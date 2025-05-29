@@ -1,0 +1,81 @@
+import React, { useEffect, useMemo } from 'react';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  NavLink
+} from "react-router-dom";
+import HumeConversationTab from './components/HumeConversationTab';
+import CoachCallTab from './components/CoachCallTab.tsx';
+import { SimulationView } from './components/SimulationView.tsx';
+import FacialAnalysisTab from './components/FacialAnalysisTab';
+import EyeContactPracticeTab from './components/EyeContactPracticeTab';
+import PosturePracticeTab from './components/PosturePracticeTab';
+import GesturePracticeView from './components/GesturePracticeView';
+import DatingApp from './components/DatingApp';
+import DemoPlaceholder from './components/DemoPlaceholder';
+import AnimatedAvatarDemo from './components/AnimatedAvatarDemo';
+import './App.css';
+import { VoiceProvider } from "@humeai/voice-react";
+import { initializeTfjs } from './tfjs-initializer'; // Import the TFJS initializer
+import { AuthProvider } from './contexts/AuthContext';
+import { UserProvider } from './contexts/UserContext.tsx'; // Added UserProvider
+
+function App() {
+  const authConfig = React.useMemo(() => ({
+    type: "apiKey",
+    value: process.env.REACT_APP_HUME_API_KEY || ""
+  }), []); // Empty dependency array means this object is created once
+  useEffect(() => {
+    // Initialize TensorFlow.js when the App component mounts
+    initializeTfjs().catch(console.error); // Call and catch any potential errors
+  }, []); // Empty dependency array ensures this runs only once on mount
+
+  // Styles have been moved to App.css
+
+  return (
+    <AuthProvider>
+      <UserProvider> {/* Added UserProvider Wrapper */}
+        <VoiceProvider
+        auth={authConfig}
+        // onMessage={(message) => console.log("Hume EVI Message:", message)}
+        // onError={(error) => console.error("Hume EVI WebSocket Error:", error)}
+        // onClose={() => console.log("Hume EVI WebSocket Closed")}
+        >
+          <Router>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+          <nav className="nav-bar">
+            <div className="logo">XRCupid</div>
+            <div className="nav-links-group">
+              <NavLink to="/dating-app" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Dating App</NavLink>
+              <NavLink to="/" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>EVI Conversation</NavLink>
+              <NavLink to="/coach-call" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Coach Call</NavLink>
+              <NavLink to="/facial-analysis" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Emotion Analysis</NavLink>
+              <NavLink to="/eye-contact" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Eye Contact</NavLink>
+              <NavLink to="/posture-practice" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Posture Practice</NavLink>
+              <NavLink to="/gesture-practice" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Gesture Practice</NavLink>
+              <NavLink to="/test-hume-evi" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Test Hume EVI</NavLink>
+            </div>
+          </nav>
+
+          <div className="App-content" style={{ padding: '20px', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+            <Routes>
+              <Route path="/dating-app" element={<DatingApp />} />
+              <Route path="/" element={<HumeConversationTab />} />
+              <Route path="/coach-call" element={<SimulationView />} />
+              <Route path="/facial-analysis" element={<FacialAnalysisTab />} />
+              <Route path="/eye-contact" element={<EyeContactPracticeTab />} />
+              <Route path="/posture-practice" element={<PosturePracticeTab />} />
+              <Route path="/gesture-practice" element={<GesturePracticeView />} />
+<Route path="/demo-avatar" element={<AnimatedAvatarDemo />} />
+            </Routes>
+          </div>
+        </div>
+        </Router>
+        </VoiceProvider>
+      </UserProvider> {/* Closed UserProvider Wrapper */}
+    </AuthProvider>
+  );
+}
+
+export default App;

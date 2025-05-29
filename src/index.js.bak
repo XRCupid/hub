@@ -1,0 +1,69 @@
+import process from 'process';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+import reportWebVitals from './reportWebVitals';
+import * as THREE from 'three';
+import { extend } from '@react-three/fiber';
+
+// Debug WebSocket connections (TEMPORARILY COMMENTED OUT)
+// const originalWebSocket = window.WebSocket;
+// window.WebSocket = function(...args) {
+//   console.log('WebSocket connection created to:', args[0]);
+//   const socket = new originalWebSocket(...args);
+
+//   // Log WebSocket events
+//   socket.addEventListener('open', (event) => {
+//     console.log('WebSocket opened:', event);
+//   });
+
+//   socket.addEventListener('error', (event) => {
+//     console.error('WebSocket error:', event);
+//   });
+
+//   socket.addEventListener('close', (event) => {
+//     console.log('WebSocket closed:', event);
+//   });
+
+//   return socket;
+// };
+
+// // Restore the original WebSocket prototype
+// Object.setPrototypeOf(window.WebSocket, originalWebSocket.prototype);
+
+// Extend THREE namespace with R3F components
+console.log("Attempting to extend THREE namespace for R3F...");
+console.log("THREE object before extend:", THREE);
+if (THREE && THREE.REVISION) {
+  console.log("THREE.REVISION before extend:", THREE.REVISION);
+} else {
+  console.error("THREE object or THREE.REVISION is undefined before extend!");
+}
+
+try {
+  extend(THREE);
+  console.log("Successfully extended THREE namespace.");
+  if (window.THREE && window.THREE.REVISION) {
+    console.log("window.THREE.REVISION after extend:", window.THREE.REVISION);
+  } else {
+    console.warn("window.THREE or window.THREE.REVISION is undefined after extend.");
+  }
+} catch (error) {
+  console.error("Error during extend(THREE):", error);
+}
+
+// Polyfill for process (needed by simple-peer dependencies) (TEMPORARILY COMMENTED OUT)
+// window.process = process;
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+
+    <App />
+
+);
+
+// If you want to start measuring performance in your app, pass a function
+// to log results (for example: reportWebVitals(console.log))
+// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+reportWebVitals();
