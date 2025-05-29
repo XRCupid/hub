@@ -27,7 +27,7 @@ export const EmotionalAvatar: React.FC<EmotionalAvatarProps> = ({
         pitch: 0.6  // Placeholder pitch value
       });
 
-      setCurrentEmotion(approximatedEmotion);
+      setCurrentEmotion(approximatedEmotion as 'neutral' | 'happy' | 'sad' | 'excited' | 'nervous');
 
       // Reset speaking state after a delay
       setTimeout(() => setIsSpeaking(false), 500);

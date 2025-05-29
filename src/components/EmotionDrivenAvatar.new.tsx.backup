@@ -1,0 +1,185 @@
+import React, { useRef, useEffect, forwardRef, useCallback, Suspense } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, useGLTF } from '@react-three/drei';
+import * as THREE from 'three';
+import type { Group, Vector3Tuple } from 'three';
+import { useHumeEmotionStream } from '../hooks/useHumeEmotionStream';
+import { emotionToBlendshapes } from '../utils/emotionMappings';
+import type { BlendShapeMap } from '../types/blendshapes';
+
+// ======================== TYPES ========================
+
+interface Emotion {
+  name: string;
+  score: number;
+}
+
+interface Avatar3DProps {
+  url: string;
+  blendShapes?: Partial<BlendShapeMap>;
+  position?: Vector3Tuple;
+  scale?: Vector3Tuple;
+  onLoaded?: () => void;
+  onModelLoaded?: (model: Group) => void;
+}
+
+interface EmotionDrivenAvatarProps {
+  humeApiKey: string;
+  avatarUrl: string;
+  onError?: (error: Error) => void;
+  onLoad?: () => void;
+  onEmotionDetected?: (emotion: { name: string; score: number }) => void;
+}
+
+// ======================== COMPONENTS ========================
+
+const Avatar3D = forwardRef<Group, Avatar3DProps>(({ 
+  url, 
+  blendShapes = {}, 
+  position = [0, -1.6, 0], 
+  scale = [1, 1, 1],
+  onLoaded,
+  onModelLoaded 
+}, ref) => {
+  const group = useRef<Group>(null);
+  const { scene } = useGLTF(url) as any; // Temporary any until we have proper GLTF typing
+
+  // Apply blend shapes when they change
+  useEffect(() => {
+    if (!group.current) return;
+    
+    group.current.traverse((child) => {
+      if (child instanceof THREE.Mesh && child.morphTargetDictionary) {
+        Object.entries(blendShapes).forEach(([name, value]) => {
+          const index = child.morphTargetDictionary?.[name];
+          if (index !== undefined && child.morphTargetInfluences) {
+            child.morphTargetInfluences[index] = value as number;
+          }
+        });
+      }
+    });
+  }, [blendShapes]);
+
+  // Notify parent when model is loaded
+  useEffect(() => {
+    if (group.current) {
+      onModelLoaded?.(group.current);
+      onLoaded?.();
+    }
+  }, [onLoaded, onModelLoaded]);
+
+  return (
+    <group ref={group} position={position} scale={scale as [number, number, number]}>
+      <primitive object={scene} />
+    </group>
+  );
+});
+
+const EmotionDrivenAvatar: React.FC<EmotionDrivenAvatarProps> = ({
+  humeApiKey,
+  avatarUrl,
+  onError,
+  onLoad,
+  onEmotionDetected
+}) => {
+  const [blendShapes, setBlendShapes] = React.useState<Partial<BlendShapeMap>>({});
+  const avatarRef = useRef<Group>(null);
+
+  // Handle emotion detection
+  const handleEmotionDetected = useCallback((emotion: Emotion) => {
+    console.log('Emotion detected:', emotion);
+    onEmotionDetected?.(emotion);
+    
+    // Convert emotion to blend shapes
+    const newBlendShapes = emotionToBlendshapes(emotion);
+    setBlendShapes(newBlendShapes);
+  }, [onEmotionDetected]);
+
+  // Initialize Hume emotion stream
+  const { sendVideoFrame } = useHumeEmotionStream(
+    humeApiKey,
+    handleEmotionDetected
+  );
+
+  // Set up video frame capture
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const animationFrameRef = useRef<number>();
+
+  const captureFrame = useCallback(() => {
+    if (!videoRef.current || !sendVideoFrame) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(videoRef.current, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          sendVideoFrame(blob);
+        }
+      },
+      'image/jpeg',
+      0.8
+    );
+
+    animationFrameRef.current = requestAnimationFrame(captureFrame);
+  }, [sendVideoFrame]);
+
+  // Start/stop frame capture when video is available
+  useEffect(() => {
+    if (videoRef.current?.readyState === HTMLMediaElement.HAVE_ENOUGH_DATA) {
+      captureFrame();
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [captureFrame]);
+
+  // Add video element for capturing frames
+  const videoElement = (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      style={{ display: 'none' }}
+      onCanPlay={() => {
+        if (videoRef.current) {
+          captureFrame();
+        }
+      }}
+    />
+  );
+
+  // Notify when loaded
+  useEffect(() => {
+    onLoad?.();
+  }, [onLoad]);
+
+  return (
+    <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
+      <ambientLight intensity={0.5} />
+      <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} />
+      <pointLight position={[-10, -10, -10]} />
+      
+      <Suspense fallback={null}>
+        <Avatar3D 
+          ref={avatarRef}
+          url={avatarUrl}
+          blendShapes={blendShapes}
+          onModelLoaded={() => console.log('Avatar model loaded')}
+        />
+      </Suspense>
+      
+      <OrbitControls />
+    </Canvas>
+  );
+};
+
+export default EmotionDrivenAvatar;
