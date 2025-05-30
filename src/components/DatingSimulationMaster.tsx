@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { VoiceProvider } from '@humeai/voice-react';
 import { HumeNPCManager } from './HumeNPCManager';
-import { SimpleAvatarSystem } from './SimpleAvatarSystem';
+import { PreloadedRPMSystem } from './PreloadedRPMAvatar';
 import { ProceduralAvatar } from './ProceduralAvatar';
 import { avatarGenerator } from '../services/AvatarAutoGenerator';
 import { scoringSystem } from '../services/UnifiedScoringSystem';
@@ -268,8 +268,9 @@ export const DatingSimulationMaster: React.FC<DatingSimulationMasterProps> = ({
         <div className="avatar-container user-avatar">
           <h3>You</h3>
           <div className="avatar-display">
-            <SimpleAvatarSystem
+            <PreloadedRPMSystem
               avatarType="male"
+              avatarIndex={0}
               blendShapes={userBlendShapes}
               showControls={false}
             />
@@ -295,8 +296,9 @@ export const DatingSimulationMaster: React.FC<DatingSimulationMasterProps> = ({
           <h3>{currentNPC?.name || 'Select NPC'}</h3>
           <div className="avatar-display">
             {currentNPC && (
-              <SimpleAvatarSystem
+              <PreloadedRPMSystem
                 avatarType={['Sarah', 'Emma', 'Sophia'].includes(currentNPC.name) ? 'female' : 'male'}
+                avatarIndex={currentNPC.name === 'Sarah' ? 0 : currentNPC.name === 'Emma' ? 1 : 0}
                 blendShapes={npcBlendShapes}
                 showControls={false}
               />
