@@ -4,6 +4,9 @@ import { OrbitControls, Text, Environment, useAnimations } from '@react-three/dr
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import * as THREE from 'three';
 import { RPMAvatarGenerator } from '../utils/rpmAvatars';
+import { FacialBlendShapes } from '../services/AvatarMirrorSystem';
+import './RPMAvatar.css';
+import { ProceduralAvatar, generateAvatarConfig } from './ProceduralAvatar';
 
 interface RPMAvatarProps {
   avatarUrl: string;
@@ -13,6 +16,7 @@ interface RPMAvatarProps {
   position?: [number, number, number];
   enableControls?: boolean;
   className?: string;
+  blendShapes?: Partial<FacialBlendShapes>;
 }
 
 interface BlendShapeData {
@@ -77,11 +81,47 @@ const EMOTION_BLENDSHAPE_MAP: { [key: string]: string } = {
   'eyeSquint_R': 'concentration'
 };
 
+// Fallback Avatar Component - defined outside to avoid issues
+const FallbackAvatar: React.FC<{ 
+  avatarUrl?: string; 
+  position?: [number, number, number];
+  blendShapes?: any 
+}> = ({ 
+  avatarUrl, 
+  position = [0, 0, 0],
+  blendShapes 
+}) => {
+  // Generate avatar config based on URL or random
+  const avatarConfig = React.useMemo(() => {
+    // Parse avatar ID to generate consistent config
+    const seed = avatarUrl || 'default';
+    const hash = seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    
+    return generateAvatarConfig({
+      gender: hash % 2 === 0 ? 'male' : 'female',
+      ethnicity: ['caucasian', 'asian', 'african', 'hispanic'][hash % 4],
+      style: ['professional', 'casual', 'creative', 'elegant'][hash % 4],
+      age: hash % 3 === 0 ? 'young' : 'middle'
+    });
+  }, [avatarUrl]);
+  
+  return (
+    <ProceduralAvatar
+      {...avatarConfig}
+      position={position}
+      blendShapes={blendShapes}
+    />
+  );
+};
+
+// Avatar3D component - handles loading and displaying avatars
 const Avatar3D: FC<{ 
   avatarUrl: string; 
   emotions?: BlendShapeData;
   isAnimating?: boolean;
-}> = ({ avatarUrl, emotions = {}, isAnimating = false }) => {
+  position?: [number, number, number];
+  blendShapes?: Partial<FacialBlendShapes>;
+}> = ({ avatarUrl, emotions = {}, isAnimating = false, position = [0, 0, 0], blendShapes = {} }) => {
   const meshRef = useRef<THREE.Group>(null);
   const [morphTargets, setMorphTargets] = useState<THREE.Mesh[]>([]);
   const [loadError, setLoadError] = useState<boolean>(false);
@@ -199,6 +239,23 @@ const Avatar3D: FC<{
     }
   }, [emotions, morphTargets]);
 
+  // Apply blend shapes to the avatar
+  useEffect(() => {
+    if (morphTargets.length > 0) {
+      morphTargets.forEach(mesh => {
+        // Apply each blend shape
+        Object.entries(blendShapes).forEach(([shapeName, value]) => {
+          if (mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
+            const index = mesh.morphTargetDictionary[shapeName];
+            if (index !== undefined) {
+              mesh.morphTargetInfluences[index] = value as number;
+            }
+          }
+        });
+      });
+    }
+  }, [morphTargets, blendShapes]);
+
   // Animation loop
   useFrame((state, delta) => {
     if (isAnimating && meshRef.current) {
@@ -247,62 +304,12 @@ const Avatar3D: FC<{
   if (loadError || !avatarUrl) {
     console.log('🎭 Avatar3D: Rendering fallback avatar. loadError:', loadError, 'avatarUrl:', avatarUrl);
     
-    // Generate diverse appearance based on avatar ID
-    const avatarSeed = avatarUrl ? avatarUrl.length : Math.random() * 1000;
-    const skinTones = ['#ffdbac', '#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#654321'];
-    const hairColors = ['#2c1b18', '#8b4513', '#daa520', '#ff6347', '#000000', '#654321'];
-    const clothingColors = ['#4A90E2', '#E74C3C', '#2ECC71', '#9B59B6', '#F39C12', '#1ABC9C'];
-    
-    const skinTone = skinTones[Math.floor(avatarSeed) % skinTones.length];
-    const hairColor = hairColors[Math.floor(avatarSeed * 2) % hairColors.length];
-    const clothingColor = clothingColors[Math.floor(avatarSeed * 3) % clothingColors.length];
-    
     return (
-      <group position={[0, -0.5, 0]}>
-        {/* Head */}
-        <mesh position={[0, 1.5, 0]}>
-          <sphereGeometry args={[0.3, 16, 16]} />
-          <meshStandardMaterial color={skinTone} />
-        </mesh>
-        
-        {/* Hair */}
-        <mesh position={[0, 1.7, 0]}>
-          <sphereGeometry args={[0.32, 16, 16]} />
-          <meshStandardMaterial color={hairColor} />
-        </mesh>
-        
-        {/* Body */}
-        <mesh position={[0, 0.5, 0]}>
-          <cylinderGeometry args={[0.4, 0.3, 1.2, 8]} />
-          <meshStandardMaterial color={clothingColor} />
-        </mesh>
-        
-        {/* Arms */}
-        <mesh position={[-0.6, 0.8, 0]} rotation={[0, 0, 0.3]}>
-          <cylinderGeometry args={[0.08, 0.08, 0.8, 8]} />
-          <meshStandardMaterial color={skinTone} />
-        </mesh>
-        <mesh position={[0.6, 0.8, 0]} rotation={[0, 0, -0.3]}>
-          <cylinderGeometry args={[0.08, 0.08, 0.8, 8]} />
-          <meshStandardMaterial color={skinTone} />
-        </mesh>
-        
-        {/* Eyes */}
-        <mesh position={[-0.1, 1.6, 0.25]}>
-          <sphereGeometry args={[0.03, 8, 8]} />
-          <meshStandardMaterial color="#000" />
-        </mesh>
-        <mesh position={[0.1, 1.6, 0.25]}>
-          <sphereGeometry args={[0.03, 8, 8]} />
-          <meshStandardMaterial color="#000" />
-        </mesh>
-        
-        {/* Simple smile */}
-        <mesh position={[0, 1.4, 0.25]} rotation={[0, 0, Math.PI]}>
-          <torusGeometry args={[0.08, 0.02, 8, 16, Math.PI]} />
-          <meshStandardMaterial color="#000" />
-        </mesh>
-      </group>
+      <FallbackAvatar 
+        avatarUrl={avatarUrl} 
+        position={position} 
+        blendShapes={blendShapes} 
+      />
     );
   }
   
@@ -312,122 +319,21 @@ const Avatar3D: FC<{
   }
   
   return (
-    <group ref={meshRef} position={[0, 0, 0]}>
+    <group ref={meshRef} position={position}>
       <primitive object={gltf.scene} />
     </group>
   );
 };
 
-// Fallback Avatar Component - shows when RPM avatar fails to load
-function FallbackAvatar({ 
+export const RPMAvatar: FC<RPMAvatarProps> = ({ 
+  avatarUrl, 
   emotions = {}, 
-  isLipSyncing = false,
-  name = 'Avatar'
-}: {
-  emotions?: Record<string, number>;
-  isLipSyncing?: boolean;
-  name?: string;
-}) {
-  const meshRef = useRef<THREE.Group>(null);
-  const [time, setTime] = useState(0);
-
-  console.log('🎭 FallbackAvatar rendering with emotions:', emotions);
-
-  // Animation loop
-  useFrame((state, delta) => {
-    setTime(time + delta);
-    
-    if (meshRef.current) {
-      // Gentle floating animation
-      meshRef.current.position.y = Math.sin(time * 2) * 0.1;
-      // Removed rotation to keep avatar facing forward
-      // meshRef.current.rotation.y = Math.sin(time * 0.5) * 0.1;
-    }
-  });
-
-  // Calculate color based on emotions
-  const avatarColor = useMemo(() => {
-    const joy = emotions.joy || 0;
-    const anger = emotions.anger || 0;
-    const sadness = emotions.sadness || 0;
-    
-    // Base blue color, modified by emotions
-    const r = Math.min(1, 0.3 + anger * 0.7);
-    const g = Math.min(1, 0.6 + joy * 0.4 - sadness * 0.3);
-    const b = Math.min(1, 0.9 - anger * 0.3);
-    
-    return new THREE.Color(r, g, b);
-  }, [emotions]);
-
-  useEffect(() => {
-    // This effect is just for the fallback avatar animation setup
-    // No need to reference avatarUrl here since this component only shows when there's no URL
-  }, []);
-
-  return (
-    <group ref={meshRef}>
-      {/* Main avatar body */}
-      <mesh position={[0, 0, 0]}>
-        <capsuleGeometry args={[0.8, 2, 4, 8]} />
-        <meshPhongMaterial color={avatarColor} />
-      </mesh>
-      
-      {/* Head */}
-      <mesh position={[0, 1.5, 0]}>
-        <sphereGeometry args={[0.6, 16, 16]} />
-        <meshPhongMaterial color={avatarColor} />
-      </mesh>
-      
-      {/* Eyes */}
-      <mesh position={[-0.2, 1.6, 0.4]}>
-        <sphereGeometry args={[0.08, 8, 8]} />
-        <meshPhongMaterial color="#000" />
-      </mesh>
-      <mesh position={[0.2, 1.6, 0.4]}>
-        <sphereGeometry args={[0.08, 8, 8]} />
-        <meshPhongMaterial color="#000" />
-      </mesh>
-      
-      {/* Mouth - changes with lip sync */}
-      <mesh position={[0, 1.3, 0.4]} scale={[isLipSyncing ? 1.2 : 1, isLipSyncing ? 0.8 : 1, 1]}>
-        <sphereGeometry args={[0.1, 8, 8]} />
-        <meshPhongMaterial color="#000" />
-      </mesh>
-      
-      {/* Name label */}
-      <Text
-        position={[0, -1.5, 0]}
-        fontSize={0.3}
-        color="#4A90E2"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {name}
-      </Text>
-      
-      {/* RPM Setup hint */}
-      <Text
-        position={[0, -2, 0]}
-        fontSize={0.15}
-        color="#666"
-        anchorX="center"
-        anchorY="middle"
-        maxWidth={4}
-      >
-        Fallback Avatar{'\n'}(Add RPM URL for realistic avatar)
-      </Text>
-    </group>
-  );
-}
-
-export const RPMAvatar: FC<RPMAvatarProps> = ({
-  avatarUrl,
-  emotions = {},
   isAnimating = true,
   scale = 1,
   position = [0, -1, 0],
   enableControls = false,
-  className = ''
+  className = '',
+  blendShapes = {}
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -503,6 +409,8 @@ export const RPMAvatar: FC<RPMAvatarProps> = ({
           avatarUrl={avatarUrl} 
           emotions={emotions}
           isAnimating={isAnimating}
+          position={position}
+          blendShapes={blendShapes}
         />
         
         <OrbitControls 
@@ -514,49 +422,6 @@ export const RPMAvatar: FC<RPMAvatarProps> = ({
         
         <Environment preset="studio" />
       </Canvas>
-      
-      <style>{`
-        .rpm-avatar-container {
-          border-radius: 12px;
-          overflow: hidden;
-        }
-        
-        .avatar-loading {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          text-align: center;
-          z-index: 10;
-        }
-        
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 4px solid #f3f3f3;
-          border-top: 4px solid #667eea;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin: 0 auto 10px;
-        }
-        
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        .avatar-error {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          text-align: center;
-          z-index: 10;
-          background: rgba(255,255,255,0.9);
-          padding: 20px;
-          border-radius: 8px;
-        }
-      `}</style>
     </div>
   );
 };
