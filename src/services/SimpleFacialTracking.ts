@@ -5,10 +5,16 @@ export class SimpleFacialTracking {
   private animationFrame: number | null = null;
   private onUpdateCallback?: (blendShapes: FacialBlendShapes) => void;
 
-  startTracking(onUpdate: (blendShapes: FacialBlendShapes) => void) {
+  startTracking(onUpdate?: (blendShapes: FacialBlendShapes) => void) {
     this.isTracking = true;
-    this.onUpdateCallback = onUpdate;
+    if (onUpdate) {
+      this.onUpdateCallback = onUpdate;
+    }
     this.animate();
+  }
+
+  onUpdate(callback: (blendShapes: FacialBlendShapes) => void) {
+    this.onUpdateCallback = callback;
   }
 
   stopTracking() {

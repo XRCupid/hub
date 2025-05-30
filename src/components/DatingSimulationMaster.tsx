@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { VoiceProvider } from '@humeai/voice-react';
 import { HumeNPCManager } from './HumeNPCManager';
-import { RPMWorkingAvatar } from './RPMWorkingAvatar';
+import { SimpleAvatarSystem } from './SimpleAvatarSystem';
 import { ProceduralAvatar } from './ProceduralAvatar';
 import { avatarGenerator } from '../services/AvatarAutoGenerator';
 import { scoringSystem } from '../services/UnifiedScoringSystem';
@@ -268,28 +268,11 @@ export const DatingSimulationMaster: React.FC<DatingSimulationMasterProps> = ({
         <div className="avatar-container user-avatar">
           <h3>You</h3>
           <div className="avatar-display">
-            {userAvatarUrl ? (
-              <RPMWorkingAvatar 
-                avatarUrl={userAvatarUrl}
-                blendShapes={userBlendShapes}
-                position={[0, -0.5, 0]}
-                scale={1.5}
-              />
-            ) : (
-              <Canvas camera={{ position: [0, 0, 2], fov: 50 }}>
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[10, 10, 5]} intensity={1} />
-                <ProceduralAvatar
-                  gender="male"
-                  skinTone="#F5DEB3"
-                  hairColor="#4A4A4A"
-                  hairStyle="short"
-                  clothingColor="#4A90E2"
-                  blendShapes={userBlendShapes}
-                  position={[0, 0, 0]}
-                />
-              </Canvas>
-            )}
+            <SimpleAvatarSystem
+              avatarType="male"
+              blendShapes={userBlendShapes}
+              showControls={false}
+            />
           </div>
           <div className="metrics">
             <div className="metric">
@@ -311,28 +294,13 @@ export const DatingSimulationMaster: React.FC<DatingSimulationMasterProps> = ({
         <div className="avatar-container npc-avatar">
           <h3>{currentNPC?.name || 'Select NPC'}</h3>
           <div className="avatar-display">
-            {npcAvatarUrl ? (
-              <RPMWorkingAvatar 
-                avatarUrl={npcAvatarUrl}
+            {currentNPC && (
+              <SimpleAvatarSystem
+                avatarType={['Sarah', 'Emma', 'Sophia'].includes(currentNPC.name) ? 'female' : 'male'}
                 blendShapes={npcBlendShapes}
-                position={[0, -0.5, 0]}
-                scale={1.5}
+                showControls={false}
               />
-            ) : currentNPC ? (
-              <Canvas camera={{ position: [0, 0, 2], fov: 50 }}>
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[10, 10, 5]} intensity={1} />
-                <ProceduralAvatar
-                  gender={['Sarah', 'Emma', 'Sophia'].includes(currentNPC.name) ? 'female' : 'male'}
-                  skinTone="#D4A574"
-                  hairColor="#8B4513"
-                  hairStyle="medium"
-                  clothingColor="#E74C3C"
-                  blendShapes={npcBlendShapes}
-                  position={[0, 0, 0]}
-                />
-              </Canvas>
-            ) : null}
+            )}
           </div>
           <div className="npc-info">
             <p>{currentNPC?.personality}</p>
