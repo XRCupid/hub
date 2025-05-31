@@ -86,6 +86,12 @@ const Navigation: React.FC = () => {
           <NavLink to="/phone-training" className={({ isActive }) => isActive ? "dropdown-link active" : "dropdown-link"}>
             Phone Training
           </NavLink>
+          <NavLink to="/conversation-toolkit" className={({ isActive }) => isActive ? "dropdown-link active" : "dropdown-link"}>
+            Conversation Toolkit
+          </NavLink>
+          <NavLink to="/skill-tree" className={({ isActive }) => isActive ? "dropdown-link active" : "dropdown-link"}>
+            Skill Tree Overview
+          </NavLink>
         </NavDropdown>
         
         {/* Dev Tools - Only show in development */}
