@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DatingSimulationMaster } from '../components/DatingSimulationMaster';
 import { NPCPersonalities } from '../config/NPCPersonalities';
 import './DatingCoachDemo.css';
 
 export const DatingCoachDemo: React.FC = () => {
   const [selectedNPC, setSelectedNPC] = useState<string>('confident-sarah');
-  const [scenario, setScenario] = useState<'first-date' | 'coffee-chat' | 'dinner-date' | 'activity-date'>('first-date');
+  const [scenario, setScenario] = useState<'first-date' | 'coffee-chat' | 'virtual-meeting'>('first-date');
   const [mirrorMode, setMirrorMode] = useState(true);
   const [showMetrics, setShowMetrics] = useState(true);
   const [showDemo, setShowDemo] = useState(false);
@@ -13,8 +13,7 @@ export const DatingCoachDemo: React.FC = () => {
   const scenarios = [
     { id: 'first-date', name: 'First Date', description: 'Practice making a great first impression' },
     { id: 'coffee-chat', name: 'Coffee Chat', description: 'Casual conversation over coffee' },
-    { id: 'dinner-date', name: 'Dinner Date', description: 'More formal dining experience' },
-    { id: 'activity-date', name: 'Activity Date', description: 'Fun activity-based interaction' }
+    { id: 'virtual-meeting', name: 'Virtual Meeting', description: 'Online video date experience' }
   ];
 
   return (
@@ -127,10 +126,7 @@ export const DatingCoachDemo: React.FC = () => {
           </button>
           
           <DatingSimulationMaster
-            npcId={selectedNPC}
-            scenario={scenario}
-            mirrorMode={mirrorMode}
-            showMetrics={showMetrics}
+            onBack={() => setShowDemo(false)}
           />
         </div>
       )}

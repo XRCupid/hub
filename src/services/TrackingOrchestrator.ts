@@ -17,6 +17,13 @@ export interface TrackingSchedule {
   priorities: Record<TrackerType, number>;
 }
 
+export interface TrackingStats {
+  fps: number;
+  activeTrackers: TrackerType[];
+  cpuUsage: number;
+  memoryUsage: number;
+}
+
 export class TrackingOrchestrator {
   private static instance: TrackingOrchestrator;
   private trackers: Map<TrackerType, TrackerConfig>;
@@ -61,6 +68,32 @@ export class TrackingOrchestrator {
     if (tracker) {
       tracker.isActive = active;
     }
+  }
+
+  // Get current tracking stats
+  getStats(): TrackingStats {
+    return {
+      fps: this.performanceMonitor.getCurrentFPS(),
+      activeTrackers: Array.from(this.trackers.entries())
+        .filter(([_, config]) => config.isActive)
+        .map(([type]) => type),
+      cpuUsage: 0, // Would need system integration
+      memoryUsage: 0 // Would need system integration
+    };
+  }
+
+  // Start all tracking
+  startTracking(): void {
+    this.trackers.forEach((config, type) => {
+      config.isActive = true;
+    });
+  }
+
+  // Stop all tracking  
+  stopTracking(): void {
+    this.trackers.forEach((config, type) => {
+      config.isActive = false;
+    });
   }
 
   private initializeTrackers(): Map<TrackerType, TrackerConfig> {
