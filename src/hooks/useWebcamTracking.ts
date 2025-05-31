@@ -1,0 +1,156 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
+import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
+import '@tensorflow/tfjs-backend-webgl';
+
+interface FaceRotation {
+  pitch: number;
+  yaw: number;
+  roll: number;
+}
+
+export function useWebcamTracking(enabled: boolean = true) {
+  const [rotation, setRotation] = useState<FaceRotation>({ pitch: 0, yaw: 0, roll: 0 });
+  const [isWebcamActive, setIsWebcamActive] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const detectorRef = useRef<faceLandmarksDetection.FaceLandmarksDetector | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  // Initialize webcam
+  const startWebcam = useCallback(async () => {
+    if (!enabled) return;
+    
+    try {
+      // Get webcam stream
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          width: 640, 
+          height: 480,
+          facingMode: 'user'
+        }
+      });
+      
+      streamRef.current = stream;
+      
+      // Create video element
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.width = 640;
+      video.height = 480;
+      video.autoplay = true;
+      video.style.position = 'absolute';
+      video.style.visibility = 'hidden';
+      document.body.appendChild(video);
+      videoRef.current = video;
+      
+      // Initialize face detector
+      const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
+      const detectorConfig: faceLandmarksDetection.MediaPipeFaceMeshTfjsModelConfig = {
+        runtime: 'tfjs',
+        maxFaces: 1,
+        refineLandmarks: true,
+      };
+      
+      const detector = await faceLandmarksDetection.createDetector(model, detectorConfig);
+      detectorRef.current = detector;
+      
+      setIsWebcamActive(true);
+      setError(null);
+      
+      // Start detection loop
+      detectFaces();
+    } catch (err) {
+      console.error('Failed to start webcam:', err);
+      setError('Failed to access webcam. Please ensure camera permissions are granted.');
+    }
+  }, [enabled]);
+
+  // Stop webcam
+  const stopWebcam = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    if (videoRef.current) {
+      videoRef.current.remove();
+      videoRef.current = null;
+    }
+    
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    
+    detectorRef.current = null;
+    setIsWebcamActive(false);
+  }, []);
+
+  // Face detection loop
+  const detectFaces = useCallback(async () => {
+    if (!videoRef.current || !detectorRef.current || !enabled) return;
+    
+    try {
+      const faces = await detectorRef.current.estimateFaces(videoRef.current);
+      
+      if (faces.length > 0) {
+        const face = faces[0];
+        
+        // Calculate head rotation from face landmarks
+        // Using key points: nose tip, left eye, right eye
+        const noseTip = face.keypoints[1];
+        const leftEye = face.keypoints[33];
+        const rightEye = face.keypoints[263];
+        
+        // Calculate yaw (left-right rotation)
+        const eyeCenter = {
+          x: (leftEye.x + rightEye.x) / 2,
+          y: (leftEye.y + rightEye.y) / 2
+        };
+        const yaw = (noseTip.x - eyeCenter.x) / 100;
+        
+        // Calculate pitch (up-down rotation)
+        const pitch = -(noseTip.y - eyeCenter.y) / 100;
+        
+        // Calculate roll (head tilt)
+        const eyeDx = rightEye.x - leftEye.x;
+        const eyeDy = rightEye.y - leftEye.y;
+        const roll = Math.atan2(eyeDy, eyeDx);
+        
+        setRotation({
+          pitch: Math.max(-0.5, Math.min(0.5, pitch)),
+          yaw: Math.max(-0.7, Math.min(0.7, yaw)),
+          roll: Math.max(-0.3, Math.min(0.3, roll))
+        });
+      }
+    } catch (err) {
+      console.error('Face detection error:', err);
+    }
+    
+    // Continue detection loop
+    animationFrameRef.current = requestAnimationFrame(detectFaces);
+  }, [enabled]);
+
+  // Initialize/cleanup
+  useEffect(() => {
+    if (enabled) {
+      startWebcam();
+    } else {
+      stopWebcam();
+    }
+    
+    return () => {
+      stopWebcam();
+    };
+  }, [enabled, startWebcam, stopWebcam]);
+
+  return {
+    rotation,
+    isWebcamActive,
+    error,
+    startWebcam,
+    stopWebcam
+  };
+}

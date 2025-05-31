@@ -95,9 +95,28 @@ export class AvatarAutoGenerator {
 
   // Get avatar for specific NPC personality
   async getAvatarForNPC(npcId: string): Promise<string> {
-    // Return empty string to trigger procedural avatar generation
-    // The procedural system will generate appropriate avatars based on NPC ID
-    return '';
+    const npcAvatarId = this.getNPCAvatarId(npcId);
+    const avatar = this.generatedAvatars.get(npcAvatarId);
+    return avatar ? avatar.url : '';
+  }
+
+  public getNPCAvatarId(npcId: string): string {
+    // Map NPCs to specific avatar IDs
+    const npcAvatarMap: { [key: string]: string } = {
+      'confident-sarah': 'angelchick',
+      'shy-emma': 'chickie',
+      'adventurous-alex': 'fool',
+      'intellectual-maya': 'angelchick',
+      'angel-chick': 'angelchick',
+      'charming-james': 'fool',
+      'mysterious-zara': 'chickie',
+      'funny-mike': 'fool',
+      'felix-2056': 'fool',
+      'bebe-3851': 'babe'
+    };
+    
+    // Return the mapped avatar ID or default
+    return npcAvatarMap[npcId] || 'angelchick';
   }
 
   private selectAvatarFromTemplates(preferences: AvatarPreferences): string {

@@ -1,8 +1,11 @@
 import React, { useRef, useEffect, useState, Suspense } from 'react';
-import { useFrame, useLoader } from '@react-three/fiber';
+import { useFrame, useLoader, useThree } from '@react-three/fiber';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import * as THREE from 'three';
 import { FacialBlendShapes } from '../services/AvatarMirrorSystem';
+import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 
 interface RPMConfiguredAvatarProps {
   avatarUrl: string;
@@ -100,6 +103,7 @@ export const RPMConfiguredAvatar: React.FC<RPMConfiguredAvatarProps> = ({
   const [processedUrl, setProcessedUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { gl } = useThree();
 
   useEffect(() => {
     // Process the avatar URL to ensure it works with CORS
@@ -134,7 +138,15 @@ export const RPMConfiguredAvatar: React.FC<RPMConfiguredAvatarProps> = ({
         }
 
         // Construct proper GLB URL with quality parameters
-        const glbUrl = `https://models.readyplayer.me/${avatarId}.glb?morphTargets=ARKit&textureAtlas=1024`;
+        const params = new URLSearchParams({
+          morphTargets: 'ARKit,Oculus Visemes',
+          textureAtlas: '1024',
+          pose: 'T',
+          lod: '0',
+          useHands: 'true',
+          meshCompression: 'false'
+        });
+        const glbUrl = `https://models.readyplayer.me/${avatarId}.glb?${params.toString()}`;
         
         // Test if URL is accessible
         const response = await fetch(glbUrl, { method: 'HEAD' });
@@ -177,6 +189,18 @@ export const RPMConfiguredAvatar: React.FC<RPMConfiguredAvatarProps> = ({
     console.error('RPM Avatar Error:', error);
     return <>{fallbackComponent || defaultFallback}</>;
   }
+
+  const loader = new GLTFLoader();
+  const ktx2Loader = new KTX2Loader();
+  ktx2Loader.setTranscoderPath('/basis/');
+  ktx2Loader.detectSupport(gl);
+  loader.setKTX2Loader(ktx2Loader);
+
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath('/draco/');
+  loader.setDRACOLoader(dracoLoader);
+
+  loader.setMeshoptDecoder(MeshoptDecoder);
 
   return (
     <RPMErrorBoundary fallback={fallbackComponent || defaultFallback}>
