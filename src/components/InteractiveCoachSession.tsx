@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
+import { ConversationAvatar } from './ConversationAvatar';
 import { voiceService } from '../services/voiceService';
 import './InteractiveCoachSession.css';
 
@@ -7,6 +10,17 @@ interface InteractiveCoachSessionProps {
   lessonContext?: string;
 }
 
+interface ConversationMessage {
+  role: 'coach' | 'user';
+  text: string;
+}
+
+const coachAvatarUrls = {
+  grace: '/avatars/coach_grace.glb',
+  posie: '/avatars/coach_posie.glb',
+  rizzo: '/avatars/coach_rizzo.glb'
+};
+
 export const InteractiveCoachSession: React.FC<InteractiveCoachSessionProps> = ({ 
   coach, 
   lessonContext = "practicing conversation skills" 
@@ -14,17 +28,16 @@ export const InteractiveCoachSession: React.FC<InteractiveCoachSessionProps> = (
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [userInput, setUserInput] = useState('');
-  const [conversation, setConversation] = useState<Array<{role: 'coach' | 'user', text: string}>>([]);
+  const [conversation, setConversation] = useState<ConversationMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [isCoachSpeaking, setIsCoachSpeaking] = useState(false);
+  const [audioData, setAudioData] = useState<Uint8Array>(new Uint8Array(128));
+  
   const recognitionRef = useRef<any>(null);
-
-  const coachAvatars = {
-    grace: '👗',
-    posie: '🧘‍♀️',
-    rizzo: '💋'
-  };
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
 
   const coachGreetings = {
     grace: "Hello darling! I'm so delighted we're working together today. Tell me, what's been on your mind about dating lately?",
@@ -33,6 +46,11 @@ export const InteractiveCoachSession: React.FC<InteractiveCoachSessionProps> = (
   };
 
   useEffect(() => {
+    // Initialize audio context for lip-sync
+    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    analyserRef.current = audioContextRef.current.createAnalyser();
+    analyserRef.current.fftSize = 256;
+    
     // Check if API key is needed
     const provider = voiceService.getAvailableProvider();
     if (provider === 'openai' && !process.env.REACT_APP_OPENAI_API_KEY) {
@@ -97,13 +115,41 @@ export const InteractiveCoachSession: React.FC<InteractiveCoachSessionProps> = (
       setConversation(prev => [...prev, { role: 'coach', text: response }]);
       
       // Speak the response
-      setIsSpeaking(true);
-      await voiceService.speak(response, coach);
-      setIsSpeaking(false);
+      speakResponse(response);
     } catch (error: any) {
       setError(error.message);
       console.error('Coach interaction error:', error);
     }
+  };
+
+  const speakResponse = async (text: string) => {
+    setIsCoachSpeaking(true);
+    
+    // Create audio analysis for lip-sync
+    const audioElement = await voiceService.speak(text, coach);
+    
+    if (audioElement && audioContextRef.current && analyserRef.current) {
+      const source = audioContextRef.current.createMediaElementSource(audioElement as HTMLAudioElement);
+      source.connect(analyserRef.current);
+      analyserRef.current.connect(audioContextRef.current.destination);
+      
+      // Update audio data for lip-sync
+      const updateAudioData = () => {
+        if (analyserRef.current && isCoachSpeaking) {
+          const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+          analyserRef.current.getByteFrequencyData(dataArray);
+          setAudioData(dataArray);
+          requestAnimationFrame(updateAudioData);
+        }
+      };
+      updateAudioData();
+    }
+    
+    // Wait for speech to complete
+    setTimeout(() => {
+      setIsCoachSpeaking(false);
+      setAudioData(new Uint8Array(128));
+    }, text.length * 50); // Rough estimate based on text length
   };
 
   const toggleListening = () => {
@@ -125,7 +171,12 @@ export const InteractiveCoachSession: React.FC<InteractiveCoachSessionProps> = (
     handleUserInput(userInput);
   };
 
-  if (showApiKeyInput) {
+  const avatarUrl = coachAvatarUrls[coach];
+
+  const openAIKey = process.env.REACT_APP_OPENAI_API_KEY;
+  const isReady = !showApiKeyInput && openAIKey;
+
+  if (!isReady && !openAIKey) {
     return (
       <div className="api-key-setup">
         <h3>Setup OpenAI API Key</h3>
@@ -151,13 +202,32 @@ export const InteractiveCoachSession: React.FC<InteractiveCoachSessionProps> = (
 
   return (
     <div className="interactive-coach-session">
-      <div className="session-header">
-        <div className="coach-info">
-          <span className="coach-avatar">{coachAvatars[coach]}</span>
-          <h3>{coach.charAt(0).toUpperCase() + coach.slice(1)}'s Live Session</h3>
+      <div className="coach-header">
+        <div className="coach-avatar-container">
+          <Canvas
+            camera={{ position: [0, 0, 3], fov: 40 }}
+            style={{ background: 'transparent' }}
+          >
+            <ambientLight intensity={0.5} />
+            <directionalLight position={[10, 10, 5]} intensity={1} />
+            <ConversationAvatar
+              avatarUrl={avatarUrl}
+              position={[0, -1, 0]}
+              scale={1.5}
+              isSpeaking={isCoachSpeaking}
+              audioContext={audioContextRef.current}
+              audioData={audioData}
+            />
+            <OrbitControls
+              enablePan={false}
+              enableZoom={false}
+              minPolarAngle={Math.PI / 3}
+              maxPolarAngle={Math.PI / 2}
+            />
+          </Canvas>
         </div>
-        <div className={`status ${isSpeaking ? 'speaking' : ''}`}>
-          {isSpeaking ? '🔊 Speaking...' : '🎤 Ready'}
+        <div className="coach-info">
+          <h3>{coach.charAt(0).toUpperCase() + coach.slice(1)}'s Coaching Session</h3>
         </div>
       </div>
 
@@ -165,7 +235,7 @@ export const InteractiveCoachSession: React.FC<InteractiveCoachSessionProps> = (
         {conversation.map((message, idx) => (
           <div key={idx} className={`message ${message.role}`}>
             {message.role === 'coach' && (
-              <span className="message-avatar">{coachAvatars[coach]}</span>
+              <span className="message-avatar">{coachAvatarUrls[coach]}</span>
             )}
             <div className="message-content">
               <p>{message.text}</p>

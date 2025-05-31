@@ -49,103 +49,87 @@ class VoiceService {
     }
   }
 
-  async speak(text: string, coach: 'grace' | 'posie' | 'rizzo'): Promise<void> {
-    const voiceConfig = coachVoices[coach][this.currentProvider];
-
-    switch (this.currentProvider) {
-      case 'openai':
-        return this.speakWithOpenAI(text, voiceConfig);
-      case 'elevenlabs':
-        return this.speakWithElevenLabs(text, coach, voiceConfig);
+  async speak(text: string, coach: 'grace' | 'posie' | 'rizzo'): Promise<HTMLAudioElement | null> {
+    const provider = this.getAvailableProvider();
+    
+    switch (provider) {
       case 'hume':
-        return this.speakWithHume(text, voiceConfig);
+        // Hume AI would handle its own audio
+        console.log('Hume AI TTS not implemented yet');
+        return null;
+        
+      case 'openai':
+        return await this.speakWithOpenAI(text, coach);
+        
+      case 'elevenlabs':
+        return await this.speakWithElevenLabs(text, coach);
+        
+      case 'browser':
+        return await this.speakWithBrowser(text);
+        
       default:
-        console.warn('No voice provider available, using browser TTS');
-        return this.speakWithBrowserTTS(text);
+        console.error('No TTS provider available');
+        return null;
     }
   }
-
-  private async speakWithOpenAI(text: string, config: any): Promise<void> {
-    if (!this.openaiApiKey) {
-      throw new Error('OpenAI API key not configured');
+  
+  private async speakWithOpenAI(text: string, coach: string): Promise<HTMLAudioElement | null> {
+    const apiKey = this.openaiApiKey || process.env.REACT_APP_OPENAI_API_KEY;
+    if (!apiKey) {
+      console.error('OpenAI API key not set');
+      return null;
     }
-
+    
     try {
+      const voice = coachVoices[coach as keyof typeof coachVoices].openai;
+      
       const response = await fetch('https://api.openai.com/v1/audio/speech', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.openaiApiKey}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           model: 'tts-1',
           input: text,
-          voice: config.voice,
-          speed: config.speed || 1.0
-        }),
+          voice: voice.voice,
+          speed: voice.speed || 1.0
+        })
       });
-
+      
       if (!response.ok) {
         throw new Error(`OpenAI TTS failed: ${response.statusText}`);
       }
-
+      
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
+      // Play and return the audio element
       await audio.play();
-      
-      // Cleanup
-      audio.addEventListener('ended', () => {
-        URL.revokeObjectURL(audioUrl);
-      });
+      return audio;
     } catch (error) {
       console.error('OpenAI TTS error:', error);
-      // Fallback to browser TTS
-      return this.speakWithBrowserTTS(text);
+      return null;
     }
   }
-
-  private async speakWithElevenLabs(text: string, coach: string, config: any): Promise<void> {
-    if (!this.elevenLabsApiKey) {
-      throw new Error('ElevenLabs API key not configured');
-    }
-
-    // ElevenLabs implementation
-    // This would require voice IDs from your ElevenLabs account
-    console.log('ElevenLabs TTS would speak:', text, 'with voice:', config.voice);
-    
-    // For now, fallback to browser TTS
-    return this.speakWithBrowserTTS(text);
+  
+  private async speakWithElevenLabs(text: string, coach: string): Promise<HTMLAudioElement | null> {
+    // Placeholder for ElevenLabs implementation
+    console.log('ElevenLabs TTS not implemented yet');
+    return null;
   }
-
-  private async speakWithHume(text: string, config: any): Promise<void> {
-    if (!this.humeApiKey) {
-      throw new Error('Hume API key not configured');
-    }
-
-    // Hume implementation would go here
-    console.log('Hume AI would speak:', text, 'with config:', config);
-    
-    // For now, fallback to browser TTS
-    return this.speakWithBrowserTTS(text);
-  }
-
-  private speakWithBrowserTTS(text: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!('speechSynthesis' in window)) {
-        reject(new Error('Browser TTS not supported'));
-        return;
-      }
-
+  
+  private async speakWithBrowser(text: string): Promise<HTMLAudioElement | null> {
+    return new Promise((resolve) => {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
-      utterance.pitch = 1.1;
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
       utterance.volume = 1.0;
-
-      utterance.onend = () => resolve();
-      utterance.onerror = (event) => reject(event);
-
+      
+      utterance.onend = () => resolve(null);
+      utterance.onerror = () => resolve(null);
+      
       window.speechSynthesis.speak(utterance);
     });
   }
