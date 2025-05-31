@@ -159,5 +159,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # RPM Avatar files (keep manifest.json)
-public/avatars/*.glb
-public/assets/animations/animations.zip
+# public/avatars/*.glb
+
+# Local Netlify folder
+.netlify
