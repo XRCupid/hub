@@ -41,7 +41,7 @@ export const TestModeToggle: React.FC<TestModeToggleProps> = ({
               switch (item.value) {
                 case 'eh':
                 case 'ae':
-                  acc.jawOpen = 0.6;
+                  acc.jawOpen = 0.0; // FIXED: was 0.6 - this was causing mouth stuck open
                   break;
                 case 'ow':
                 case 'aw':
@@ -53,7 +53,7 @@ export const TestModeToggle: React.FC<TestModeToggleProps> = ({
                   acc.mouthSmileRight = 0.3;
                   break;
                 default:
-                  acc.jawOpen = Math.max(acc.jawOpen || 0, 0.2);
+                  acc.jawOpen = Math.max(acc.jawOpen || 0, 0.0); // FIXED: was 0.2 - forcing minimum jaw open
               }
             }
             return acc;

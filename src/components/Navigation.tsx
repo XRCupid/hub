@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import '../styles/Navigation.css';
+import RisographHeart from './RisographHeart';
 
 interface NavDropdownProps {
   title: string;
@@ -52,8 +53,11 @@ const NavDropdown: React.FC<NavDropdownProps> = ({ title, icon, children }) => {
 const Navigation: React.FC = () => {
   return (
     <nav className="main-navigation">
-      <div className="logo">
-        <NavLink to="/">XRCupid</NavLink>
+      <div className="logo risograph-logo">
+        <NavLink to="/" className="logo-link">
+          <span className="logo-text offset-text">XRCupid</span>
+          <RisographHeart size={24} className="logo-heart" animated />
+        </NavLink>
       </div>
       
       <div className="nav-links-group">
@@ -138,6 +142,7 @@ const Navigation: React.FC = () => {
           <span className="nav-icon">👤</span>
           Customize Avatar
         </NavLink>
+        <RisographHeart />
       </div>
     </nav>
   );

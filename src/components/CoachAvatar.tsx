@@ -18,28 +18,65 @@ const CoachAvatar: React.FC<CoachAvatarProps> = ({
   scale = 1,
   isSpeaking = false
 }) => {
-  console.log(' CoachAvatar RENDER - URL:', avatarUrl);
+  console.log('CoachAvatar RENDER - URL:', avatarUrl, 'isSpeaking:', isSpeaking);
   
   // Load the avatar without cloning (like AnimatedAvatar does)
   const { scene: avatar } = useGLTF(avatarUrl);
   
-  // Set a specific default animation (F_Standing_Idle_Variations_001.glb)
-  const defaultAnimation = '/animations/feminine/idle/F_Standing_Idle_Variations_001.glb';
+  // Choose animation based on speaking state
+  const idleAnimation = '/animations/feminine/idle/F_Standing_Idle_Variations_003.glb';
+  const talkingAnimation = '/animations/feminine/talk/F_Talking_Variations_001.glb';
   
-  // Always load the animation (no conditional hooks)
-  const { animations } = useGLTF(defaultAnimation);
+  // Load both animations
+  const { animations: idleAnimations } = useGLTF(idleAnimation);
+  const { animations: talkingAnimations } = useGLTF(talkingAnimation);
+  
+  // Combine animations
+  const allAnimations = React.useMemo(() => {
+    const anims = [...idleAnimations];
+    // Add talking animations with a prefix to distinguish them
+    talkingAnimations.forEach(anim => {
+      const talkAnim = anim.clone();
+      talkAnim.name = 'talking_' + talkAnim.name;
+      anims.push(talkAnim);
+    });
+    return anims;
+  }, [idleAnimations, talkingAnimations]);
   
   // Set up animations with the avatar directly (not cloned)
-  const { actions } = useAnimations(animations, avatar);
+  const { actions } = useAnimations(allAnimations, avatar);
   
-  // Play the animation when loaded
+  // Play the appropriate animation based on speaking state
   useEffect(() => {
-    if (actions && animations.length > 0) {
-      console.log('Playing animation:', animations[0].name);
-      const action = actions[animations[0].name];
-      if (action) {
-        action.reset().fadeIn(0.2).play();
-        action.setLoop(THREE.LoopRepeat, Infinity);
+    if (actions && allAnimations.length > 0) {
+      // Stop all actions first
+      Object.values(actions).forEach((action) => action?.stop());
+      
+      // Find the appropriate animation
+      let animationToPlay: THREE.AnimationAction | undefined;
+      
+      if (isSpeaking) {
+        // Find a talking animation
+        const talkingAnimName = Object.keys(actions).find(name => name.startsWith('talking_'));
+        if (talkingAnimName) {
+          animationToPlay = actions[talkingAnimName] || undefined;
+          console.log('Playing talking animation:', talkingAnimName);
+        }
+      }
+      
+      // If no talking animation or not speaking, play idle
+      if (!animationToPlay) {
+        const idleAnimName = Object.keys(actions).find(name => !name.startsWith('talking_'));
+        if (idleAnimName) {
+          animationToPlay = actions[idleAnimName] || undefined;
+          console.log('Playing idle animation:', idleAnimName);
+        }
+      }
+      
+      // Play the selected animation
+      if (animationToPlay) {
+        animationToPlay.reset().fadeIn(0.2).play();
+        animationToPlay.setLoop(THREE.LoopRepeat, Infinity);
       }
     }
     
@@ -47,7 +84,7 @@ const CoachAvatar: React.FC<CoachAvatarProps> = ({
       // Stop all actions on cleanup
       Object.values(actions).forEach((action) => action?.stop());
     };
-  }, [actions, animations]);
+  }, [actions, allAnimations, isSpeaking]);
   
   if (!avatar) {
     console.error('Avatar not loaded:', avatarUrl);

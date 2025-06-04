@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { DatingSimulationMaster } from './DatingSimulationMaster';
 import { NPCPersonalities } from '../config/NPCPersonalities';
+import RisographAngel from './RisographAngel';
+import RisographHeart from './RisographHeart';
 import './DatingSimulationHub.css';
 
 export const DatingSimulationHub: React.FC = () => {
@@ -16,7 +18,7 @@ export const DatingSimulationHub: React.FC = () => {
     return (
       <div className="simulation-wrapper">
         <button 
-          className="back-button"
+          className="back-button riso-button secondary"
           onClick={() => {
             setShowSimulation(false);
             setSelectedNPC(null);
@@ -36,90 +38,80 @@ export const DatingSimulationHub: React.FC = () => {
 
   return (
     <div className="dating-hub">
-      <div className="hub-hero">
+      <div className="hub-hero risograph-hero">
+        <div className="angel-decoration-left">
+          <RisographAngel size={120} className="floating-angel" />
+        </div>
         <div className="hero-content">
-          <h1 className="hero-title">
-            Find Your Perfect Match
-            <span className="title-emoji">💕</span>
+          <h1 className="hero-title offset-text">
+            <span className="title-main">Choose Your Date</span>
+            <RisographHeart size={40} className="title-heart" animated />
           </h1>
           <p className="hero-subtitle">
-            Practice your dating skills with AI-powered personalities in a safe, judgment-free environment
+            Practice conversation skills with our unique AI personalities
           </p>
         </div>
-        <div className="hero-decoration"></div>
       </div>
 
-      <div className="matches-section">
-        <div className="section-header">
-          <h2>Your Matches</h2>
-          <p>Choose someone interesting to start a conversation</p>
-        </div>
+      <div className="character-grid">
+        {Object.entries(NPCPersonalities).map(([id, personality]) => {
+          // Generate emoji based on personality type
+          const getEmoji = (id: string) => {
+            if (id.includes('sarah')) return '✨';
+            if (id.includes('emma')) return '🎨';
+            if (id.includes('alex')) return '🏔️';
+            if (id.includes('maya')) return '📚';
+            if (id.includes('marcus')) return '🎭';
+            return '💗';
+          };
 
-        <div className="matches-grid">
-          {Object.entries(NPCPersonalities).map(([id, npc]) => (
-            <div key={id} className="match-card">
-              <div className="match-image">
-                <div className="avatar-gradient" data-initial={npc.name.charAt(0)}>
-                  <span className="avatar-letter">{npc.name.charAt(0)}</span>
-                </div>
-                <div className="online-indicator"></div>
+          return (
+            <div key={id} className="character-card riso-card">
+              <div className="card-decoration">
+                <RisographHeart size={25} />
               </div>
-              
-              <div className="match-info">
-                <h3 className="match-name">{npc.name}, {npc.age}</h3>
-                <p className="match-occupation">{npc.occupation}</p>
-                <p className="match-personality">{npc.personality}</p>
-                
-                <div className="match-interests">
-                  {npc.interests.slice(0, 3).map((interest, i) => (
-                    <span key={i} className="interest-pill">{interest}</span>
+              <div className="character-avatar">
+                <div className="avatar-placeholder">
+                  {getEmoji(id)}
+                </div>
+              </div>
+              <h3 className="character-name">{personality.name}</h3>
+              <p className="character-age">{personality.age} years old</p>
+              <p className="character-occupation">{personality.occupation}</p>
+              <p className="character-bio">{personality.personality}</p>
+              <div className="character-interests">
+                <h4>Interests:</h4>
+                <div className="interest-tags">
+                  {personality.interests.map((interest, index) => (
+                    <span key={index} className="interest-tag">
+                      {interest}
+                    </span>
                   ))}
-                  {npc.interests.length > 3 && (
-                    <span className="interest-more">+{npc.interests.length - 3}</span>
-                  )}
                 </div>
               </div>
-
               <button 
-                className="start-chat-btn"
+                className="chat-button riso-button"
                 onClick={() => startChat(id)}
               >
-                <span className="btn-text">Start Chat</span>
-                <svg className="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M7 9H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M7 13H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
+                Start Chat with {personality.name}
               </button>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      <div className="features-section">
-        <h2>Why Practice Here?</h2>
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">🎭</div>
-            <h3>Real Expression Tracking</h3>
-            <p>Your facial expressions are mirrored in real-time for authentic interactions</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">🗣️</div>
-            <h3>Natural Conversations</h3>
-            <p>Voice-powered AI creates fluid, realistic dialogue experiences</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">📈</div>
-            <h3>Track Your Progress</h3>
-            <p>Get insights on your communication style and areas for improvement</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">🛡️</div>
-            <h3>Safe Environment</h3>
-            <p>Practice without pressure in a judgment-free space</p>
-          </div>
-        </div>
+      <div className="tips-section riso-card">
+        <h2 className="tips-title">
+          <span className="icon">💡</span>
+          Dating Tips
+        </h2>
+        <ul className="tips-list">
+          <li>Be genuine and authentic in your conversations</li>
+          <li>Ask open-ended questions to keep the conversation flowing</li>
+          <li>Listen actively and respond thoughtfully</li>
+          <li>Share your own experiences when appropriate</li>
+          <li>Practice makes perfect - try different approaches!</li>
+        </ul>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import CoachSelection from './CoachSelection';
 import TrainingModuleCard from './TrainingModuleCard';
 import TrackingDashboard from './TrackingDashboard';
 import './TrainingHub.css';
+import { useNavigate } from 'react-router-dom';
 
 // Mock user progress - in production this would come from a database
 const mockUserProgress: UserProgress[] = [];
@@ -18,6 +19,7 @@ const TrainingHub: React.FC<TrainingHubProps> = ({ onStartModule }) => {
   const [selectedModule, setSelectedModule] = useState<TrainingModule | null>(null);
   const [userProgress, setUserProgress] = useState<UserProgress[]>(mockUserProgress);
   const [showDashboard, setShowDashboard] = useState(false);
+  const navigate = useNavigate();
 
   const handleCoachSelect = (coach: CoachProfile) => {
     setSelectedCoach(coach);
@@ -46,6 +48,25 @@ const TrainingHub: React.FC<TrainingHubProps> = ({ onStartModule }) => {
       <div className="hub-header">
         <h1>XRCupid Training Hub</h1>
         <p className="hub-subtitle">Master the art of romance with personalized coaching</p>
+        <button 
+          className="hume-test-btn"
+          onClick={() => navigate('/hume-test')}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            background: 'linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)',
+            border: 'none',
+            color: 'white',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '600',
+            fontSize: '14px'
+          }}
+        >
+          🧪 Hume AI Test
+        </button>
       </div>
 
       {!selectedCoach ? (

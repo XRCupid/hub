@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import PresenceAvatar from './PresenceAvatar';
+import { PresenceAvatar } from './PresenceAvatar';
 import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';
 import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
 import { TrackingData, FacialExpressions } from '../types/tracking';
@@ -92,8 +92,22 @@ const UserPresenceAvatar: React.FC<UserPresenceAvatarProps> = ({
 
     const interval = setInterval(() => {
       const currentExpressions = trackingService.getExpressions();
+      
+      // 🚨 DEBUG: Log jawOpen at the source
+      if (currentExpressions && 'jawOpen' in currentExpressions) {
+        console.log(`🚨 [UserPresenceAvatar] SOURCE jawOpen=${currentExpressions.jawOpen}`);
+      }
+      
       if (currentExpressions) {
-        setExpressions(currentExpressions);
+        setExpressions({
+          ...currentExpressions,
+          cheekSquintLeft: currentExpressions.cheekSquintLeft ?? 0,
+          cheekSquintRight: currentExpressions.cheekSquintRight ?? 0,
+          eyeBlink: currentExpressions.eyeBlink ?? 0,
+          eyebrowRaise: currentExpressions.eyebrowRaise ?? 0,
+          eyeSquint: currentExpressions.eyeSquint ?? 0,
+          // Add any other missing keys from FacialExpressions here if needed
+        });
       }
     }, 50); // Update at 20 FPS
 
@@ -117,9 +131,6 @@ const UserPresenceAvatar: React.FC<UserPresenceAvatarProps> = ({
       position={position}
       scale={scale}
       trackingData={getTrackingData()}
-      isUser={true}
-      emotionalState="neutral"
-      debugMode={false}
     />
   );
 };

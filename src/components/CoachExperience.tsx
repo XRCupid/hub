@@ -7,7 +7,7 @@ import '../styles/CoachExperience.css';
 
 // Preload avatar model
 useGLTF.preload('/avatars/AngelChick.glb');
-useGLTF.preload('/avatars/male_1.glb');
+useGLTF.preload('/avatars/babe.glb');
 useGLTF.preload('/animations/M_Standing_Idle_001.glb');
 useGLTF.preload('/animations/M_Talking_Variations_001.glb');
 

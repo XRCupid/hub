@@ -12,6 +12,12 @@ export interface CoachProfile {
   color: string; // Theme color for UI
   techniques: string[];
   scenarios: string[];
+  voice: {
+    elevenLabsVoiceId?: string;
+    pitch?: number;
+    speed?: number;
+    style?: 'conversational' | 'professional' | 'friendly' | 'flirty';
+  };
 }
 
 export const COACHES: Record<string, CoachProfile> = {
@@ -38,7 +44,13 @@ export const COACHES: Record<string, CoachProfile> = {
       'Formal events and galas',
       'Intellectual conversations',
       'Wine tasting dates'
-    ]
+    ],
+    voice: {
+      elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL', // Sarah - warm, sophisticated
+      pitch: 1.0,
+      speed: 0.95,
+      style: 'professional'
+    }
   },
   
   posie: {
@@ -64,7 +76,13 @@ export const COACHES: Record<string, CoachProfile> = {
       'Walking dates in the park',
       'Non-verbal flirting practice',
       'Creating chemistry through presence'
-    ]
+    ],
+    voice: {
+      elevenLabsVoiceId: 'MF3mGyEYCl7XYWbV9V6O', // Elli - gentle, empathetic
+      pitch: 1.05,
+      speed: 0.9,
+      style: 'friendly'
+    }
   },
   
   rizzo: {
@@ -90,7 +108,13 @@ export const COACHES: Record<string, CoachProfile> = {
       'Making bold first moves',
       'Sexting and digital flirting',
       'Keeping the spark alive'
-    ]
+    ],
+    voice: {
+      elevenLabsVoiceId: 'jsCqWAovK2LkecY7zXl4', // Freya - confident, playful
+      pitch: 0.95,
+      speed: 1.05,
+      style: 'flirty'
+    }
   }
 };
 

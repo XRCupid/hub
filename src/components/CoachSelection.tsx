@@ -1,5 +1,7 @@
 import React from 'react';
 import { COACHES, CoachProfile } from '../config/coachConfig';
+import RisographAngel from './RisographAngel';
+import RisographHeart from './RisographHeart';
 import './CoachSelection.css';
 
 interface CoachSelectionProps {
@@ -11,18 +13,27 @@ const CoachSelection: React.FC<CoachSelectionProps> = ({ onSelectCoach, selected
   const coaches = Object.values(COACHES);
 
   return (
-    <div className="coach-selection-container">
-      <h2 className="coach-selection-title">Choose Your Dating Coach</h2>
-      <p className="coach-selection-subtitle">Each coach specializes in different aspects of romance</p>
+    <div className="coach-selection-container risograph-container">
+      <div className="selection-hero">
+        <RisographAngel size={100} className="hero-angel-small" />
+        <h2 className="coach-selection-title offset-text">
+          <span className="title-main">Choose Your Dating Coach</span>
+          <RisographHeart size={35} className="title-heart" animated />
+        </h2>
+        <p className="coach-selection-subtitle">Each coach specializes in different aspects of romance</p>
+      </div>
       
       <div className="coach-cards">
         {coaches.map((coach) => (
           <div 
             key={coach.id} 
-            className={`coach-card ${selectedCoachId === coach.id ? 'selected' : ''}`}
+            className={`coach-card riso-card ${selectedCoachId === coach.id ? 'selected' : ''}`}
             onClick={() => onSelectCoach(coach)}
             style={{ borderColor: coach.color }}
           >
+            <div className="coach-card-decoration">
+              <RisographHeart size={20} />
+            </div>
             <div className="coach-card-header" style={{ backgroundColor: coach.color }}>
               <h3>{coach.name}</h3>
             </div>
