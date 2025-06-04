@@ -1,7 +1,7 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
-import PresenceAvatar from './PresenceAvatar';
+import { PresenceAvatar } from './PresenceAvatar';
 import { PRELOADED_AVATARS } from '../data/preloadedAvatars';
 
 // Define types locally
@@ -97,16 +97,12 @@ const AnimationTester: React.FC = () => {
           
           <PresenceAvatar
             avatarUrl={selectedAvatar}
-            idleAnimationUrl={selectedIdleAnimation}
-            talkAnimationUrl={selectedTalkAnimation}
             position={[0, 0, 0]}
             scale={1}
-            emotionalState={emotionalState}
-            partnerState={partnerState}
             trackingData={{
-              facialExpressions: null,
-              posture: null,
-              hands: null
+              facialExpressions: undefined,
+              headRotation: undefined,
+              landmarks: null
             }}
           />
           

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './SampleLessons.css';
-import { InteractiveCoachSession } from './InteractiveCoachSession';
+import { ImmersiveCoachCall } from './ImmersiveCoachCall';
 
 interface LessonContent {
   coach: 'grace' | 'posie' | 'rizzo';
@@ -131,10 +132,12 @@ const sampleLessons: Record<string, LessonContent> = {
 };
 
 export const SampleLessons: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedCoach, setSelectedCoach] = useState<'grace' | 'posie' | 'rizzo'>('grace');
   const [currentSegment, setCurrentSegment] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  
+  const [activeSegment, setActiveSegment] = useState<'practice' | null>(null);
+  const [useHumeAI, setUseHumeAI] = useState(false);
+
   const lesson = sampleLessons[selectedCoach];
   const segment = lesson.segments[currentSegment];
 
@@ -161,6 +164,21 @@ export const SampleLessons: React.FC = () => {
       <div className="lessons-header">
         <h1>Experience a Sample Lesson</h1>
         <p>Try a mini coaching session with each of our expert coaches</p>
+        
+        <div className="ai-toggle">
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={useHumeAI}
+              onChange={(e) => setUseHumeAI(e.target.checked)}
+              className="toggle-checkbox"
+            />
+            <span className="toggle-slider"></span>
+            <span className="toggle-text">
+              {useHumeAI ? 'Hume AI (Emotional Intelligence)' : 'Standard AI'}
+            </span>
+          </label>
+        </div>
       </div>
 
       <div className="coach-selector">
@@ -216,9 +234,8 @@ export const SampleLessons: React.FC = () => {
                   <p>{segment.coachDialogue}</p>
                   <button 
                     className="play-audio-btn"
-                    onClick={() => setIsPlaying(!isPlaying)}
                   >
-                    {isPlaying ? '⏸️' : '▶️'} Play Audio
+                    ▶️ Play Audio
                   </button>
                 </div>
               </div>
@@ -233,16 +250,24 @@ export const SampleLessons: React.FC = () => {
                     <strong>Your turn:</strong> {segment.userPrompt}
                   </div>
                 )}
-                <button className="practice-btn">
+                <button 
+                  className="practice-btn"
+                  onClick={() => {
+                    if (useHumeAI) {
+                      navigate(`/hume-coach/${selectedCoach}`);
+                    } else {
+                      setActiveSegment('practice');
+                    }
+                  }}
+                >
                   Start Practice
                 </button>
               </div>
             )}
 
-            {segment.type === 'practice' && (
-              <InteractiveCoachSession 
-                coach={selectedCoach} 
-                lessonContext={`Practicing ${segment.content} - ${segment.exercise?.title}`}
+            {segment.type === 'practice' && activeSegment === 'practice' && !useHumeAI && (
+              <ImmersiveCoachCall 
+                onEnd={() => setActiveSegment(null)}
               />
             )}
           </div>

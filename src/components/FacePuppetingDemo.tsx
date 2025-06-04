@@ -115,8 +115,8 @@ export const FacePuppetingDemo: React.FC = () => {
           
           // Debug log all active expressions
           const activeExpressions = Object.entries(expressions)
-            .filter(([_, value]) => value > 0.01)
-            .map(([key, value]) => `${key}: ${value.toFixed(2)}`);
+            .filter(([_, value]) => (value ?? 0) > 0.01)
+            .map(([key, value]) => `${key}: ${(value ?? 0).toFixed(2)}`);
           
           if (activeExpressions.length > 0) {
             console.log('[FacePuppeting] Active expressions:', activeExpressions.join(', '));
@@ -124,8 +124,8 @@ export const FacePuppetingDemo: React.FC = () => {
           
           // Also log any expressions that are non-zero but below threshold
           const lowExpressions = Object.entries(expressions)
-            .filter(([_, value]) => value > 0 && value <= 0.01)
-            .map(([key, value]) => `${key}: ${value.toFixed(3)}`);
+            .filter(([_, value]) => (value ?? 0) > 0 && (value ?? 0) <= 0.01)
+            .map(([key, value]) => `${key}: ${(value ?? 0).toFixed(3)}`);
           
           if (lowExpressions.length > 0) {
             console.log('[FacePuppeting] Low expressions (below threshold):', lowExpressions.join(', '));
@@ -235,10 +235,10 @@ export const FacePuppetingDemo: React.FC = () => {
               <ambientLight intensity={0.5} />
               <directionalLight position={[5, 5, 5]} intensity={0.5} />
               <PresenceAvatar 
-                isUser={true}
                 trackingData={trackingData}
                 position={[0, -1, 0]}
                 scale={1}
+                avatarUrl="/avatars/coach_grace.glb"
               />
             </Canvas>
           </div>

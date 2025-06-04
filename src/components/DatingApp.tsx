@@ -11,7 +11,7 @@ const NPCS = [
     bio: 'Loves hiking, philosophy, and jazz. Looking for deep conversation.',
     interests: ['Hiking', 'Philosophy', 'Jazz'],
     funFact: 'Once backpacked solo across Patagonia.',
-    avatarPath: '/avatars/male_1.glb'
+    avatarPath: '/avatars/myMan.glb'
   },
   {
     id: 2,
@@ -21,7 +21,7 @@ const NPCS = [
     bio: 'Startup founder, foodie, and aspiring novelist.',
     interests: ['Startups', 'Food', 'Writing'],
     funFact: 'Wrote a novel in 30 days.',
-    avatarPath: '/avatars/female_1.glb'
+    avatarPath: '/avatars/babe.glb'
   },
   {
     id: 3,
@@ -31,7 +31,7 @@ const NPCS = [
     bio: 'Yoga teacher, traveler, and dog lover. Enjoys meaningful connections.',
     interests: ['Yoga', 'Travel', 'Dogs'],
     funFact: 'Has visited over 40 countries.',
-    avatarPath: '/avatars/male_2.glb'
+    avatarPath: '/avatars/fool.glb'
   },
   {
     id: 4,
@@ -41,7 +41,7 @@ const NPCS = [
     bio: 'Creative soul, music lover, and adventure seeker. Life is too short for boring conversations.',
     interests: ['Music', 'Art', 'Adventure'],
     funFact: 'Can play three instruments and loves spontaneous road trips.',
-    avatarPath: '/avatars/AngelChick.glb'
+    avatarPath: '/avatars/myMan.glb'
   }
 ];
 

@@ -30,7 +30,7 @@ const NPC_PROFILES = [
     bio: 'Loves hiking, philosophy, and jazz. Looking for deep conversation.',
     interests: ['Hiking', 'Philosophy', 'Jazz'],
     funFact: 'Once backpacked solo across Patagonia.',
-    avatarPath: '/avatars/male_1.glb'
+    avatarPath: '/avatars/myMan.glb'
   },
   {
     id: 4,

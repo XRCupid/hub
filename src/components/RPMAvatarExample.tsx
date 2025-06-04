@@ -11,14 +11,15 @@ interface AvatarWithLipSyncProps {
 }
 
 // Available avatars from manifest
-const AVAILABLE_AVATARS = [
-  { name: 'Select an avatar...', path: '' },
-  { name: 'AngelChick', path: '/avatars/AngelChick.glb' },
-  { name: 'Male 1', path: '/avatars/male_1.glb' },
-  { name: 'Female 1', path: '/avatars/female_1.glb' },
-  { name: 'Male 2', path: '/avatars/male_2.glb' },
-  { name: 'Female 2', path: '/avatars/female_2.glb' },
-  { name: 'Neutral 1', path: '/avatars/neutral_1.glb' }
+const AVATAR_OPTIONS = [
+  { name: 'Angel Chick', path: '/avatars/AngelChick.glb' },
+  { name: 'Babe', path: '/avatars/babe.glb' },
+  { name: 'Chickie', path: '/avatars/chickie.glb' },
+  { name: 'Fool', path: '/avatars/fool.glb' },
+  { name: 'My Man', path: '/avatars/myMan.glb' },
+  { name: 'Coach Grace', path: '/avatars/coach_grace.glb' },
+  { name: 'Coach Posie', path: '/avatars/coach_posie.glb' },
+  { name: 'Coach Rizzo', path: '/avatars/coach_rizzo.glb' }
 ];
 
 // Component that handles the avatar with all features
@@ -152,7 +153,7 @@ export default function RPMAvatarExample() {
                 fontSize: '14px'
               }}
             >
-              {AVAILABLE_AVATARS.map(avatar => (
+              {AVATAR_OPTIONS.map(avatar => (
                 <option key={avatar.path} value={avatar.path}>
                   {avatar.name}
                 </option>

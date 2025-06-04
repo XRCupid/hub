@@ -57,6 +57,7 @@ class VoiceService {
   private openaiApiKey?: string;
   private elevenLabsApiKey?: string;
   private humeApiKey?: string;
+  private currentAudio: HTMLAudioElement | null = null;
 
   constructor() {
     this.initializeProviders();
@@ -77,11 +78,16 @@ class VoiceService {
     }
     if (this.elevenLabsApiKey) {
       this.providers.add('elevenlabs');
+      // Set ElevenLabs as preferred if available
+      this.preferredProvider = 'elevenlabs';
     }
     this.providers.add('browser');
   }
 
   async speak(text: string, coach: 'grace' | 'posie' | 'rizzo'): Promise<HTMLAudioElement | null> {
+    // Stop any currently playing audio
+    this.stop();
+    
     const provider = this.getAvailableProvider();
     
     switch (provider) {
@@ -91,13 +97,16 @@ class VoiceService {
         return null;
         
       case 'openai':
-        return await this.speakWithOpenAI(text, coach);
+        this.currentAudio = await this.speakWithOpenAI(text, coach);
+        return this.currentAudio;
         
       case 'elevenlabs':
-        return await this.speakWithElevenLabs(text, coach);
+        this.currentAudio = await this.speakWithElevenLabs(text, coach);
+        return this.currentAudio;
         
       case 'browser':
-        return await this.speakWithBrowser(text);
+        this.currentAudio = await this.speakWithBrowser(text);
+        return this.currentAudio;
         
       default:
         console.error('No TTS provider available');
@@ -115,8 +124,8 @@ class VoiceService {
     try {
       const voiceConfig = coachVoices[coach as keyof typeof coachVoices].openai;
       
-      // Add natural pauses and emphasis to text
-      const processedText = this.addNaturalSpeechPatterns(text, coach);
+      // Add natural pauses, emphasis, and emotional inflection to text
+      const processedText = this.addEmotionalSpeechPatterns(text, coach);
       
       const response = await fetch('https://api.openai.com/v1/audio/speech', {
         method: 'POST',
@@ -140,72 +149,62 @@ class VoiceService {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       
-      // Add subtle audio processing
-      if ('AudioContext' in window) {
-        const audioContext = new AudioContext();
-        const source = audioContext.createMediaElementSource(audio);
-        
-        // Add warmth with subtle compression
-        const compressor = audioContext.createDynamicsCompressor();
-        compressor.threshold.setValueAtTime(-50, audioContext.currentTime);
-        compressor.knee.setValueAtTime(40, audioContext.currentTime);
-        compressor.ratio.setValueAtTime(12, audioContext.currentTime);
-        compressor.attack.setValueAtTime(0, audioContext.currentTime);
-        compressor.release.setValueAtTime(0.25, audioContext.currentTime);
-        
-        // Add presence with subtle high-frequency boost
-        const highShelf = audioContext.createBiquadFilter();
-        highShelf.type = 'highshelf';
-        highShelf.frequency.setValueAtTime(3000, audioContext.currentTime);
-        highShelf.gain.setValueAtTime(2, audioContext.currentTime);
-        
-        // Connect the audio graph
-        source.connect(compressor);
-        compressor.connect(highShelf);
-        highShelf.connect(audioContext.destination);
-      }
-      
-      // Play and return the audio element
+      // Don't create a new AudioContext here - let the component handle it
+      // Just play and return the audio element
       await audio.play();
       return audio;
     } catch (error) {
       console.error('OpenAI TTS error:', error);
-      return null;
+      // Fallback to browser TTS
+      return this.speakWithBrowser(text);
     }
   }
   
-  private addNaturalSpeechPatterns(text: string, coach: string): string {
-    // Add natural pauses and emphasis based on coach personality
+  private addEmotionalSpeechPatterns(text: string, coach: string): string {
     let processed = text;
     
+    // Add coach-specific emotional patterns
     switch (coach) {
       case 'grace':
-        // Add elegant pauses and emphasis
+        // Grace: Elegant pauses, warm emphasis
         processed = processed
-          .replace(/\. /g, '... ')  // Longer pauses between sentences
-          .replace(/, /g, '.. ')    // Medium pauses at commas
-          .replace(/darling/gi, '*darling*')  // Emphasis on endearments
-          .replace(/wonderful/gi, '*wonderful*');
+          .replace(/\. /g, '... ')  // Add elegant pauses
+          .replace(/darling/gi, '..darling..')  // Emphasis on endearments
+          .replace(/elegant/gi, '*elegant*')  // Emphasize key words
+          .replace(/charm/gi, '*charm*')
+          .replace(/\?/g, '...?');  // Thoughtful questions
         break;
         
       case 'posie':
-        // Add contemplative pauses
+        // Posie: Contemplative pauses, feeling emphasis
         processed = processed
-          .replace(/\. /g, '.... ')  // Even longer pauses for reflection
-          .replace(/feel/gi, '*feel*')  // Emphasis on feeling words
-          .replace(/breathe/gi, '... *breathe* ...')
-          .replace(/\?/g, '?...');  // Pause after questions
+          .replace(/\. /g, '.... ')  // Longer, contemplative pauses
+          .replace(/feel/gi, '...*feel*...')  // Emphasis on feeling words
+          .replace(/body/gi, '*body*')
+          .replace(/energy/gi, '...*energy*...')
+          .replace(/notice/gi, '...notice...')
+          .replace(/\?/g, '....?');  // Very thoughtful questions
         break;
         
       case 'rizzo':
-        // Add energetic emphasis
+        // Rizzo: Energetic, playful emphasis
         processed = processed
           .replace(/!/g, '!!')  // Extra excitement
-          .replace(/hot stuff/gi, '*hot stuff*')
-          .replace(/amazing/gi, '*AMAZING*')
+          .replace(/honey/gi, 'HONEY')  // Bold emphasis
+          .replace(/sexy/gi, '*SEXY*')
+          .replace(/fire/gi, '🔥FIRE🔥')
+          .replace(/confidence/gi, '*CONFIDENCE*')
           .replace(/\. /g, '! ');  // Turn periods into excitement
         break;
     }
+    
+    // Add natural breathing pauses for all coaches
+    processed = processed
+      .replace(/,/g, ', ')  // Small pause after commas
+      .replace(/:/g, ': ... ')  // Longer pause after colons
+      .replace(/—/g, ' ... ')  // Pause for em dashes
+      .replace(/\(/g, ' ... (')  // Pause before parentheses
+      .replace(/\)/g, ') ... ');  // Pause after parentheses
     
     return processed;
   }
@@ -221,7 +220,7 @@ class VoiceService {
       const voiceConfig = coachVoices[coach as keyof typeof coachVoices].elevenlabs;
       
       // Add natural speech patterns
-      const processedText = this.addNaturalSpeechPatterns(text, coach);
+      const processedText = this.addEmotionalSpeechPatterns(text, coach);
       
       const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceConfig.voiceId}`, {
         method: 'POST',
@@ -296,6 +295,14 @@ class VoiceService {
       
       window.speechSynthesis.speak(utterance);
     });
+  }
+
+  stop() {
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio.currentTime = 0;
+      this.currentAudio = null;
+    }
   }
 
   setPreferredProvider(provider: VoiceProvider | null): void {

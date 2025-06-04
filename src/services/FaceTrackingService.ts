@@ -149,6 +149,11 @@ export class FaceTrackingService {
       }
     } catch (error) {
       console.error('Face tracking error:', error);
+      console.error('Error details:', {
+        message: (error as any).message,
+        stack: (error as any).stack,
+        name: (error as any).name
+      });
     }
 
     // Continue tracking
