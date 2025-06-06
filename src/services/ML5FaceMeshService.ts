@@ -47,12 +47,23 @@ export class ML5FaceMeshService implements IFaceTrackingService {
         throw new Error('ML5 or facemesh not available after waiting');
       }
       console.log('[ML5FaceMesh] ML5 is available, creating facemesh model...');
+      if (typeof ml5.facemesh !== 'function') {
+        console.error('[ML5FaceMesh] ml5.facemesh is not a function!');
+        throw new Error('ml5.facemesh is not a function!');
+      }
       return new Promise<void>((resolve, reject) => {
         try {
           this.facemesh = ml5.facemesh(this.modelConfig, () => {
+            console.log('[ML5FaceMesh] ml5.facemesh LOAD CALLBACK invoked.');
+            if (!this.facemesh) {
+              console.error('[ML5FaceMesh] CRITICAL: this.facemesh is null INSIDE load callback. This should not happen.');
+              reject(new Error('Facemesh model is null or undefined after load callback.'));
+              return;
+            }
             console.log('[ML5FaceMesh] Model loaded successfully!');
             resolve();
           });
+          console.log('[ML5FaceMesh] Value of this.facemesh IMMEDIATELY AFTER ml5.facemesh() call:', this.facemesh);
           if (this.facemesh && typeof this.facemesh.on === 'function') {
             this.facemesh.on('error', (error: any) => {
               console.error('[ML5FaceMesh] Model error:', error);
@@ -81,8 +92,14 @@ export class ML5FaceMeshService implements IFaceTrackingService {
     this.videoElement = videoElement;
     this.isTracking = true;
     this.isRunning = true; 
-    console.log('[ML5FaceMesh] Video element ready, starting detection loop...');
-    this.detectionLoop();
+    console.log('[ML5FaceMesh] Video element ready, queueing detection loop start...');
+    // Add a slight delay before the first detectionLoop call to let the model "settle"
+    setTimeout(() => {
+        if (this.isRunning && this.isTracking && this.facemesh && this.videoElement) { // Re-check conditions
+            console.log('[ML5FaceMesh] Initiating detection loop after delay.');
+            this.detectionLoop();
+        }
+    }, 100); // 100ms delay, can be adjusted
   }
 
   private async detectionLoop(): Promise<void> {
