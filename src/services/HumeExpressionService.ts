@@ -251,8 +251,9 @@ export class HumeExpressionService {
 
   private async pollForResults(jobId: string): Promise<HumePrediction[] | null> {
     // Simple polling - in production use webhooks
-    for (let i = 0; i < 10; i++) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+    // Increased polling duration: 20 attempts, 500ms interval (10 seconds total)
+    for (let i = 0; i < 20; i++) {
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       try {
         const response = await fetch(`https://api.hume.ai/v0/batch/jobs/${jobId}/predictions`, {

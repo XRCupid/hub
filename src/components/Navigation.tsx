@@ -119,6 +119,9 @@ const Navigation: React.FC = () => {
             <NavLink to="/simple-face-tracking" className={({ isActive }) => isActive ? "dropdown-link active" : "dropdown-link"}>
               Face Tracking Demo
             </NavLink>
+            <NavLink to="/test-convai" className={({ isActive }) => isActive ? "dropdown-link active" : "dropdown-link"}>
+              Convai Test
+            </NavLink>
             <hr className="dropdown-divider" />
             <button 
               className="dropdown-link"

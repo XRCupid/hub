@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
 import { PresenceAvatar } from './PresenceAvatar';
-import { UserAvatarPiP } from './UserAvatarPiP';
+import { SafeVisualEffects } from './SafeVisualEffects';
+import { DateEnvironment } from './DateEnvironments';
 import { NPCPersonalities } from '../config/NPCPersonalities';
 import humeVoiceService, { EmotionalState } from '../services/humeVoiceService';
+import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
 import './PracticeDate.css';
+import { CoachLesson, PracticeScenario } from '../types/DatingTypes';
 
 interface ConversationPrompt {
   id: string;
@@ -43,10 +46,15 @@ const PracticeDate: React.FC = () => {
   const [showPiP, setShowPiP] = useState(true);
   const [audioData, setAudioData] = useState<Uint8Array>(new Uint8Array(128));
   const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string>('');
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [trackingData, setTrackingData] = useState<any>(null);
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const ml5FaceMeshServiceRef = useRef<ML5FaceMeshService | null>(null);
   const animationFrameRef = useRef<number>();
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const npc = NPCPersonalities[npcId || ''];
 
@@ -55,16 +63,137 @@ const PracticeDate: React.FC = () => {
       navigate('/training-hub');
       return;
     }
+    
+    // Initialize face tracking
+    const initializeFaceTracking = async () => {
+      try {
+        ml5FaceMeshServiceRef.current = new ML5FaceMeshService();
+        await ml5FaceMeshServiceRef.current.initialize();
+        
+        // Create video element for face tracking
+        const videoElement = document.createElement('video');
+        videoElement.width = 640;
+        videoElement.height = 480;
+        videoElement.autoplay = true;
+        videoElement.playsInline = true;
+        videoElement.muted = true;
+        videoElement.style.position = 'absolute';
+        videoElement.style.top = '-9999px';
+        videoElement.style.left = '-9999px';
+        document.body.appendChild(videoElement);
+        
+        // Store video reference
+        videoRef.current = videoElement;
+        
+        // Get webcam stream
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        videoElement.srcObject = stream;
+        
+        // Wait for video to be ready
+        await new Promise((resolve) => {
+          videoElement.onloadedmetadata = () => resolve(null);
+          videoElement.oncanplay = () => {
+            videoElement.play()
+              .then(() => {
+                console.log('[PracticeDate] video.play() called successfully.');
+              })
+              .catch(playError => {
+                console.error('[PracticeDate] Error calling video.play():', playError);
+              });
+          };
+        });
+        
+        // Now start tracking with the ready video element
+        ml5FaceMeshServiceRef.current.startTracking(videoElement);
+        
+        // Set up tracking data updates
+        const updateTracking = () => {
+          if (ml5FaceMeshServiceRef.current) {
+            const facialExpressions = ml5FaceMeshServiceRef.current.getExpressions();
+            const headRotation = ml5FaceMeshServiceRef.current.getHeadRotation();
+            const landmarks = ml5FaceMeshServiceRef.current.getLandmarks();
+            
+            if (facialExpressions || headRotation || landmarks) {
+              const data = {
+                facialExpressions: facialExpressions || {},
+                headRotation: headRotation || {},
+                landmarks: landmarks || [],
+                source: 'ml5'
+              };
+              setTrackingData(data);
+            }
+          }
+          animationFrameRef.current = requestAnimationFrame(updateTracking);
+        };
+        updateTracking();
+      } catch (error) {
+        console.error('[PracticeDate] Failed to initialize face tracking:', error);
+      }
+    };
+    
+    initializeFaceTracking();
+    
+    // Initialize Hume Voice Service
+    const initializeHume = async () => {
+      try {
+        // Set up callbacks before connecting
+        humeVoiceService.onEmotion((emotions) => {
+          setEmotionalState(emotions);
+          updateDateScore(emotions);
+        });
+        
+        humeVoiceService.onAudio(async (audioBlob) => {
+          await playAudioWithAnalysis(audioBlob);
+        });
+        
+        humeVoiceService.onMessage((message) => {
+          setConversation(prev => [...prev, { role: 'NPC', message }]);
+        });
+        
+        // Connect to Hume
+        await humeVoiceService.connect();
+        
+        setIsConnected(true);
+        
+        // Send NPC personality context
+        const npcContext = {
+          type: 'npc_date',
+          npc: npc.name,
+          systemPrompt: npc.systemPrompt,
+          personality: npc.personality,
+          conversationStyle: npc.conversationStyle,
+          interests: npc.interests
+        };
+        
+        humeVoiceService.sendMessage(JSON.stringify(npcContext));
+        
+        // Initial greeting from NPC
+        const greeting = `Hi! I'm ${npc.name}. ${getRandomGreeting()}`;
+        setConversation([{ role: 'NPC', message: greeting }]);
+        
+      } catch (error) {
+        console.error('Failed to connect to Hume:', error);
+      }
+    };
 
-    initializeAudioContext();
-    connectToHume();
+    initializeHume();
 
     return () => {
+      if (ml5FaceMeshServiceRef.current) {
+        ml5FaceMeshServiceRef.current.stopTracking();
+      }
+      humeVoiceService.disconnect();
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      humeVoiceService.disconnect();
       audioContextRef.current?.close();
+      if (videoRef.current) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        if (stream) {
+          stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+        }
+        document.body.removeChild(videoRef.current);
+      }
     };
   }, [npc]);
 
@@ -74,48 +203,6 @@ const PracticeDate: React.FC = () => {
     analyserRef.current = audioContextRef.current.createAnalyser();
     analyserRef.current.fftSize = 256;
     analyserRef.current.smoothingTimeConstant = 0.8;
-  };
-
-  const connectToHume = async () => {
-    try {
-      // Set up callbacks before connecting
-      humeVoiceService.onEmotion((emotions) => {
-        setEmotionalState(emotions);
-        updateDateScore(emotions);
-      });
-      
-      humeVoiceService.onAudio(async (audioBlob) => {
-        await playAudioWithAnalysis(audioBlob);
-      });
-      
-      humeVoiceService.onMessage((message) => {
-        setConversation(prev => [...prev, { role: 'NPC', message }]);
-      });
-      
-      // Connect to Hume
-      await humeVoiceService.connect();
-      
-      setIsConnected(true);
-      
-      // Send NPC personality context
-      const npcContext = {
-        type: 'npc_date',
-        npc: npc.name,
-        systemPrompt: npc.systemPrompt,
-        personality: npc.personality,
-        conversationStyle: npc.conversationStyle,
-        interests: npc.interests
-      };
-      
-      humeVoiceService.sendMessage(JSON.stringify(npcContext));
-      
-      // Initial greeting from NPC
-      const greeting = `Hi! I'm ${npc.name}. ${getRandomGreeting()}`;
-      setConversation([{ role: 'NPC', message: greeting }]);
-      
-    } catch (error) {
-      console.error('Failed to connect to Hume:', error);
-    }
   };
 
   const getRandomGreeting = () => {
@@ -276,24 +363,17 @@ const PracticeDate: React.FC = () => {
 
       <div className="date-content">
         <div className="date-scene">
-          <Canvas className="date-canvas">
-            <PerspectiveCamera makeDefault position={[0, 1.6, 3]} fov={45} />
-            <ambientLight intensity={0.6} />
-            <directionalLight position={[5, 5, 5]} intensity={0.4} castShadow />
+          <Canvas className="date-canvas" shadows>
+            <PerspectiveCamera makeDefault position={[0, 1.5, 1.5]} fov={35} />
             
-            {/* Date environment */}
-            <group>
-              <mesh position={[0, -0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[10, 10]} />
-                <meshStandardMaterial color="#2a2a3a" />
-              </mesh>
-            </group>
+            {/* Dynamic Date Environment */}
+            <DateEnvironment environment={getSceneEnvironment()} />
             
             {/* NPC Avatar */}
             <PresenceAvatar
-              avatarUrl="/avatars/default-date-avatar.glb"
+              avatarUrl="/avatars/fool.glb"
               position={[0, 0, 0]}
-              scale={1.1}
+              scale={1.0}
               trackingData={{
                 position: { x: 0, y: 0, z: 0 },
                 rotation: { pitch: 0, yaw: 0, roll: 0 },
@@ -435,11 +515,21 @@ const PracticeDate: React.FC = () => {
       </div>
 
       {showPiP && (
-        <UserAvatarPiP
-          position="bottom-left"
-          size="small"
-          onClose={() => setShowPiP(false)}
-        />
+        <div className="pip-avatar">
+          <Canvas camera={{ position: [0, 0, 1.5], fov: 35 }}>
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[0, 1, 2]} intensity={1.2} />
+            <Suspense fallback={null}>
+              <PresenceAvatar
+                avatarUrl="/avatars/babe.glb"
+                trackingData={trackingData || undefined}
+                position={[0, -1.75, 0]}
+                scale={1.2}
+              />
+            </Suspense>
+            <SafeVisualEffects style="subtle" enabled={true} />
+          </Canvas>
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DatingSimulationMaster } from '../components/DatingSimulationMaster';
 import { NPCPersonalities } from '../config/NPCPersonalities';
+import DatingCoachIntegration from '../components/DatingCoachIntegration';
 import './DatingCoachDemo.css';
 
 export const DatingCoachDemo: React.FC = () => {
@@ -9,6 +10,7 @@ export const DatingCoachDemo: React.FC = () => {
   const [mirrorMode, setMirrorMode] = useState(true);
   const [showMetrics, setShowMetrics] = useState(true);
   const [showDemo, setShowDemo] = useState(false);
+  const [demoMode, setDemoMode] = useState<'simulation' | 'integrated'>('integrated');
 
   const scenarios = [
     { id: 'first-date', name: 'First Date', description: 'Practice making a great first impression' },
@@ -27,85 +29,105 @@ export const DatingCoachDemo: React.FC = () => {
 
           <div className="feature-highlights">
             <div className="feature-card">
-              <div className="feature-icon">🎭</div>
-              <h3>Avatar Expression Mirroring</h3>
-              <p>See yourself as an avatar with real-time facial expression mapping</p>
+              <div className="feature-icon">📱</div>
+              <h3>Dating App Integration</h3>
+              <p>Swipe, match, and chat with AI-powered personalities</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">📊</div>
-              <h3>Unified Scoring System</h3>
-              <p>Track posture, eye contact, gestures, expressions, and conversation skills</p>
-            </div>
-            <div className="feature-card">
-              <div className="feature-icon">🤖</div>
-              <h3>AI-Powered NPCs</h3>
-              <p>Practice with diverse personalities powered by Hume AI</p>
+              <div className="feature-icon">💬</div>
+              <h3>Texting Analysis</h3>
+              <p>Real-time feedback on your messaging skills</p>
             </div>
             <div className="feature-card">
               <div className="feature-icon">🎯</div>
-              <h3>Smart Tracking</h3>
-              <p>Intelligent tracking orchestration for optimal performance</p>
+              <h3>Personalized Coaching</h3>
+              <p>Lessons tailored to your specific performance metrics</p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon">📊</div>
+              <h3>Progress Tracking</h3>
+              <p>Monitor your improvement across all dating skills</p>
             </div>
           </div>
 
-          <div className="setup-options">
-            <div className="option-group">
-              <h3>Choose Your Date</h3>
-              <div className="npc-selector">
-                {Object.entries(NPCPersonalities).map(([id, npc]) => (
-                  <div 
-                    key={id}
-                    className={`npc-option ${selectedNPC === id ? 'selected' : ''}`}
-                    onClick={() => setSelectedNPC(id)}
-                  >
-                    <h4>{npc.name}, {npc.age}</h4>
-                    <p>{npc.occupation}</p>
-                    <div className="personality-traits">
-                      <span>{npc.personality}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div className="demo-mode-selector">
+            <h3>Choose Demo Mode</h3>
+            <div className="mode-options">
+              <button 
+                className={`mode-btn ${demoMode === 'integrated' ? 'active' : ''}`}
+                onClick={() => setDemoMode('integrated')}
+              >
+                <span className="mode-icon">🎯</span>
+                <span className="mode-title">Full Dating Experience</span>
+                <span className="mode-desc">Swipe → Match → Text → Date → Coach</span>
+              </button>
+              <button 
+                className={`mode-btn ${demoMode === 'simulation' ? 'active' : ''}`}
+                onClick={() => setDemoMode('simulation')}
+              >
+                <span className="mode-icon">🎭</span>
+                <span className="mode-title">Direct Simulation</span>
+                <span className="mode-desc">Jump straight into a date simulation</span>
+              </button>
             </div>
+          </div>
 
-            <div className="option-group">
-              <h3>Select Scenario</h3>
-              <div className="scenario-selector">
-                {scenarios.map((s) => (
-                  <div 
-                    key={s.id}
-                    className={`scenario-option ${scenario === s.id ? 'selected' : ''}`}
-                    onClick={() => setScenario(s.id as typeof scenario)}
-                  >
-                    <h4>{s.name}</h4>
-                    <p>{s.description}</p>
+          <div className="option-group">
+            <h3>Choose Your Date</h3>
+            <div className="npc-selector">
+              {Object.entries(NPCPersonalities).map(([id, npc]) => (
+                <div 
+                  key={id}
+                  className={`npc-option ${selectedNPC === id ? 'selected' : ''}`}
+                  onClick={() => setSelectedNPC(id)}
+                >
+                  <h4>{npc.name}, {npc.age}</h4>
+                  <p>{npc.occupation}</p>
+                  <div className="personality-traits">
+                    <span>{npc.personality}</span>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
+          </div>
 
-            <div className="option-group">
-              <h3>Settings</h3>
-              <div className="settings-options">
-                <label className="toggle-option">
-                  <input 
-                    type="checkbox" 
-                    checked={mirrorMode} 
-                    onChange={(e) => setMirrorMode(e.target.checked)}
-                  />
-                  <span>Avatar Mirror Mode</span>
-                  <small>See yourself as an avatar instead of video</small>
-                </label>
-                <label className="toggle-option">
-                  <input 
-                    type="checkbox" 
-                    checked={showMetrics} 
-                    onChange={(e) => setShowMetrics(e.target.checked)}
-                  />
-                  <span>Show Real-time Metrics</span>
-                  <small>Display performance scores during the date</small>
-                </label>
-              </div>
+          <div className="option-group">
+            <h3>Select Scenario</h3>
+            <div className="scenario-selector">
+              {scenarios.map((s) => (
+                <div 
+                  key={s.id}
+                  className={`scenario-option ${scenario === s.id ? 'selected' : ''}`}
+                  onClick={() => setScenario(s.id as typeof scenario)}
+                >
+                  <h4>{s.name}</h4>
+                  <p>{s.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="option-group">
+            <h3>Settings</h3>
+            <div className="settings-options">
+              <label className="toggle-option">
+                <input 
+                  type="checkbox" 
+                  checked={mirrorMode} 
+                  onChange={(e) => setMirrorMode(e.target.checked)}
+                />
+                <span>Avatar Mirror Mode</span>
+                <small>See yourself as an avatar instead of video</small>
+              </label>
+              <label className="toggle-option">
+                <input 
+                  type="checkbox" 
+                  checked={showMetrics} 
+                  onChange={(e) => setShowMetrics(e.target.checked)}
+                />
+                <span>Show Real-time Metrics</span>
+                <small>Display performance scores during the date</small>
+              </label>
             </div>
           </div>
 
@@ -124,10 +146,15 @@ export const DatingCoachDemo: React.FC = () => {
           >
             ← Back to Setup
           </button>
-          
-          <DatingSimulationMaster
-            onBack={() => setShowDemo(false)}
-          />
+          {demoMode === 'integrated' ? (
+            <DatingCoachIntegration
+              onBack={() => setShowDemo(false)}
+            />
+          ) : (
+            <DatingSimulationMaster
+              onBack={() => setShowDemo(false)}
+            />
+          )}
         </div>
       )}
     </div>

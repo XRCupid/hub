@@ -52,7 +52,7 @@ export interface HumeCoachConfiguration {
 
 export const HUME_COACH_CONFIGS: Record<string, HumeCoachConfiguration> = {
   grace: {
-    configId: 'grace-coach-config-v1',
+    configId: '3910aba0-b518-440a-a4a2-0ad1772aec57', // Grace's new custom EVI config ID
     coachId: 'grace',
     name: 'Grace',
     voice: {
@@ -138,7 +138,7 @@ Important: Keep responses under 3 sentences unless specifically asked to elabora
   },
 
   posie: {
-    configId: 'posie-coach-config-v1',
+    configId: 'b939d339-15bc-44ab-84d8-b614a539724f',
     coachId: 'posie',
     name: 'Posie',
     voice: {

@@ -10,7 +10,10 @@ interface PresenceAvatarProps {
   avatarUrl: string;
   position?: [number, number, number];
   scale?: number; // Overall scale for the group
-  trackingData?: TrackingData;
+  trackingData?: TrackingData; // For user's face tracking (ML5)
+  animationName?: string; // e.g., 'idle', 'talking'
+  emotionalBlendshapes?: Record<string, number>; // For Hume EVI prosody
+  audioData?: Uint8Array; // For lip-sync from Hume EVI audio
 }
 
 // Hume to RPM blendshape mapping with amplification factors
@@ -108,28 +111,21 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = ({
   avatarUrl,
   position = [0, 0, 0],
   scale = 1, // Default group scale to 1, primitive scale is separate
-  trackingData
+  trackingData,
+  animationName = 'idle', // Default to idle
+  emotionalBlendshapes,
+  audioData
 }) => {
   console.log('[PresenceAvatar] Component starting with:', { avatarUrl, trackingData: !!trackingData });
   
   // All hooks must be called unconditionally at the top
   const groupRef = useRef<THREE.Group>(null); // Keep a ref for the returned group
-  const { scene } = useGLTF(avatarUrl);
   const modelRootRef = useRef<THREE.Object3D | null>(null);
-  
-  // Load basic idle animation - most subtle option
-  const animationUrl = '/animations/idle.glb';
-  const { animations: idleAnimations } = useGLTF(animationUrl);
-  
-  // All the refs
   const meshWithMorphTargets = useRef<THREE.Mesh | null>(null);
   const headBone = useRef<THREE.Bone | null>(null);
   const neckBone = useRef<THREE.Bone | null>(null);
-
   const jawBone = useRef<THREE.Bone | null>(null);
   const eyeBone = useRef<THREE.Bone | null>(null);
-
-  // Initial pose references
   const initialHeadLocalQuaternionRef = useRef<THREE.Quaternion | null>(null);
   const initialNeckLocalQuaternionRef = useRef<THREE.Quaternion | null>(null);
   const trackingDataRef = useRef<TrackingData | null>(null);
@@ -137,36 +133,131 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = ({
   const lastDebugLogRef = useRef<number>(0);
   const morphTargetMapping = useRef<{ logged?: boolean }>({});
   
+  const { scene } = useGLTF(avatarUrl);
+  
   // Clone the scene using useMemo to prevent re-cloning on every render
   const clonedScene = useMemo(() => {
     if (!scene) return null;
     const cloned = SkeletonUtils.clone(scene);
     return cloned;
   }, [scene]);
+
+  // Load basic idle animation - most subtle option
+  const idleAnimationUrl = '/animations/feminine/idle/F_Standing_Idle_001.glb';
+  const { animations: idleAnimations } = useGLTF(idleAnimationUrl);
+  useGLTF.preload(idleAnimationUrl);
+
+  // Load talking animations
+  const talkingAnimationUrls = [
+    '/animations/feminine/talk/F_Talking_Variations_001.glb',
+    '/animations/feminine/talk/F_Talking_Variations_002.glb',
+    '/animations/feminine/talk/F_Talking_Variations_003.glb',
+    '/animations/feminine/talk/F_Talking_Variations_004.glb',
+    '/animations/feminine/talk/F_Talking_Variations_005.glb',
+    '/animations/feminine/talk/F_Talking_Variations_006.glb'
+  ];
   
-  // Setup animation mixer and actions - apply to cloned scene
-  const { actions, mixer } = useAnimations(idleAnimations, clonedScene || groupRef);
+  // Load all talking animations separately
+  const { animations: talking1 } = useGLTF(talkingAnimationUrls[0]);
+  const { animations: talking2 } = useGLTF(talkingAnimationUrls[1]);
+  const { animations: talking3 } = useGLTF(talkingAnimationUrls[2]);
+  const { animations: talking4 } = useGLTF(talkingAnimationUrls[3]);
+  const { animations: talking5 } = useGLTF(talkingAnimationUrls[4]);
+  const { animations: talking6 } = useGLTF(talkingAnimationUrls[5]);
   
-  // Play idle animation when actions are available
+  // Combine all talking animations
+  const talkingAnimations = useMemo(() => {
+    return [...talking1, ...talking2, ...talking3, ...talking4, ...talking5, ...talking6];
+  }, [talking1, talking2, talking3, talking4, talking5, talking6]);
+  
+  // Preload all animations
+  talkingAnimationUrls.forEach(url => useGLTF.preload(url));
+  
+  // Combine all animations. Ensure names are unique if they aren't already.
+  const allAnimations = useMemo(() => {
+    // It's good practice to ensure animation names are unique if loaded from different files and might clash.
+    // For now, assuming 'idle' and 'F_Talking_Variations_001' are distinct enough or come from files with unique animation names.
+    return [...idleAnimations, ...talkingAnimations];
+  }, [idleAnimations, talkingAnimations]);
+  const { actions, mixer } = useAnimations(allAnimations, clonedScene || groupRef);
+  
+  const activeActionNameRef = useRef<string | null>(null);
+  const lastTalkingAnimationRef = useRef<string | null>(null);
+
+  // Play animations based on animationName prop
   useEffect(() => {
-    if (actions && Object.keys(actions).length > 0) {
-      console.log('[PresenceAvatar] Available animations:', Object.keys(actions));
-      const firstAction = Object.values(actions)[0];
-      if (firstAction) {
-        // Reset and play the animation
-        firstAction.reset();
-        firstAction.setLoop(THREE.LoopRepeat, Infinity);
-        // Set lower weight to allow head rotation to override
-        firstAction.setEffectiveWeight(0.8);
-        // Slow down the animation for more subtle breathing
-        firstAction.setEffectiveTimeScale(0.5); // Half speed
-        firstAction.play();
-        console.log('[PresenceAvatar] Playing basic idle animation - action started at 0.5x speed');
-      }
-    } else {
-      console.log('[PresenceAvatar] No animation actions available');
+    if (!actions || Object.keys(actions).length === 0) {
+      console.log('[PresenceAvatar] No animation actions available to play.');
+      return;
     }
-  }, [actions]);
+
+    console.log('[PresenceAvatar] Available animation actions:', Object.keys(actions));
+
+    // Find all talking animations
+    const talkingAnimations = Object.keys(actions).filter(name => 
+      name.toLowerCase().includes('talk') || 
+      name.toLowerCase().includes('speak') ||
+      name.toLowerCase().includes('f_talking')
+    );
+    
+    if (talkingAnimations.length > 0) {
+      console.log('[PresenceAvatar] Available talking animations:', talkingAnimations);
+    }
+
+    let targetActionName = '';
+    if (animationName === 'talking' && talkingAnimations.length > 0) {
+      // If we have multiple talking animations, pick one randomly (but not the same as last time)
+      if (talkingAnimations.length > 1) {
+        let availableAnimations = talkingAnimations.filter(anim => anim !== lastTalkingAnimationRef.current);
+        if (availableAnimations.length === 0) {
+          availableAnimations = talkingAnimations; // Reset if we've filtered everything out
+        }
+        targetActionName = availableAnimations[Math.floor(Math.random() * availableAnimations.length)];
+        lastTalkingAnimationRef.current = targetActionName;
+      } else {
+        targetActionName = talkingAnimations[0];
+      }
+    } else if (actions['idle']) { // Default to 'idle' if available
+      targetActionName = 'idle';
+    } else if (Object.keys(actions).length > 0) { // Fallback to the first available animation if 'idle' is not found
+        targetActionName = Object.keys(actions)[0];
+        console.warn(`[PresenceAvatar] 'idle' animation not found, falling back to ${targetActionName}`);
+    }
+
+    if (!targetActionName || !actions[targetActionName]) {
+        console.error(`[PresenceAvatar] Target animation '${targetActionName}' not found in actions.`);
+        return;
+    }
+
+    const newAction = actions[targetActionName];
+    const oldActionName = activeActionNameRef.current;
+    const oldAction = oldActionName ? actions[oldActionName] : null;
+
+    if (!newAction) {
+      console.error(`[PresenceAvatar] newAction '${targetActionName}' is unexpectedly null or undefined.`);
+      return;
+    }
+
+    if (newAction === oldAction && newAction?.isRunning()) {
+        return; // Already playing the target animation
+    }
+
+    // Fade out old action if it exists and is different
+    if (oldAction && oldAction !== newAction) {
+      oldAction.fadeOut(0.3);
+    }
+
+    // Configure and play new action
+    newAction.reset();
+    newAction.setLoop(THREE.LoopRepeat, Infinity);
+    newAction.setEffectiveWeight(1.0); // Full weight for primary action
+    newAction.setEffectiveTimeScale(animationName === 'talking' ? 0.4 : 0.3); // Talking slowed to 0.4, idle at 0.3
+    newAction.fadeIn(0.3).play();
+
+    activeActionNameRef.current = targetActionName;
+    console.log(`[PresenceAvatar] Switched animation to: ${targetActionName}`);
+
+  }, [actions, animationName]);
 
   // useEffect for model setup
   useEffect(() => {
@@ -375,91 +466,99 @@ if (frameCountRef.current % 60 === 0) { // Every second at 60fps
 }
 
 const mesh = meshWithMorphTargets.current;
-const expressions = tracking?.facialExpressions ?? tracking?.expressions;
+    // Initialize target morph values for this frame
+    const frameMorphTargetValues: Record<string, number> = {};
+    const expressionLerpFactor = 0.3; // Smoothing factor
 
-// Apply facial expressions with more reasonable amplification
-if (mesh.morphTargetDictionary && Object.keys(mesh.morphTargetDictionary).length > 0 && expressions) {
-  const expressionLerpFactor = 0.3; // Smoothing factor for expression changes
-  const frameMorphTargetValues: Record<string, number> = {}; // Stores target values for current frame
-
-  // Calculate target values for each RPM blendshape based on ML5 expressions and mapping
-  Object.entries(expressions).forEach(([ml5Key, rawValue]) => {
-    if (typeof rawValue !== 'number') {
-      // console.warn(`[PresenceAvatar] Non-numeric rawValue for ${ml5Key}:`, rawValue);
-      return;
-    }
-
-        const mapping = ML5_TO_RPM_MAPPING[ml5Key as keyof typeof ML5_TO_RPM_MAPPING];
+    // Determine the source of expressions: Hume EVI or ML5 tracking data
+    if (emotionalBlendshapes && Object.keys(emotionalBlendshapes).length > 0) {
+      // Priority 1: Hume EVI emotionalBlendshapes
+      Object.entries(emotionalBlendshapes).forEach(([humeKey, rawValue]) => {
+        if (typeof rawValue !== 'number') return;
+        const mapping = HUME_TO_RPM_MAPPING[humeKey as keyof typeof HUME_TO_RPM_MAPPING];
         if (mapping) {
           const amplification = mapping.amplify ?? 1.0;
-          const numericRawValue = Number(rawValue); // Ensure it's a number
-          const amplifiedValue = MathUtils.clamp(numericRawValue * amplification, 0, 1);
-
-          mapping.targets.forEach(rpmTargetName => {
-            // If multiple ML5 keys map to the same RPM target, take the max value
-            frameMorphTargetValues[rpmTargetName] = Math.max(frameMorphTargetValues[rpmTargetName] || 0, amplifiedValue);
-            
-            if (mapping.debug && frameCountRef.current % 120 === 0) { // Log less frequently
-               console.log(`[PresenceAvatar] [${ml5Key} -> ${rpmTargetName}] Raw: ${numericRawValue.toFixed(3)}, Amp: ${amplification.toFixed(1)}, TargetVal: ${amplifiedValue.toFixed(3)}`);
-            }
-          });
+          const amplifiedValue = MathUtils.clamp(Number(rawValue) * amplification, 0, 1);
+          frameMorphTargetValues[mapping.target] = Math.max(frameMorphTargetValues[mapping.target] || 0, amplifiedValue);
         }
-      }); // End of Object.entries(expressions).forEach
-
-
-      // Apply the calculated values to the actual morph targets with smoothing
-      if (mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
-        // Apply values for expressions active in the current frame
-        Object.entries(frameMorphTargetValues).forEach(([rpmTargetName, targetValue]) => {
-            const morphIndex = mesh.morphTargetDictionary![rpmTargetName];
-            if (morphIndex !== undefined) {
-                mesh.morphTargetInfluences![morphIndex] = lerp(
-                    mesh.morphTargetInfluences![morphIndex],
-                    targetValue,
-                    expressionLerpFactor 
-                );
-            }
-        });
-
-        // Smoothly return inactive morph targets to 0
-        // Iterate over all known RPM morph targets in the dictionary
-        Object.keys(mesh.morphTargetDictionary).forEach(rpmTargetName => {
-            if (!frameMorphTargetValues.hasOwnProperty(rpmTargetName)) {
-                const morphIndex = mesh.morphTargetDictionary![rpmTargetName];
-                if (morphIndex !== undefined && mesh.morphTargetInfluences![morphIndex] > 0.001) { // Avoid lerping if already near zero
-                    mesh.morphTargetInfluences![morphIndex] = lerp(
-                        mesh.morphTargetInfluences![morphIndex],
-                        0,
-                        expressionLerpFactor
-                    );
-                }
-            }
-        });
-      }
-
-      // Optional: Log active blendshapes count periodically
-      const now = Date.now();
-      if (now - lastDebugLogRef.current > 5000) { // Log every 5 seconds
-        let activeBlendshapes = 0;
-        let activeDetails = '';
-        if (mesh.morphTargetInfluences && mesh.morphTargetDictionary) {
-            Object.keys(mesh.morphTargetDictionary).forEach(name => {
-                const idx = mesh.morphTargetDictionary![name];
-                if (mesh.morphTargetInfluences![idx] > 0.05) {
-                    activeBlendshapes++;
-                    if (activeBlendshapes <= 5) activeDetails += `${name}: ${mesh.morphTargetInfluences![idx].toFixed(2)} `; 
-                }
+      });
+    } else if (tracking?.facialExpressions || tracking?.expressions) {
+      // Priority 2: ML5 trackingData (existing logic)
+      const expressions = tracking?.facialExpressions ?? tracking?.expressions;
+      if (expressions) {
+        Object.entries(expressions).forEach(([ml5Key, rawValue]) => {
+          if (typeof rawValue !== 'number') return;
+          const mapping = ML5_TO_RPM_MAPPING[ml5Key as keyof typeof ML5_TO_RPM_MAPPING];
+          if (mapping) {
+            const amplification = mapping.amplify ?? 1.0;
+            const numericRawValue = Number(rawValue);
+            const amplifiedValue = MathUtils.clamp(numericRawValue * amplification, 0, 1);
+            mapping.targets.forEach(rpmTargetName => {
+              frameMorphTargetValues[rpmTargetName] = Math.max(frameMorphTargetValues[rpmTargetName] || 0, amplifiedValue);
             });
-        }
-        const totalMorphTargets = Object.keys(mesh.morphTargetDictionary || {}).length;
-        console.log(`[PresenceAvatar] Active blendshapes: ${activeBlendshapes}/${totalMorphTargets}. Sample: ${activeDetails}`);
-        if (!morphTargetMapping.current.logged && mesh.morphTargetDictionary) {
-          // console.log('[PresenceAvatar] Available morph targets:', Object.keys(mesh.morphTargetDictionary));
-          morphTargetMapping.current.logged = true; // Log full list only once if needed
-        }
-        lastDebugLogRef.current = now;
+          }
+        });
       }
-    } // End of if (mesh.morphTargetDictionary && ... && expressions)
+    }
+
+    // Lip Sync Override (if talking and audioData is present)
+    if (animationName === 'talking' && audioData && audioData.length > 0 && mesh.morphTargetDictionary) {
+      let totalEnergy = 0;
+      const relevantBins = Math.min(16, audioData.length); // Use first 16 bins
+      for (let i = 0; i < relevantBins; i++) {
+        totalEnergy += audioData[i];
+      }
+      const averageEnergy = relevantBins > 0 ? totalEnergy / relevantBins / 255 : 0; // Normalize 0-1
+      
+      const jawOpenTargetRpm = HUME_TO_RPM_MAPPING['jawOpen']?.target || 'jawOpen'; 
+      const lipSyncJawOpenValue = MathUtils.clamp(averageEnergy * 0.4, 0, 0.25); // Further reduced: 0.4x multiplier, max 0.25
+
+      frameMorphTargetValues[jawOpenTargetRpm] = lipSyncJawOpenValue;
+      // Potentially clear other expressions that might conflict with talking, e.g. mouthSmile
+      // frameMorphTargetValues[HUME_TO_RPM_MAPPING['mouthSmileLeft']?.target || 'mouthSmileLeft'] = 0;
+      // frameMorphTargetValues[HUME_TO_RPM_MAPPING['mouthSmileRight']?.target || 'mouthSmileRight'] = 0;
+    }
+
+    // Apply the final frameMorphTargetValues to the actual morph targets with smoothing
+    if (mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
+      Object.keys(mesh.morphTargetDictionary).forEach(rpmTargetName => {
+        const morphIndex = mesh.morphTargetDictionary![rpmTargetName];
+        if (morphIndex !== undefined) {
+          const targetValue = frameMorphTargetValues[rpmTargetName] || 0;
+          const currentValue = mesh.morphTargetInfluences![morphIndex] !== undefined ? mesh.morphTargetInfluences![morphIndex] : 0;
+          
+          if (Math.abs(currentValue - targetValue) > 0.001) { // Only lerp if there's a change
+            mesh.morphTargetInfluences![morphIndex] = lerp(
+              currentValue,
+              targetValue,
+              expressionLerpFactor
+            );
+          } else if (targetValue === 0 && currentValue !== 0) {
+             mesh.morphTargetInfluences![morphIndex] = 0; // Snap to 0 if target is 0 and current is not already 0
+          }
+        }
+      });
+    }
+
+    // Optional: Log active blendshapes count periodically
+    const now = Date.now();
+    if (now - lastDebugLogRef.current > 5000) { // Log every 5 seconds
+      let activeBlendshapes = 0;
+      let activeDetails = '';
+      if (mesh.morphTargetInfluences && mesh.morphTargetDictionary) {
+        Object.keys(mesh.morphTargetDictionary).forEach(name => {
+          const idx = mesh.morphTargetDictionary![name];
+          if (mesh.morphTargetInfluences![idx] > 0.05) {
+            activeBlendshapes++;
+            if (activeBlendshapes <= 5) activeDetails += `${name}: ${mesh.morphTargetInfluences![idx].toFixed(2)} `;
+          }
+        });
+      }
+      if (activeBlendshapes > 0) {
+        // console.log(`[PresenceAvatar] Active blendshapes (${activeBlendshapes}): ${activeDetails.trim()}${activeBlendshapes > 5 ? '...' : ''}`);
+      }
+      lastDebugLogRef.current = now;
+    }
 
     // Debug log bone status periodically
     if (frameCountRef.current % 60 === 0) {
