@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { FaceTracker } from './FaceTracker';
+import FaceTracker from './FaceTracker'; // Fix FaceTracker import to use default export
 import { ConversationAvatar } from './ConversationAvatar';
 import { COACHES } from '../config/coachConfig';
 import { voiceService } from '../services/voiceService';

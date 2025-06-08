@@ -13,7 +13,7 @@ const SimpleVideoChat: React.FC = () => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const peerRef = useRef<Peer.Instance | null>(null);
+  const peerRef = useRef<any | null>(null);
   const roomRef = useRef<string | null>(null);
 
   // Test Firebase connection on component mount
