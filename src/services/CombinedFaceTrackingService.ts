@@ -1,8 +1,7 @@
-import { FacialExpressions } from '../types/tracking';
+import { FacialExpressions, PostureData } from '../types/tracking';
 import { ML5FaceMeshService } from './ML5FaceMeshService';
 import { HumeExpressionService } from './HumeExpressionService';
 import { PostureTrackingService } from './PostureTrackingService';
-import { PostureData } from '../types/tracking';
 
 export class CombinedFaceTrackingService {
   private ml5Service: ML5FaceMeshService;
@@ -111,8 +110,12 @@ export class CombinedFaceTrackingService {
     this.useHume = true;
   }
   
-  startTracking(videoElement: HTMLVideoElement) {
+  async startTracking(videoElement: HTMLVideoElement) {
     console.log('[CombinedFaceTracking] Starting tracking with ML5...');
+    
+    // Ensure ML5 is initialized
+    await this.ml5Service.initialize();
+    
     this.ml5Service.startTracking(videoElement);
     
     // Posture tracking disabled for now - focus on expressions

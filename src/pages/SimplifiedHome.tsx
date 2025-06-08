@@ -21,6 +21,41 @@ const SimplifiedHome: React.FC = () => {
             <RisographHeart size={50} className="title-heart" animated />
           </h1>
           <p className="tagline">Your Personal Dating Coach</p>
+          
+          {/* AWE Conference Demo - Prominent Access */}
+          <div className="conference-demo-highlight" style={{
+            backgroundColor: '#ff6b6b',
+            padding: '15px 25px',
+            borderRadius: '12px',
+            margin: '20px 0',
+            border: '3px solid #ff4757',
+            textAlign: 'center',
+            boxShadow: '0 4px 12px rgba(255, 107, 107, 0.3)'
+          }}>
+            <h2 style={{ color: 'white', margin: '0 0 10px 0', fontSize: '1.4em' }}>
+              🚀 AWE Conference Demo
+            </h2>
+            <p style={{ color: 'white', margin: '0 0 15px 0', opacity: 0.9 }}>
+              Live audience-coached multiplayer dating experience with real-time analytics
+            </p>
+            <button 
+              className="btn-primary"
+              style={{
+                backgroundColor: 'white',
+                color: '#ff6b6b',
+                fontWeight: 'bold',
+                fontSize: '1.1em',
+                padding: '12px 30px',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+              }}
+              onClick={() => navigate('/conference-demo')}
+            >
+              🎭 Launch Conference Demo
+            </button>
+          </div>
         </div>
         
         <div className="core-features">

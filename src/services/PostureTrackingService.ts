@@ -14,6 +14,27 @@ export class PostureTrackingService {
   private isTracking: boolean = false;
   private onResultsCallback: ((data: PostureData) => void) | null = null;
 
+  // Map ML5 keypoint names to our PostureData keypoint names
+  private keypointMap: { [key: string]: keyof PostureData['keypoints'] } = {
+    'nose': 'nose',
+    'leftEye': 'leftEye',
+    'rightEye': 'rightEye',
+    'leftEar': 'leftEar',
+    'rightEar': 'rightEar',
+    'leftShoulder': 'leftShoulder',
+    'rightShoulder': 'rightShoulder',
+    'leftElbow': 'leftElbow',
+    'rightElbow': 'rightElbow',
+    'leftWrist': 'leftWrist',
+    'rightWrist': 'rightWrist',
+    'leftHip': 'leftHip',
+    'rightHip': 'rightHip',
+    'leftKnee': 'leftKnee',
+    'rightKnee': 'rightKnee',
+    'leftAnkle': 'leftAnkle',
+    'rightAnkle': 'rightAnkle'
+  };
+
   constructor() {
     console.log('[PostureTracking] Initializing ML5 PoseNet service...');
   }
@@ -36,32 +57,63 @@ export class PostureTrackingService {
     const pose = poses[0].pose;
     const keypoints = pose.keypoints;
 
+    // Log all keypoint scores for debugging
+    console.log('[PostureTracking] Keypoint scores:', keypoints.map((kp: any) => ({
+      part: kp.part,
+      score: kp.score.toFixed(3),
+      position: { x: kp.position.x.toFixed(0), y: kp.position.y.toFixed(0) }
+    })));
+
     // Convert ML5 PoseNet keypoints to our PostureData format
     const postureData: PostureData = {
       confidence: pose.score || 0,
-      keypoints: {
-        nose: this.getKeypoint(keypoints, 'nose'),
-        leftEye: this.getKeypoint(keypoints, 'leftEye'),
-        rightEye: this.getKeypoint(keypoints, 'rightEye'),
-        leftEar: this.getKeypoint(keypoints, 'leftEar'),
-        rightEar: this.getKeypoint(keypoints, 'rightEar'),
-        leftShoulder: this.getKeypoint(keypoints, 'leftShoulder'),
-        rightShoulder: this.getKeypoint(keypoints, 'rightShoulder'),
-        leftElbow: this.getKeypoint(keypoints, 'leftElbow'),
-        rightElbow: this.getKeypoint(keypoints, 'rightElbow'),
-        leftWrist: this.getKeypoint(keypoints, 'leftWrist'),
-        rightWrist: this.getKeypoint(keypoints, 'rightWrist'),
-        leftHip: this.getKeypoint(keypoints, 'leftHip'),
-        rightHip: this.getKeypoint(keypoints, 'rightHip'),
-        leftKnee: this.getKeypoint(keypoints, 'leftKnee'),
-        rightKnee: this.getKeypoint(keypoints, 'rightKnee'),
-        leftAnkle: this.getKeypoint(keypoints, 'leftAnkle'),
-        rightAnkle: this.getKeypoint(keypoints, 'rightAnkle')
-      }
+      keypoints: {}
     };
 
-    this.lastPostureData = postureData;
+    // Lower confidence threshold to 0.05 for testing
+    const minConfidence = 0.05;
+
+    // Map keypoints
+    keypoints.forEach((kp: any) => {
+      if (kp.score > minConfidence) {
+        const mappedName = this.keypointMap[kp.part];
+        if (mappedName) {
+          postureData.keypoints[mappedName] = {
+            x: kp.position.x,
+            y: kp.position.y,
+            confidence: kp.score
+          };
+        }
+      }
+    });
     
+    // Log arm keypoints specifically - including those below threshold
+    const armParts = ['leftShoulder', 'leftElbow', 'leftWrist', 'rightShoulder', 'rightElbow', 'rightWrist'];
+    console.log('[PostureTracking] All arm keypoints (including low confidence):', 
+      keypoints
+        .filter((kp: any) => armParts.includes(kp.part))
+        .map((kp: any) => ({
+          part: kp.part,
+          score: kp.score.toFixed(3),
+          position: { x: kp.position.x.toFixed(0), y: kp.position.y.toFixed(0) },
+          mapped: this.keypointMap[kp.part],
+          included: kp.score > minConfidence
+        }))
+    );
+    
+    // Log which keypoints failed the confidence threshold
+    const failedKeypoints = keypoints.filter((kp: any) => 
+      kp.score <= minConfidence && armParts.includes(kp.part)
+    );
+    if (failedKeypoints.length > 0) {
+      console.log('[PostureTracking] Low confidence arm keypoints:', failedKeypoints.map((kp: any) => ({
+        part: kp.part,
+        score: kp.score.toFixed(3)
+      })));
+    }
+
+    this.lastPostureData = postureData;
+
     // Log occasionally
     if (Math.random() < 0.02) {
       console.log('[PostureTracking] Got posture data:', {
@@ -70,7 +122,7 @@ export class PostureTrackingService {
         confidence: postureData.confidence
       });
     }
-    
+
     if (this.onResultsCallback) {
       this.onResultsCallback(postureData);
     }
@@ -78,10 +130,10 @@ export class PostureTrackingService {
 
   private getKeypoint(keypoints: any[], name: string) {
     const keypoint = keypoints.find((kp: any) => kp.part === name);
-    if (keypoint && keypoint.score > 0.3) { // Only return if confidence is decent
+    if (keypoint && keypoint.score > 0.1) { // Only return if confidence is decent
       return {
-        x: keypoint.position.x / (this.videoElement?.videoWidth || 640), // Normalize to 0-1
-        y: keypoint.position.y / (this.videoElement?.videoHeight || 480), // Normalize to 0-1
+        x: keypoint.position.x,
+        y: keypoint.position.y,
         confidence: keypoint.score
       };
     }
@@ -91,31 +143,31 @@ export class PostureTrackingService {
   async startTracking(videoElement: HTMLVideoElement) {
     this.videoElement = videoElement;
     this.isTracking = true;
-    
+
     try {
       console.log('[PostureTracking] Starting ML5 PoseNet tracking...');
       console.log('[PostureTracking] Video element:', videoElement);
       console.log('[PostureTracking] Video dimensions:', videoElement.videoWidth, 'x', videoElement.videoHeight);
-      
+
       if (!window.ml5) {
         console.error('[PostureTracking] ML5 is not loaded!');
         return;
       }
-      
+
       console.log('[PostureTracking] ML5 version:', ml5.version);
-      
+
       // Initialize PoseNet with the video element
       this.poseNet = ml5.poseNet(videoElement, {
         architecture: 'MobileNetV1',
-        imageScaleFactor: 0.3,
+        imageScaleFactor: 0.5, // Increased from 0.3 for better accuracy
         outputStride: 16,
         flipHorizontal: true,
-        minConfidence: 0.5,
+        minConfidence: 0.1, // Lowered from 0.5
         maxPoseDetections: 1,
-        scoreThreshold: 0.5,
+        scoreThreshold: 0.1, // Lowered from 0.5
         nmsRadius: 20,
         detectionType: 'single',
-        multiplier: 0.75
+        multiplier: 1.0 // Increased from 0.75 for better accuracy
       }, () => {
         console.log('[PostureTracking] ML5 PoseNet loaded successfully');
         console.log('[PostureTracking] PoseNet object:', this.poseNet);
@@ -139,7 +191,7 @@ export class PostureTrackingService {
   stopTracking() {
     console.log('[PostureTracking] Stopping tracking...');
     this.isTracking = false;
-    
+
     if (this.poseNet) {
       // ML5 PoseNet doesn't have a specific stop method, 
       // but setting isTracking to false will stop processing results
