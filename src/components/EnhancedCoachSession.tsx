@@ -76,6 +76,8 @@ const EnhancedCoachSession: React.FC = () => {
   const [showSubtitles, setShowSubtitles] = useState(true);
   const [isFacialTrackingRunning, setIsFacialTrackingRunning] = useState<boolean>(false);
   const [isMicrophoneSetup, setIsMicrophoneSetup] = useState(false);
+  const [hasSetupComplete, setHasSetupComplete] = useState(false);
+  const [hasStartedSession, setHasStartedSession] = useState(false);
 
   // Chat interface state
   const [messages, setMessages] = useState<Array<{
@@ -94,10 +96,8 @@ const EnhancedCoachSession: React.FC = () => {
   const audioQueueRef = useRef<Blob[]>([]);
   const isPlayingRef = useRef<boolean>(false);
   const videoRef = useRef<HTMLVideoElement | null>(null); // For ML5 video
-  const faceMeshRef = useRef<any>(null); // For ML5 faceMesh instance
-  const trackingIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined); // For ML5 tracking interval, corrected type
   const ml5FaceMeshServiceRef = useRef<ML5FaceMeshService | null>(null);
-  const combinedFaceTrackingServiceRef = useRef<CombinedFaceTrackingService | null>(null);
+  const trackingIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isInitializedRef = useRef<boolean>(false); // To run initialize once
   const mediaRecorderRef = useRef<MediaRecorder | null>(null); // For microphone
   const audioChunksRef = useRef<Blob[]>([]); // For microphone audio chunks
@@ -125,38 +125,23 @@ const EnhancedCoachSession: React.FC = () => {
   const realtimeRecorderRef = useRef<MediaRecorder | null>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastLogTimeRef = useRef<number | null>(null);
+  const frameCountRef = useRef<number>(0);
 
   // Callbacks
   const playNextAudioFromQueue = useCallback(() => {
-    console.log('[EnhancedCoachSession] playNextAudioFromQueue called');
-    console.log('[EnhancedCoachSession] Queue state:', {
-      queueLength: audioQueueRef.current.length,
-      isPlaying: isPlayingRef.current,
-      hasPlayer: !!audioPlayerRef.current
-    });
-    
     if (isPlayingRef.current || audioQueueRef.current.length === 0) {
-      console.log('[EnhancedCoachSession] Not playing: either already playing or queue empty');
       return;
     }
     
     const audioBlob = audioQueueRef.current.shift();
     isPlayingRef.current = true; // Set immediately to prevent race conditions
     
-    console.log('[EnhancedCoachSession] Processing audio blob:', {
-      hasBlob: !!audioBlob,
-      blobSize: audioBlob?.size,
-      blobType: audioBlob?.type
-    });
-    
     if (audioBlob && audioPlayerRef.current) {
       const audioUrl = URL.createObjectURL(audioBlob);
-      console.log('[EnhancedCoachSession] Created audio URL:', audioUrl);
       audioPlayerRef.current.src = audioUrl;
       
       audioPlayerRef.current.play()
         .then(() => {
-          console.log('[EnhancedCoachSession] Audio playback started successfully');
           setIsSpeaking(true); // AI starts speaking
           setCurrentAnimation('talking');
           
@@ -165,7 +150,6 @@ const EnhancedCoachSession: React.FC = () => {
             try {
               // Check if audio context exists and is not closed
               if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
-                console.log('[EnhancedCoachSession] Creating new AudioContext');
                 const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
                 audioContextRef.current = new AudioContext({ sampleRate: 48000 });
               }
@@ -173,7 +157,6 @@ const EnhancedCoachSession: React.FC = () => {
               // Resume audio context if suspended
               if (audioContextRef.current.state === 'suspended') {
                 audioContextRef.current.resume().then(() => {
-                  console.log('[EnhancedCoachSession] Audio context resumed');
                 });
               }
               
@@ -186,7 +169,6 @@ const EnhancedCoachSession: React.FC = () => {
               coachAudioAnalyserRef.current = analyser;
               coachAudioSourceRef.current = source;
               audioSourceCreatedRef.current = true;
-              console.log('[EnhancedCoachSession] Audio analyzer setup complete');
             } catch (error) {
               console.error('[EnhancedCoachSession] Error setting up audio analyzer:', error);
             }
@@ -194,14 +176,6 @@ const EnhancedCoachSession: React.FC = () => {
         })
         .catch(e => {
           console.error('[EnhancedCoachSession] Error playing audio:', e);
-          console.error('[EnhancedCoachSession] Audio element state:', {
-            src: audioPlayerRef.current?.src,
-            readyState: audioPlayerRef.current?.readyState,
-            error: audioPlayerRef.current?.error,
-            paused: audioPlayerRef.current?.paused,
-            muted: audioPlayerRef.current?.muted,
-            volume: audioPlayerRef.current?.volume
-          });
           isPlayingRef.current = false;
           setIsSpeaking(false); // AI failed to speak
           setCurrentAnimation('idle');
@@ -224,7 +198,6 @@ const EnhancedCoachSession: React.FC = () => {
   }, [setIsSpeaking, setCurrentAnimation, audioQueueRef, isPlayingRef, audioPlayerRef]); // playNextAudioFromQueue is a dependency for main useEffect
 
   const handleInterruption = useCallback(() => {
-    console.log('[EnhancedCoachSession] Handling user interruption.');
     if (humeVoiceServiceRef.current && humeConnected) { // Use humeConnected state instead of private isConnected
       // Assuming a method like sendInterruption or sendPauseAssistantMessage exists
       // For now, we'll log. Replace with actual SDK call if available.
@@ -322,7 +295,6 @@ const EnhancedCoachSession: React.FC = () => {
 
   const initializeAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
-      console.log('[EnhancedCoachSession] Initializing audio context');
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       audioContextRef.current = new AudioContext({ sampleRate: 48000 });
       analyserRef.current = audioContextRef.current.createAnalyser();
@@ -333,7 +305,6 @@ const EnhancedCoachSession: React.FC = () => {
   const handleUserInteraction = useCallback(() => {
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
       audioContextRef.current.resume().then(() => {
-        console.log('[EnhancedCoachSession] Audio context resumed after user interaction');
       }).catch(e => console.error("[EnhancedCoachSession] Error resuming audio context", e));
     }
   }, []);
@@ -639,14 +610,26 @@ const EnhancedCoachSession: React.FC = () => {
   }, [playNextAudioFromQueue]);
 
   const handleSendMessage = useCallback(async () => {
-    if (!userInput.trim() || !humeVoiceServiceRef.current?.checkConnection()) return;
+    if (!userInput.trim() || !humeVoiceServiceRef.current || !humeConnected) return;
     const message = userInput.trim();
     setUserInput('');
-    setFeedback(prev => [...prev, `You: ${message}`]);
-    setConversationHistory(prev => [...prev, {speaker: 'user', text: message, timestamp: Date.now()}]);
-    humeVoiceServiceRef.current.sendMessage(message);
-    // Optionally, handle interruption if user speaks over coach
-    handleInterruption(); 
+    
+    // Add user message to chat
+    const userMessage = {
+      id: Date.now().toString(),
+      text: message,
+      sender: 'user' as const,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, userMessage]);
+    
+    // Send to Hume
+    try {
+      await humeVoiceServiceRef.current.sendMessage(message);
+    } catch (error) {
+      console.error('[EnhancedCoachSession] Error sending message:', error);
+      setError('Failed to send message');
+    }
   }, [userInput, setUserInput, setFeedback, setConversationHistory, handleInterruption]);
 
   const handleTogglePiP = useCallback(() => setShowPiP(p => !p), [setShowPiP]);
@@ -672,12 +655,9 @@ const EnhancedCoachSession: React.FC = () => {
       // Initialize audio context
       initializeAudioContext();
       
-      // Initialize Face Tracking FIRST
-      console.log('%%%%%%%%%%%%%%%%%%%% [EnhancedCoachSession] ATTEMPTING FACE TRACKING INIT %%%%%%%%%%%%%%%%%%%%');
+      // Initialize face tracking services
       try {
-        console.log('[EnhancedCoachSession] Initializing ML5 face tracking...');
-        
-        // Create video element for face tracking
+        // Set up video element for face tracking
         const video = document.createElement('video');
         video.width = 640;
         video.height = 480;
@@ -702,24 +682,27 @@ const EnhancedCoachSession: React.FC = () => {
           video.oncanplay = () => {
             video.play()
               .then(() => {
-                console.log('[EnhancedCoachSession] video.play() called successfully.');
+                console.log('[EnhancedCoachSession] Video ready for face tracking');
               })
               .catch(playError => {
-                console.error('[EnhancedCoachSession] Error calling video.play():', playError);
+                console.error('[EnhancedCoachSession] Error playing video:', playError);
               });
           };
         });
         
+        // Clean up any existing ML5 service before creating new one
+        if (ml5FaceMeshServiceRef.current) {
+          ml5FaceMeshServiceRef.current.stopTracking();
+          ml5FaceMeshServiceRef.current = null;
+        }
+        
         ml5FaceMeshServiceRef.current = new ML5FaceMeshService();
         await ml5FaceMeshServiceRef.current.initialize();
 
-        console.log(`[EnhancedCoachSession] Video paused state before startTracking: ${video.paused}`);
-        console.log('!!!!!!!!!!!!!!!!!!!! [EnhancedCoachSession] ABOUT TO CALL startTracking (ML5FaceMeshService) !!!!!!!!!!!!!!!!!!!!');
-        console.log('[EnhancedCoachSession] video element for ML5:', video);
+        console.log('[EnhancedCoachSession] Starting ML5 face tracking');
 
         // Actually start tracking!
         ml5FaceMeshServiceRef.current.startTracking(video);
-        console.log('[EnhancedCoachSession] ML5 startTracking called successfully');
 
         const newFaceTrackingIntervalId = setInterval(() => {
           if (video && ml5FaceMeshServiceRef.current) { // Check video and service existence
@@ -735,42 +718,17 @@ const EnhancedCoachSession: React.FC = () => {
                 source: 'ml5'
               };
               setTrackingData(data);
-              
-              // Debug log every second
-              if (Date.now() % 1000 < 50) {
-                console.log('[EnhancedCoachSession] ML5 tracking data:', {
-                  hasExpressions: !!facialExpressions && Object.keys(facialExpressions).length > 0,
-                  expressions: facialExpressions,
-                  hasHeadRotation: !!headRotation,
-                  headRotation: headRotation
-                });
-              }
             }
             setIsFacialTrackingRunning(true); // Set tracking as running
-          } else {
-            console.warn('[EnhancedCoachSession] Face tracking interval: Video element or ML5 service not available/initialized.');
           }
-        }, 1000 / 30); // 30 FPS
+        }, 66); // Run at ~15 FPS instead of 30
         
         trackingIntervalRef.current = newFaceTrackingIntervalId;
         setIsFacialTrackingRunning(true); // Confirming tracking is initiated
         
-        console.log('[EnhancedCoachSession] Face tracking polling started successfully.');
+        console.log('[EnhancedCoachSession] Face tracking initialized successfully');
       } catch (error) {
-        console.error('!!!!!!!!!!!!!!!!!!!! [EnhancedCoachSession] CAUGHT ERROR during face tracking setup !!!!!!!!!!!!!!!!!!!!', error);
-        // console.error('[EnhancedCoachSession] Failed to start face tracking:', error); // Original log commented out for clarity, can be re-enabled
-      }
-      
-      // Initialize Combined Face Tracking Service
-      combinedFaceTrackingServiceRef.current = new CombinedFaceTrackingService();
-      await combinedFaceTrackingServiceRef.current.initialize();
-      
-      // Start tracking with the video element if it exists
-      if (videoRef.current) {
-        combinedFaceTrackingServiceRef.current.startTracking(videoRef.current);
-        console.log('[EnhancedCoachSession] Started combined face tracking');
-      } else {
-        console.warn('[EnhancedCoachSession] No video element available for combined face tracking');
+        console.error('[EnhancedCoachSession] Failed to start face tracking:', error);
       }
       
       // Auto-connect to Hume
@@ -800,11 +758,23 @@ const EnhancedCoachSession: React.FC = () => {
       // Cleanup on unmount
       console.log('[EnhancedCoachSession] Cleaning up...');
       
+      // Stop face tracking interval
+      if (trackingIntervalRef.current) {
+        clearInterval(trackingIntervalRef.current);
+        trackingIntervalRef.current = undefined;
+      }
+      
+      // Stop ML5 face tracking
+      if (ml5FaceMeshServiceRef.current) {
+        console.log('[EnhancedCoachSession] Stopping ML5 face tracking...');
+        ml5FaceMeshServiceRef.current.stopTracking();
+        ml5FaceMeshServiceRef.current = null;
+      }
+      
       // Stop real-time streaming if active
       if (realtimeRecorderRef.current && realtimeRecorderRef.current.state !== 'inactive') {
         console.log('[EnhancedCoachSession] Stopping real-time recorder...');
         realtimeRecorderRef.current.stop();
-        trackingIntervalRef.current = undefined;
       }
       
       // Disconnect Hume
@@ -830,13 +800,6 @@ const EnhancedCoachSession: React.FC = () => {
         console.log('[EnhancedCoachSession] Stopping audio playback...');
         currentAudioRef.current.pause();
         currentAudioRef.current = null;
-      }
-      
-      // Stop combined face tracking
-      if (combinedFaceTrackingServiceRef.current) {
-        console.log('[EnhancedCoachSession] Stopping combined face tracking...');
-        combinedFaceTrackingServiceRef.current.stopTracking();
-        combinedFaceTrackingServiceRef.current = null;
       }
       
       // Clean up video element
@@ -934,8 +897,8 @@ const EnhancedCoachSession: React.FC = () => {
       }
       
       // Clean up face tracking
-      if (combinedFaceTrackingServiceRef.current) {
-        combinedFaceTrackingServiceRef.current.stopTracking();
+      if (ml5FaceMeshServiceRef.current) {
+        ml5FaceMeshServiceRef.current.stopTracking();
       }
       
       // Clean up audio context
@@ -989,66 +952,10 @@ const EnhancedCoachSession: React.FC = () => {
     };
   }, [isSpeaking]);
 
-  const AvatarWithEmotion: React.FC<{
-    avatarUrl: string;
-    audioData: Uint8Array;
-    emotionalState: EmotionalState;
-    isSpeaking: boolean;
-    captureRef: React.RefObject<HTMLDivElement>;
-  }> = ({ avatarUrl, audioData, emotionalState, isSpeaking, captureRef }) => {
-    const [localBlendshapes, setLocalBlendshapes] = useState<Record<string, number>>({});
-    const meshRef = useRef<THREE.SkinnedMesh>(null);
-
-    useEffect(() => {
-      if (Object.keys(emotionalState).length > 0) {
-        const emotionalValues: Record<string, number> = {};
-        Object.entries(emotionalState).forEach(([key, value]) => {
-          if (value !== undefined) {
-            emotionalValues[key] = value;
-          }
-        });
-        const shapes = prosodyToBlendshapes(emotionalValues);
-        setLocalBlendshapes(shapes);
-      }
-    }, [emotionalState]);
-
-    useFrame(() => {
-      if (!meshRef.current?.morphTargetDictionary || !meshRef.current?.morphTargetInfluences) return;
-
-      // Apply emotional blendshapes
-      Object.entries(localBlendshapes).forEach(([shapeName, value]) => {
-        const index = meshRef.current!.morphTargetDictionary![shapeName];
-        if (index !== undefined && meshRef.current!.morphTargetInfluences) {
-          meshRef.current!.morphTargetInfluences[index] = value;
-        }
-      });
-
-      // Apply mouth movement based on audio
-      if (isSpeaking && audioData && audioData.length > 0) {
-        const average = audioData.reduce((sum: number, val: number) => sum + val, 0) / audioData.length;
-        const mouthOpen = Math.min(average / 255 * 0.3, 0.3); // Max 30% open
-        
-        const mouthOpenIndex = meshRef.current!.morphTargetDictionary!['mouthOpen'];
-        if (mouthOpenIndex !== undefined && meshRef.current!.morphTargetInfluences) {
-          meshRef.current!.morphTargetInfluences[mouthOpenIndex] = mouthOpen;
-        }
-      }
-    });
-
-    return (
-      <group>
-        <primitive object={new THREE.Object3D()} ref={meshRef} />
-        {/* Avatar mesh would be loaded here based on avatarUrl */}
-      </group>
-    );
-  };
-
   // Use refs for blend shapes
   const blendShapesRef = useRef<any>({});
 
   // --- Render ---
-  console.log('[EnhancedCoachSession] Rendering with:', { coachId, lessonId, currentLesson, coach });
-  
   if (!coachId || !lessonId) {
     return <div>Invalid coach or lesson ID</div>;
   }

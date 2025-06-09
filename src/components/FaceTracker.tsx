@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import '@tensorflow/tfjs-backend-webgl';
-import '@tensorflow/tfjs-core';
-import '@tensorflow/tfjs-converter';
+// Commented out to prevent TensorFlow conflicts with ML5
+// import '@tensorflow/tfjs-backend-webgl';
+// import '@tensorflow/tfjs-core';
+// import '@tensorflow/tfjs-converter';
 // Stubbed TensorFlow imports to prevent compilation errors
 // import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
 

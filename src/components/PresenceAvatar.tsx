@@ -6,14 +6,17 @@ import { SkeletonUtils } from 'three-stdlib';
 import { MathUtils } from 'three';
 import type { TrackingData, FacialExpressions } from '../types/tracking';
 
+const DEFAULT_AVATAR_URL = '/models/feminine/FeminineAvatar.gltf';
+
 interface PresenceAvatarProps {
-  avatarUrl: string;
-  position?: [number, number, number];
+  avatarUrl?: string;
+  position?: [number, number, number] | THREE.Vector3;
   scale?: number; // Overall scale for the group
   trackingData?: TrackingData; // For user's face tracking (ML5)
   animationName?: string; // e.g., 'idle', 'talking'
   emotionalBlendshapes?: Record<string, number>; // For Hume EVI prosody
   audioData?: Uint8Array; // For lip-sync from Hume EVI audio
+  participantId?: string;
 }
 
 // Hume to RPM blendshape mapping with amplification factors
@@ -46,30 +49,37 @@ const HUME_TO_RPM_MAPPING: Record<string, { target: string; amplify?: number }> 
 };
 
 const ML5_TO_RPM_MAPPING: Record<string, { targets: string[]; amplify?: number; debug?: boolean }> = {
-  'mouthOpen': { targets: ['jawOpen'], amplify: 0.8, debug: true }, // Changed target to jawOpen, amplify to 0.8
-  'mouthSmile': { targets: ['mouthSmileLeft', 'mouthSmileRight'], amplify: 7.0 }, // Amplify to 7.0
-  'mouthFrown': { targets: ['mouthFrownLeft', 'mouthFrownRight'], amplify: 7.0 }, // Amplify to 7.0
+  'mouthOpen': { targets: ['jawOpen'], amplify: 0.8, debug: true },
+  'mouthSmile': { targets: ['mouthSmileLeft', 'mouthSmileRight'], amplify: 7.0 }, // Restore high amplification for smiles
+  'mouthFrown': { targets: ['mouthFrownLeft', 'mouthFrownRight'], amplify: 7.0 },
   'mouthPucker': { targets: ['mouthPucker'], amplify: 1.8 },
-  'browInnerUp': { targets: ['browInnerUp'], amplify: 1.5 }, // Added for direct control from ML5's browInnerUp
-  'browUpLeft': { targets: ['browOuterUpLeft'], amplify: 1.5 }, // This is an ML5 key, but less direct than eyebrowRaise. Keep as is for now.
-  'browUpRight': { targets: ['browOuterUpRight'], amplify: 1.5 }, // This is an ML5 key, but less direct than eyebrowRaise. Keep as is for now.
-  'eyebrowRaiseLeft': { targets: ['browOuterUpLeft'], amplify: 5.0 }, // Amplify to 5.0, removed browInnerUp target
-  'eyebrowRaiseRight': { targets: ['browOuterUpRight'], amplify: 5.0 }, // Amplify to 5.0, removed browInnerUp target
-  'eyebrowFurrow': { targets: ['browDownLeft', 'browDownRight'], amplify: 5.0 }, // Amplify to 5.0
-  'eyeSquintLeft': { targets: ['eyeSquintLeft'], amplify: 3.0 }, // Amplify to 3.0
-  'eyeSquintRight': { targets: ['eyeSquintRight'], amplify: 3.0 }, // Amplify to 3.0
-  'eyeWideLeft': { targets: ['eyeWideLeft'], amplify: 3.0 }, // Amplify to 3.0
-  'eyeWideRight': { targets: ['eyeWideRight'], amplify: 3.0 }, // Amplify to 3.0
+  'browInnerUp': { targets: ['browInnerUp'], amplify: 1.5 },
+  'browUpLeft': { targets: ['browOuterUpLeft'], amplify: 1.5 },
+  'browUpRight': { targets: ['browOuterUpRight'], amplify: 1.5 },
+  'eyebrowRaiseLeft': { targets: ['browOuterUpLeft'], amplify: 5.0 }, // Restore high amplification
+  'eyebrowRaiseRight': { targets: ['browOuterUpRight'], amplify: 5.0 },
+  'eyebrowFurrow': { targets: ['browDownLeft', 'browDownRight'], amplify: 5.0 },
+  'eyeSquintLeft': { targets: ['eyeSquintLeft'], amplify: 3.0 },
+  'eyeSquintRight': { targets: ['eyeSquintRight'], amplify: 3.0 },
+  'eyeWideLeft': { targets: ['eyeWideLeft'], amplify: 3.0 },
+  'eyeWideRight': { targets: ['eyeWideRight'], amplify: 3.0 },
   'cheekPuff': { targets: ['cheekPuff'], amplify: 1.5 },
   'cheekSquintLeft': { targets: ['cheekSquintLeft'], amplify: 1.3 },
   'cheekSquintRight': { targets: ['cheekSquintRight'], amplify: 1.3 },
   'noseSneer': { targets: ['noseSneerLeft', 'noseSneerRight'], amplify: 1.5 },
-  'tongueOut': { targets: ['tongueOut'], amplify: 1.0 },
-  'jawOpen': { targets: ['jawOpen'], amplify: 0.8 }, // Amplify to 0.8. Note: ML5 also sends mouthOpen, which maps to jawOpen.
   'jawLeft': { targets: ['jawLeft'], amplify: 1.2 },
   'jawRight': { targets: ['jawRight'], amplify: 1.2 },
-  'eyeBlinkLeft': { targets: ['eyeBlinkLeft'], amplify: 1.0 }, // Direct mapping
-  'eyeBlinkRight': { targets: ['eyeBlinkRight'], amplify: 1.0 } // Direct mapping
+  'mouthLeft': { targets: ['mouthLeft'], amplify: 1.5 },
+  'mouthRight': { targets: ['mouthRight'], amplify: 1.5 },
+  'mouthRollLower': { targets: ['mouthRollLower'], amplify: 1.5 },
+  'mouthRollUpper': { targets: ['mouthRollUpper'], amplify: 1.5 },
+  'mouthShrugLower': { targets: ['mouthShrugLower'], amplify: 1.5 },
+  'mouthShrugUpper': { targets: ['mouthShrugUpper'], amplify: 1.5 },
+  'mouthFunnel': { targets: ['mouthFunnel'], amplify: 1.5 },
+  'mouthPress': { targets: ['mouthPressLeft', 'mouthPressRight'], amplify: 1.5 },
+  'mouthLowerDown': { targets: ['mouthLowerDownLeft', 'mouthLowerDownRight'], amplify: 1.5 },
+  'mouthUpperUp': { targets: ['mouthUpperUpLeft', 'mouthUpperUpRight'], amplify: 1.5 },
+  'mouthPout': { targets: ['mouthPucker'], amplify: 1.8 } // Map pout to pucker with amplification
 };
 
 const ROTATION_LIMITS = {
@@ -107,33 +117,61 @@ const targetWorldMatrix = new THREE.Matrix4();
 const parentInverseWorldMatrix = new THREE.Matrix4();
 const targetLocalMatrix = new THREE.Matrix4();
 
-export const PresenceAvatar: React.FC<PresenceAvatarProps> = ({
+export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
   avatarUrl,
-  position = [0, 0, 0],
-  scale = 1, // Default group scale to 1, primitive scale is separate
   trackingData,
-  animationName = 'idle', // Default to idle
+  position = [0, 0, 0],
+  scale = 1,
+  participantId,
+  animationName = 'idle',
   emotionalBlendshapes,
   audioData
 }) => {
-  console.log('[PresenceAvatar] Component starting with:', { avatarUrl, trackingData: !!trackingData });
+  // Determine if this is a coach avatar
+  const isCoachAvatar = trackingData === undefined;
+  const avatarType = isCoachAvatar ? 'COACH' : 'USER';
   
+  // Debug: Add unique instance tracking
+  const instanceIdRef = useRef(Math.random().toString(36).substr(2, 9));
+  
+  useEffect(() => {
+    console.log(`[PresenceAvatar-${instanceIdRef.current}] Mounted:`, {
+      avatarType,
+      participantId,
+      hasTrackingData: !!trackingData,
+      avatarUrl,
+      timestamp: Date.now()
+    });
+    return () => {
+      console.log(`[PresenceAvatar-${instanceIdRef.current}] Unmounted`);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isCoachAvatar && emotionalBlendshapes && Object.keys(emotionalBlendshapes).length > 0) {
+      console.log(`[PresenceAvatar-${instanceIdRef.current}] Emotional blendshapes:`, Object.keys(emotionalBlendshapes).length);
+    }
+    if (!isCoachAvatar && trackingData?.facialExpressions) {
+      console.log(`[PresenceAvatar-${instanceIdRef.current}] Tracking data expressions:`, Object.keys(trackingData.facialExpressions).length);
+    }
+  }, [emotionalBlendshapes, trackingData, isCoachAvatar, avatarType]);
+
   // All hooks must be called unconditionally at the top
-  const groupRef = useRef<THREE.Group>(null); // Keep a ref for the returned group
+  const groupRef = useRef<THREE.Group>(null!); // Non-null assertion to avoid constant null checks
   const modelRootRef = useRef<THREE.Object3D | null>(null);
   const meshWithMorphTargets = useRef<THREE.Mesh | null>(null);
   const headBone = useRef<THREE.Bone | null>(null);
   const neckBone = useRef<THREE.Bone | null>(null);
   const jawBone = useRef<THREE.Bone | null>(null);
-  const eyeBone = useRef<THREE.Bone | null>(null);
   const initialHeadLocalQuaternionRef = useRef<THREE.Quaternion | null>(null);
   const initialNeckLocalQuaternionRef = useRef<THREE.Quaternion | null>(null);
   const trackingDataRef = useRef<TrackingData | null>(null);
-  const frameCountRef = useRef<number>(0);
+  const frameCountRef = useRef(0);
   const lastDebugLogRef = useRef<number>(0);
   const morphTargetMapping = useRef<{ logged?: boolean }>({});
+  const currentInfluences = useRef<Record<string, number>>({});
   
-  const { scene } = useGLTF(avatarUrl);
+  const { scene } = useGLTF(avatarUrl || DEFAULT_AVATAR_URL);
   
   // Clone the scene using useMemo to prevent re-cloning on every render
   const clonedScene = useMemo(() => {
@@ -270,8 +308,13 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = ({
     
     // Find mesh with morph targets
     clonedScene.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.morphTargetDictionary && child.morphTargetInfluences) {
-        console.log('[PresenceAvatar] Found mesh with morph targets:', child.name, 'Targets:', Object.keys(child.morphTargetDictionary).length);
+      if (child instanceof THREE.SkinnedMesh && child.morphTargetDictionary && child.morphTargetInfluences) {
+        console.log(`[PresenceAvatar-${instanceIdRef.current}] Found mesh with morph targets:`, {
+          avatarType,
+          meshId: child.uuid,
+          morphTargets: Object.keys(child.morphTargetDictionary).length,
+          mesh: child
+        });
         meshWithMorphTargets.current = child;
       }
     });
@@ -380,7 +423,8 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = ({
   // useEffect for tracking data
   useEffect(() => {
     if (trackingData) {
-      console.log('[PresenceAvatar] Tracking data updated:', trackingData);
+      // Track if tracking data is updated - removed to prevent re-renders
+      // console.log('[PresenceAvatar] Tracking data updated:', trackingData);
       
       let headRotation: { pitch: number; yaw: number; roll: number; } | undefined;
       
@@ -403,6 +447,30 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = ({
         headRotation = trackingData.headRotation;
       }
       
+      if (!headRotation && trackingData.rotation) {
+        headRotation = trackingData.rotation;
+      }
+      
+      if (!headRotation && trackingData.head) {
+        // Convert head object to headRotation format if needed
+        const head = trackingData.head as any;
+        if (head.pitch !== undefined || head.yaw !== undefined || head.roll !== undefined) {
+          headRotation = head;
+        }
+      }
+      
+      // Ensure we have valid rotation values
+      if (!headRotation || typeof headRotation !== 'object') {
+        headRotation = { pitch: 0, yaw: 0, roll: 0 };
+      }
+      
+      // Ensure all rotation values are numbers
+      headRotation = {
+        pitch: typeof headRotation.pitch === 'number' ? headRotation.pitch : 0,
+        yaw: typeof headRotation.yaw === 'number' ? headRotation.yaw : 0,
+        roll: typeof headRotation.roll === 'number' ? headRotation.roll : 0
+      };
+      
       const convertedTrackingData = {
         facialExpressions: trackingData.face?.shapes || trackingData.facialExpressions || {},
         headRotation
@@ -410,8 +478,8 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = ({
       
       trackingDataRef.current = convertedTrackingData;
       
-      if (convertedTrackingData.facialExpressions) {
-        console.log('[PresenceAvatar] Facial expressions:', Object.keys(convertedTrackingData.facialExpressions));
+      if (convertedTrackingData.facialExpressions && Object.keys(convertedTrackingData.facialExpressions).length > 0) {
+        console.log('[PresenceAvatar] Facial expressions:', Object.keys(convertedTrackingData.facialExpressions).length);
       }
       if (convertedTrackingData.headRotation) {
         console.log('[PresenceAvatar] Head rotation data present:', convertedTrackingData.headRotation);
@@ -425,18 +493,93 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = ({
     }
   }, [trackingData]);
 
+  // Process tracking data with memoization to avoid unnecessary recalculations
+  const processedTrackingData = useMemo(() => {
+    if (!trackingData || trackingData === undefined) {
+      return null;
+    }
+    
+    // Process the tracking data directly here instead of relying on ref
+    let headRotation: { pitch: number; yaw: number; roll: number; } | undefined;
+    
+    if (trackingData.head?.rotation) {
+      const rot = trackingData.head.rotation;
+      // Check if it's already in pitch/yaw/roll format
+      if ('pitch' in rot && 'yaw' in rot && 'roll' in rot) {
+        headRotation = rot as { pitch: number; yaw: number; roll: number; };
+      } else if ('x' in rot && 'y' in rot && 'z' in rot && 'w' in rot) {
+        // Convert quaternion to euler angles
+        const quat = new THREE.Quaternion(rot.x, rot.y, rot.z, rot.w);
+        const euler = new THREE.Euler().setFromQuaternion(quat);
+        headRotation = {
+          pitch: euler.x,
+          yaw: euler.y,
+          roll: euler.z
+        };
+      }
+    } else if (trackingData.headRotation) {
+      headRotation = trackingData.headRotation;
+    }
+    
+    if (!headRotation && trackingData.rotation) {
+      headRotation = trackingData.rotation;
+    }
+    
+    if (!headRotation && trackingData.head) {
+      // Convert head object to headRotation format if needed
+      const head = trackingData.head as any;
+      if (head.pitch !== undefined || head.yaw !== undefined || head.roll !== undefined) {
+        headRotation = head;
+      }
+    }
+    
+    // Ensure we have valid rotation values
+    if (!headRotation || typeof headRotation !== 'object') {
+      headRotation = { pitch: 0, yaw: 0, roll: 0 };
+    }
+    
+    // Ensure all rotation values are numbers
+    headRotation = {
+      pitch: typeof headRotation.pitch === 'number' ? headRotation.pitch : 0,
+      yaw: typeof headRotation.yaw === 'number' ? headRotation.yaw : 0,
+      roll: typeof headRotation.roll === 'number' ? headRotation.roll : 0
+    };
+    
+    const processed = {
+      facialExpressions: trackingData.face?.shapes || trackingData.facialExpressions || {},
+      headRotation
+    };
+    
+    // Debug log to verify data is being processed
+    if (Object.keys(processed.facialExpressions).length > 0) {
+      console.log('[PresenceAvatar] Processed tracking data with', Object.keys(processed.facialExpressions).length, 'expressions');
+    }
+    
+    return processed;
+  }, [trackingData]);
+
+  // Add frustum culling and LOD
+  useEffect(() => {
+    if (!clonedScene) return;
+    
+    clonedScene.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.frustumCulled = true;
+        // Reduce texture size if possible
+        if (child.material && 'map' in child.material && child.material.map) {
+          child.material.map.minFilter = THREE.LinearMipMapLinearFilter;
+          child.material.map.generateMipmaps = true;
+        }
+      }
+    });
+  }, [clonedScene]);
+
   // useFrame hook for real-time updates
   useFrame((state, delta) => {
-    if (frameCountRef.current % 300 === 0) { // Log every 5 seconds
-      console.log('[PresenceAvatar] useFrame is running, frame:', frameCountRef.current);
-      console.log('[PresenceAvatar] Bone refs in useFrame:', {
-        headBone: !!headBone.current,
-        headBoneName: headBone.current?.name,
-        neckBone: !!neckBone.current,
-        neckBoneName: neckBone.current?.name
-      });
-    }
-    frameCountRef.current++;
+    if (!modelRootRef.current) return;
+
+    const currentFrameCount = state.clock.elapsedTime * 60; // Approximate frame count
+    frameCountRef.current = Math.floor(currentFrameCount);
     
     // Update animation mixer
     if (mixer) {
@@ -453,7 +596,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = ({
       if (headBone.current) {
         const time = Date.now() * 0.001;
         const idleNod = Math.sin(time * 0.5) * 0.05;
-        headBone.current.rotation.x = idleNod;
+        headBone.current.rotation.x = lerp(headBone.current.rotation.x, idleNod, 0.1);
       }
       if (frameCountRef.current % 300 === 0) { // Every 5 seconds at 60fps
         console.log('[PresenceAvatar useFrame] No tracking data');
@@ -461,17 +604,33 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = ({
       return;
     }
 
-if (frameCountRef.current % 60 === 0) { // Every second at 60fps
-  console.log('[PresenceAvatar useFrame] Processing tracking data:', trackingDataRef.current);
-}
+    if (frameCountRef.current % 60 === 0) { // Every second at 60fps
+      console.log('[PresenceAvatar useFrame] Processing tracking data:', trackingDataRef.current);
+    }
 
-const mesh = meshWithMorphTargets.current;
+    const mesh = meshWithMorphTargets.current;
     // Initialize target morph values for this frame
     const frameMorphTargetValues: Record<string, number> = {};
-    const expressionLerpFactor = 0.3; // Smoothing factor
-
+    const expressionLerpFactor = 0.7; // Increased for near 1:1 responsiveness
+    const hasEmotionalBlendshapes = emotionalBlendshapes && Object.keys(emotionalBlendshapes).length > 0;
+    
+    // Determine if this is a coach avatar
+    const avatarType = animationName === 'talking' ? 'coach' : 'user';
+    const isCoachAvatar = avatarType === 'coach';
+    
+    // Skip morph target processing for coach avatars
+    if (isCoachAvatar) {
+      // Only do subtle idle head movement for coach
+      if (headBone.current) {
+        const time = Date.now() * 0.001;
+        const idleNod = Math.sin(time * 0.5) * 0.02;
+        headBone.current.rotation.x = lerp(headBone.current.rotation.x, idleNod, 0.1);
+      }
+      return; // Exit early - no morph target processing
+    }
+    
     // Determine the source of expressions: Hume EVI or ML5 tracking data
-    if (emotionalBlendshapes && Object.keys(emotionalBlendshapes).length > 0) {
+    if (hasEmotionalBlendshapes) {
       // Priority 1: Hume EVI emotionalBlendshapes
       Object.entries(emotionalBlendshapes).forEach(([humeKey, rawValue]) => {
         if (typeof rawValue !== 'number') return;
@@ -483,7 +642,7 @@ const mesh = meshWithMorphTargets.current;
         }
       });
     } else if (tracking?.facialExpressions || tracking?.expressions) {
-      // Priority 2: ML5 trackingData (existing logic)
+      // Priority 2: ML5 trackingData (check both facialExpressions and expressions)
       const expressions = tracking?.facialExpressions ?? tracking?.expressions;
       if (expressions) {
         Object.entries(expressions).forEach(([ml5Key, rawValue]) => {
@@ -493,6 +652,12 @@ const mesh = meshWithMorphTargets.current;
             const amplification = mapping.amplify ?? 1.0;
             const numericRawValue = Number(rawValue);
             const amplifiedValue = MathUtils.clamp(numericRawValue * amplification, 0, 1);
+            
+            // Debug log for high-value expressions
+            if (amplifiedValue > 0.3 && (ml5Key.includes('mouth') || ml5Key.includes('smile'))) {
+              console.log(`[PresenceAvatar] Expression: ${ml5Key} = ${amplifiedValue}`);
+            }
+            
             mapping.targets.forEach(rpmTargetName => {
               frameMorphTargetValues[rpmTargetName] = Math.max(frameMorphTargetValues[rpmTargetName] || 0, amplifiedValue);
             });
@@ -514,9 +679,6 @@ const mesh = meshWithMorphTargets.current;
       const lipSyncJawOpenValue = MathUtils.clamp(averageEnergy * 0.4, 0, 0.25); // Further reduced: 0.4x multiplier, max 0.25
 
       frameMorphTargetValues[jawOpenTargetRpm] = lipSyncJawOpenValue;
-      // Potentially clear other expressions that might conflict with talking, e.g. mouthSmile
-      // frameMorphTargetValues[HUME_TO_RPM_MAPPING['mouthSmileLeft']?.target || 'mouthSmileLeft'] = 0;
-      // frameMorphTargetValues[HUME_TO_RPM_MAPPING['mouthSmileRight']?.target || 'mouthSmileRight'] = 0;
     }
 
     // Apply the final frameMorphTargetValues to the actual morph targets with smoothing
@@ -544,150 +706,66 @@ const mesh = meshWithMorphTargets.current;
     const now = Date.now();
     if (now - lastDebugLogRef.current > 5000) { // Log every 5 seconds
       let activeBlendshapes = 0;
-      let activeDetails = '';
-      if (mesh.morphTargetInfluences && mesh.morphTargetDictionary) {
-        Object.keys(mesh.morphTargetDictionary).forEach(name => {
-          const idx = mesh.morphTargetDictionary![name];
-          if (mesh.morphTargetInfluences![idx] > 0.05) {
-            activeBlendshapes++;
-            if (activeBlendshapes <= 5) activeDetails += `${name}: ${mesh.morphTargetInfluences![idx].toFixed(2)} `;
-          }
+      if (mesh.morphTargetInfluences) {
+        mesh.morphTargetInfluences.forEach((influence) => {
+          if (influence > 0.01) activeBlendshapes++;
         });
       }
       if (activeBlendshapes > 0) {
-        // console.log(`[PresenceAvatar] Active blendshapes (${activeBlendshapes}): ${activeDetails.trim()}${activeBlendshapes > 5 ? '...' : ''}`);
+        console.log(`[PresenceAvatar] Active blendshapes: ${activeBlendshapes}`);
       }
       lastDebugLogRef.current = now;
     }
 
-    // Debug log bone status periodically
-    if (frameCountRef.current % 60 === 0) {
-      console.log('[PresenceAvatar] Bone and tracking status:', {
-        hasHeadBone: !!headBone.current,
-        hasNeckBone: !!neckBone.current,
-        headBoneName: headBone.current?.name,
-        neckBoneName: neckBone.current?.name,
-        hasTrackingData: !!trackingDataRef.current,
-        hasHeadRotation: !!trackingDataRef.current?.headRotation,
-        trackingDataKeys: trackingDataRef.current ? Object.keys(trackingDataRef.current) : [],
-        headRotationValue: trackingDataRef.current?.headRotation
-      });
-    }
-    
-    if (frameCountRef.current % 60 === 0) {
-      console.log('[PresenceAvatar] About to check bones:', {
-        headBone: !!headBone.current,
-        neckBone: !!neckBone.current,
-        condition: !!(headBone.current && neckBone.current)
-      });
-    }
-    
-    if (headBone.current && neckBone.current) {
-      console.log('[PresenceAvatar] Both bones found, checking for head rotation data...');
-      if (trackingDataRef.current?.headRotation) {
-        const { pitch, yaw, roll } = trackingDataRef.current.headRotation;
+    // Head rotation from tracking data with neck support
+    if (tracking?.headRotation && headBone.current && !isCoachAvatar) {
+      const headRotation = tracking.headRotation;
+      
+      if (headRotation && typeof headRotation === 'object') {
+        const rotationLerpFactor = 0.8; // Restored high value for fast tracking
         
-        // Debug log raw values periodically
-        if (frameCountRef.current % 60 === 0) {
-          console.log('[PresenceAvatar] Head rotation raw values (radians):', { pitch, yaw, roll });
-          console.log('[PresenceAvatar] Head rotation raw values (degrees):', { 
-            pitch: pitch * 180 / Math.PI, 
-            yaw: yaw * 180 / Math.PI, 
-            roll: roll * 180 / Math.PI 
-          });
-          console.log('[PresenceAvatar] Applying head rotation to bones');
+        // Apply rotation with minimal scaling and offset for pitch
+        if (typeof headRotation.pitch === 'number') {
+          // No manual offset needed - ML5 handles calibration
+          const targetPitch = MathUtils.clamp(headRotation.pitch, -0.8, 0.8);
+          headBone.current.rotation.x = lerp(headBone.current.rotation.x, targetPitch, rotationLerpFactor);
+        }
+        if (typeof headRotation.yaw === 'number') {
+          const targetYaw = MathUtils.clamp(headRotation.yaw * 0.9, -0.7, 0.7); // Minimal scaling for responsiveness
+          headBone.current.rotation.y = lerp(headBone.current.rotation.y, targetYaw, rotationLerpFactor);
+        }
+        if (typeof headRotation.roll === 'number') {
+          const targetRoll = MathUtils.clamp(headRotation.roll * 0.8, -0.4, 0.4); // Minimal scaling
+          headBone.current.rotation.z = lerp(headBone.current.rotation.z, targetRoll, rotationLerpFactor);
         }
         
-        // The ML5 values are already in radians, with ranges:
-        // Pitch: ±45° (±0.785 rad) - looking up/down
-        // Yaw: ±45° (±0.785 rad) - looking left/right  
-        // Roll: ±35° (±0.611 rad) - tilting head left/right
-        
-        // Apply slightly wider constraints to preserve natural movement
-        const constrainedPitch = MathUtils.clamp(pitch, -Math.PI/3, Math.PI / 2);  // -60° to +90° (increased downward range)
-        const constrainedYaw = MathUtils.clamp(yaw, -Math.PI/3, Math.PI/3);      // ±60°
-        const constrainedRoll = MathUtils.clamp(roll, -Math.PI/4, Math.PI/4);    // ±45°
-        
-        // Distribution between head and neck for more natural movement
-        const headPitchFactor = 1.0;   // 100% of pitch on head
-        const neckPitchFactor = 0.0;   // 0% on neck
-        const headYawFactor = 0.75;    // 75% of yaw on head  
-        const neckYawFactor = 0.25;    // 25% on neck
-        const headRollFactor = 0.85;   // 85% of roll on head (neck doesn't tilt much)
-        const neckRollFactor = 0.15;   // 15% on neck
-        
-        // Smooth interpolation factor - slightly faster for more responsive movement
-        const lerpFactor = 0.25;
-        
-        // Apply rotations with proper axis mapping for Three.js coordinate system
-        // Three.js uses right-handed Y-up coordinate system:
-        // - X axis: pitch (nodding yes)
-        // - Y axis: yaw (shaking head no) 
-        // - Z axis: roll (tilting head to shoulder)
-        
-        // Head rotation - apply mirroring where needed for natural movement
-        const targetHeadX = constrainedPitch * headPitchFactor;      // Pitch: positive = look down
-        const targetHeadY = constrainedYaw * headYawFactor;          // Yaw: positive = look left
-        const targetHeadZ = constrainedRoll * headRollFactor;        // Roll: positive = tilt right
-        
-        // Apply smooth interpolation to head bone
-        headBone.current.rotation.x = MathUtils.lerp(headBone.current.rotation.x, targetHeadX, lerpFactor);
-        headBone.current.rotation.y = MathUtils.lerp(headBone.current.rotation.y, targetHeadY, lerpFactor);
-        headBone.current.rotation.z = MathUtils.lerp(headBone.current.rotation.z, targetHeadZ, lerpFactor);
-        
-        // Neck rotation - smaller movements for realism
-        const targetNeckX = constrainedPitch * neckPitchFactor;
-        const targetNeckY = constrainedYaw * neckYawFactor;
-        const targetNeckZ = constrainedRoll * neckRollFactor;
-        
-        // Apply smooth interpolation to neck bone
-        neckBone.current.rotation.x = MathUtils.lerp(neckBone.current.rotation.x, targetNeckX, lerpFactor);
-        neckBone.current.rotation.y = MathUtils.lerp(neckBone.current.rotation.y, targetNeckY, lerpFactor);
-        neckBone.current.rotation.z = MathUtils.lerp(neckBone.current.rotation.z, targetNeckZ, lerpFactor);
-        
-        // Log current bone rotations periodically for debugging
-        if (frameCountRef.current % 120 === 0) {
-          console.log('[PresenceAvatar] Current head bone rotation (degrees):', {
-            x: headBone.current.rotation.x * 180 / Math.PI,
-            y: headBone.current.rotation.y * 180 / Math.PI,
-            z: headBone.current.rotation.z * 180 / Math.PI
-          });
-          console.log('[PresenceAvatar] Current neck bone rotation (degrees):', {
-            x: neckBone.current.rotation.x * 180 / Math.PI,
-            y: neckBone.current.rotation.y * 180 / Math.PI,
-            z: neckBone.current.rotation.z * 180 / Math.PI
-          });
-        }
-        
-      } else {
-        // No tracking data - smoothly return to default pose
-        const returnSpeed = 0.05;
-        
-        // Return head to initial pose
-        if (headBone.current && initialHeadLocalQuaternionRef.current) {
-          headBone.current.quaternion.slerp(initialHeadLocalQuaternionRef.current, returnSpeed);
-        }
-        
-        // Return neck to initial pose
-        if (neckBone.current && initialNeckLocalQuaternionRef.current) {
-          neckBone.current.quaternion.slerp(initialNeckLocalQuaternionRef.current, returnSpeed);
+        // Also apply subtle neck movement for more natural look
+        if (neckBone.current) {
+          neckBone.current.rotation.x = lerp(neckBone.current.rotation.x, headBone.current.rotation.x * 0.3, rotationLerpFactor);
+          neckBone.current.rotation.y = lerp(neckBone.current.rotation.y, headBone.current.rotation.y * 0.3, rotationLerpFactor);
         }
       }
-    } // End of if (headBone.current && neckBone.current)
-  }); // End of useFrame
+    } else if (isCoachAvatar && headBone.current) {
+      // Coach avatar subtle idle movement
+      const time = Date.now() * 0.001;
+      const idleNod = Math.sin(time * 0.5) * 0.02;
+      headBone.current.rotation.x = lerp(headBone.current.rotation.x, idleNod, 0.1);
+    }
+  });
 
 // Now check if scene is loaded after all hooks
-if (!clonedScene) {
-  console.warn('[PresenceAvatar] GLTF scene not loaded or available, rendering null.');
+if (!clonedScene || !modelRootRef.current) {
+  // Removed excessive logging
+  // console.log('[PresenceAvatar] Rendering. Scene:', clonedScene, 'ModelRootRef:', modelRootRef.current);
   return null;
 }
 
 console.log('[PresenceAvatar] Rendering. Scene:', clonedScene, 'ModelRootRef:', modelRootRef.current);
 return (
-  <group ref={groupRef} position={position} scale={scale}>
+  <group ref={groupRef} position={position as [number, number, number]} scale={scale}>
     {modelRootRef.current && <primitive object={modelRootRef.current} dispose={null} />}
   </group>
 );
-};
+});
 
 export default PresenceAvatar;

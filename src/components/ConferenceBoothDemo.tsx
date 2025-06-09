@@ -8,6 +8,7 @@ import { OrbitControls } from '@react-three/drei';
 import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
 // DISABLED: Posture tracking causing crashes
 // import { PostureTrackingService } from '../services/PostureTrackingService';
+import { Link } from 'react-router-dom';
 import './ConferenceBoothDemo.css';
 
 interface Props {
@@ -582,9 +583,22 @@ const ConferenceBoothDemo: React.FC<Props> = ({
           )}
         </div>
 
-        <div className="mode-switcher">
-          <button onClick={() => setMode('participant')} className="riso-button primary">Participant</button>
-          <button onClick={() => setMode('audience')} className="riso-button secondary">Audience</button>
+        <div className="mode-toggle riso-card">
+          <h3>Select Your Role</h3>
+          <div className="toggle-buttons">
+            <button onClick={() => setMode('participant')} className="riso-button primary">Participant</button>
+            <button onClick={() => setMode('audience')} className="riso-button secondary">Audience</button>
+          </div>
+
+          <div className="nav-links" style={{ marginTop: '20px', textAlign: 'center' }}>
+            <p style={{ color: '#888', marginBottom: '10px' }}>Or try the new setup:</p>
+            <Link to="/conference" style={{ marginRight: '15px', color: '#4ECDC4' }}>
+              Host Conference (Computer)
+            </Link>
+            <Link to="/conference-mobile" style={{ color: '#FFD700' }}>
+              Join Conference (Mobile)
+            </Link>
+          </div>
         </div>
 
         {!isInRoom ? (
@@ -681,9 +695,22 @@ const ConferenceBoothDemo: React.FC<Props> = ({
         <p className="riso-subtitle">Real-time Dating Performance Analysis</p>
       </div>
 
-      <div className="mode-switcher">
-        <button onClick={() => setMode('participant')} className="riso-button primary">Participant</button>
-        <button onClick={() => setMode('audience')} className="riso-button secondary">Audience</button>
+      <div className="mode-toggle riso-card">
+        <h3>Select Your Role</h3>
+        <div className="toggle-buttons">
+          <button onClick={() => setMode('participant')} className="riso-button primary">Participant</button>
+          <button onClick={() => setMode('audience')} className="riso-button secondary">Audience</button>
+        </div>
+
+        <div className="nav-links" style={{ marginTop: '20px', textAlign: 'center' }}>
+          <p style={{ color: '#888', marginBottom: '10px' }}>Or try the new setup:</p>
+          <Link to="/conference" style={{ marginRight: '15px', color: '#4ECDC4' }}>
+            Host Conference (Computer)
+          </Link>
+          <Link to="/conference-mobile" style={{ color: '#FFD700' }}>
+            Join Conference (Mobile)
+          </Link>
+        </div>
       </div>
 
       {/* Avatar/Video Toggle */}

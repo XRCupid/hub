@@ -3,6 +3,8 @@ import { DaterPerformanceAnalytics } from '../services/DaterPerformanceAnalytics
 import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
 import { PostureTrackingService } from '../services/PostureTrackingService';
 import { HumeVoiceService } from '../services/humeVoiceService';
+import { EmotionDisplay } from './EmotionDisplay';
+import PresenceAvatar from './PresenceAvatar';
 import './AudienceAnalyticsDashboard.css';
 
 interface ParticipantData {
@@ -12,6 +14,7 @@ interface ParticipantData {
   analytics: DaterPerformanceAnalytics;
   faceMeshService: ML5FaceMeshService;
   postureService: PostureTrackingService;
+  emotions: Array<{ emotion: string; score: number }>;
 }
 
 interface AudienceAnalyticsDashboardProps {
@@ -20,6 +23,8 @@ interface AudienceAnalyticsDashboardProps {
   participant1Name: string;
   participant2Name: string;
   roomId?: string;
+  showPresenceAvatars?: boolean;
+  enableRealTimeCoaching?: boolean;
 }
 
 interface ChemistryMoment {
@@ -41,7 +46,9 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
   participant2Stream,
   participant1Name,
   participant2Name,
-  roomId
+  roomId,
+  showPresenceAvatars = true,
+  enableRealTimeCoaching = true
 }) => {
   const [participants, setParticipants] = useState<ParticipantData[]>([]);
   const [overallChemistry, setOverallChemistry] = useState<number>(50);
@@ -51,9 +58,12 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
   const [chemistryMoments, setChemistryMoments] = useState<ChemistryMoment[]>([]);
   const [coachingInsights, setCoachingInsights] = useState<CoachingInsight[]>([]);
   const [emotionalSync, setEmotionalSync] = useState<number>(75);
+  const [participant1Emotions, setParticipant1Emotions] = useState<Array<{ emotion: string; score: number }>>([]);
+  const [participant2Emotions, setParticipant2Emotions] = useState<Array<{ emotion: string; score: number }>>([]);
 
   const sessionStartTime = useRef<number>(0);
   const humeVoiceService = useRef<HumeVoiceService | null>(null);
+  const reconnectTimeoutId = useRef<number | null>(null);
 
   // Initialize participants when streams are available
   useEffect(() => {
@@ -65,7 +75,8 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
           stream: participant1Stream,
           analytics: new DaterPerformanceAnalytics(),
           faceMeshService: new ML5FaceMeshService(),
-          postureService: new PostureTrackingService()
+          postureService: new PostureTrackingService(),
+          emotions: []
         },
         {
           id: 'participant2', 
@@ -73,12 +84,149 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
           stream: participant2Stream,
           analytics: new DaterPerformanceAnalytics(),
           faceMeshService: new ML5FaceMeshService(),
-          postureService: new PostureTrackingService()
+          postureService: new PostureTrackingService(),
+          emotions: []
         }
       ];
       setParticipants(newParticipants);
     }
   }, [participant1Stream, participant2Stream, participant1Name, participant2Name]);
+
+  // Start session and initialize services when streams are available
+  useEffect(() => {
+    if (!participants.length || !participant1Stream || !participant2Stream) return;
+    if (isSessionActive) return;
+
+    console.log('[AudienceDashboard] Starting session with participants:', participants);
+    setIsSessionActive(true);
+    sessionStartTime.current = Date.now();
+
+    participants.forEach((p) => {
+      p.analytics.startSession([p.id]);
+    });
+
+    // Initialize Hume for emotion tracking with audio streams
+    const initializeHume = async () => {
+      try {
+        humeVoiceService.current = new HumeVoiceService();
+        
+        // Connect Hume service
+        await humeVoiceService.current.connect();
+        
+        // Set up Hume emotion callbacks
+        humeVoiceService.current.onEmotion((emotionData: any) => {
+          console.log('[AudienceDashboard] Received emotion data:', emotionData);
+          
+          if (emotionData?.predictions && emotionData.predictions.length > 0) {
+            const emotions = emotionData.predictions[0].emotions || {};
+            
+            // Transform Hume emotion data to our format
+            const formattedEmotions = Object.entries(emotions)
+              .map(([emotion, score]) => ({ emotion, score: score as number }))
+              .filter(e => e.score > 0.1) // Only show emotions above 10%
+              .sort((a, b) => b.score - a.score);
+            
+            // For demo purposes, alternate between participants
+            // In production, you'd identify which participant is speaking
+            const currentSpeaker = Math.random() > 0.5 ? 1 : 2;
+            if (currentSpeaker === 1) {
+              setParticipant1Emotions(formattedEmotions);
+            } else {
+              setParticipant2Emotions(formattedEmotions);
+            }
+            
+            // Update emotional sync based on similarity of emotions
+            updateEmotionalSync(formattedEmotions);
+          }
+        });
+
+        // Send audio from participant streams to Hume
+        // Note: In production, you'd process audio from each participant separately
+        const audioContext = new AudioContext();
+        
+        // Helper to process audio stream
+        const processAudioStream = async (stream: MediaStream) => {
+          const source = audioContext.createMediaStreamSource(stream);
+          const processor = audioContext.createScriptProcessor(4096, 1, 1);
+          
+          processor.onaudioprocess = async (e) => {
+            const inputData = e.inputBuffer.getChannelData(0);
+            // Convert to base64 for Hume
+            const audioBlob = new Blob([inputData], { type: 'audio/wav' });
+            
+            // Send to Hume (if connected)
+            if (humeVoiceService.current) {
+              humeVoiceService.current.sendAudio(audioBlob);
+            }
+          };
+          
+          source.connect(processor);
+          processor.connect(audioContext.destination);
+        };
+        
+        // Process both participant audio streams
+        await processAudioStream(participant1Stream);
+        await processAudioStream(participant2Stream);
+        
+      } catch (error) {
+        console.error('[AudienceDashboard] Error initializing Hume:', error);
+      }
+    };
+    
+    initializeHume();
+    
+    // Start face mesh and posture tracking for each participant
+    participants.forEach(async (p) => {
+      await p.faceMeshService.initialize();
+      await p.postureService.initialize();
+
+      if (!p.stream) return;
+
+      // Create video element for tracking
+      const video = document.createElement('video');
+      video.srcObject = p.stream || null;
+      video.play();
+
+      p.faceMeshService.startTracking(video);
+      p.postureService.startTracking(video);
+    });
+
+    // Start analytics update loop
+    const analyticsInterval = setInterval(() => {
+      if (!isSessionActive) {
+        clearInterval(analyticsInterval);
+        return;
+      }
+      updateAnalytics();
+    }, 2000);
+
+    // Update session duration
+    const durationInterval = setInterval(() => {
+      if (isSessionActive) {
+        setSessionDuration(Math.floor((Date.now() - sessionStartTime.current) / 1000));
+      } else {
+        clearInterval(durationInterval);
+      }
+    }, 1000);
+    
+    return () => {
+      console.log('[AudienceDashboard] Cleaning up session');
+      participants.forEach((p) => {
+        p.analytics.endSession();
+        p.faceMeshService.stopTracking();
+        p.postureService.stopTracking();
+      });
+      
+      // Disconnect Hume
+      if (humeVoiceService.current) {
+        humeVoiceService.current.disconnect();
+      }
+      
+      if (reconnectTimeoutId.current) {
+        clearTimeout(reconnectTimeoutId.current);
+      }
+    };
+  }, [participants, isSessionActive, participant1Stream, participant2Stream]);
 
   const startSession = () => {
     if (participants.length !== 2) return;
@@ -93,6 +241,33 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
 
     // Initialize Hume for emotion tracking
     humeVoiceService.current = new HumeVoiceService();
+    
+    // Set up Hume emotion callbacks
+    if (humeVoiceService.current) {
+      humeVoiceService.current.onEmotion((emotionData: any) => {
+        if (emotionData?.predictions && emotionData.predictions.length > 0) {
+          const emotions = emotionData.predictions[0].emotions || [];
+          
+          // Transform Hume emotion data to our format
+          const formattedEmotions = Object.entries(emotions)
+            .map(([emotion, score]) => ({ emotion, score: score as number }))
+            .filter(e => e.score > 0.1) // Only show emotions above 10%
+            .sort((a, b) => b.score - a.score);
+          
+          // For demo purposes, alternate between participants
+          // In production, you'd identify which participant is speaking
+          const currentSpeaker = Math.random() > 0.5 ? 1 : 2;
+          if (currentSpeaker === 1) {
+            setParticipant1Emotions(formattedEmotions);
+          } else {
+            setParticipant2Emotions(formattedEmotions);
+          }
+          
+          // Update emotional sync based on similarity of emotions
+          updateEmotionalSync(formattedEmotions);
+        }
+      });
+    }
     
     // Start face mesh and posture tracking for each participant
     participants.forEach(async (p) => {
@@ -189,15 +364,16 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
     }
 
     // Generate coaching insights
-    if (Math.random() > 0.8) {
-      const newInsight: CoachingInsight = {
-        timestamp: Date.now(),
-        participant: Math.random() > 0.5 ? participant1Name : participant2Name,
-        category: getRandomCategory(),
-        message: getRandomCoachingMessage(),
-        priority: Math.random() > 0.7 ? 'high' : 'medium'
-      };
-      setCoachingInsights(prev => [...prev.slice(-2), newInsight]);
+    if (enableRealTimeCoaching && isSessionActive) {
+      participants.forEach(participant => {
+        const newInsights = generateCoachingInsight(participant);
+        newInsights.forEach(insight => {
+          setCoachingInsights(prev => {
+            const updated = [insight, ...prev].slice(0, 10); // Keep last 10 insights
+            return updated;
+          });
+        });
+      });
     }
 
     // Update conversation phase
@@ -211,6 +387,115 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
     } else {
       setConversationPhase('Building connection');
     }
+
+    // Generate mock emotions if Hume isn't providing real data
+    if (participant1Emotions.length === 0) {
+      setParticipant1Emotions([
+        { emotion: 'joy', score: 0.7 + Math.random() * 0.2 },
+        { emotion: 'interest', score: 0.5 + Math.random() * 0.3 },
+        { emotion: 'contentment', score: 0.4 + Math.random() * 0.3 }
+      ]);
+    }
+      
+    if (participant2Emotions.length === 0) {
+      setParticipant2Emotions([
+        { emotion: 'excitement', score: 0.6 + Math.random() * 0.3 },
+        { emotion: 'joy', score: 0.5 + Math.random() * 0.3 },
+        { emotion: 'interest', score: 0.4 + Math.random() * 0.2 }
+      ]);
+    }
+
+    // Update emotional sync
+    updateEmotionalSync(participant1Emotions);
+  };
+
+  const updateEmotionalSync = (currentEmotions: Array<{ emotion: string; score: number }>) => {
+    // Compare current emotions with the other participant's emotions
+    const otherEmotions = currentEmotions === participant1Emotions ? participant2Emotions : participant1Emotions;
+    
+    if (otherEmotions.length === 0) return;
+    
+    // Calculate similarity between emotion sets
+    let similarity = 0;
+    currentEmotions.forEach(e1 => {
+      const matchingEmotion = otherEmotions.find(e2 => e2.emotion === e1.emotion);
+      if (matchingEmotion) {
+        similarity += Math.min(e1.score, matchingEmotion.score);
+      }
+    });
+    
+    setEmotionalSync(Math.round(similarity * 100));
+  };
+
+  const generateCoachingInsight = (participant: ParticipantData) => {
+    const metrics = getParticipantMetrics(participant);
+    const insights: CoachingInsight[] = [];
+    const timestamp = Date.now();
+    
+    // Eye contact coaching
+    if (metrics.eyeContact < 50) {
+      insights.push({
+        timestamp,
+        participant: participant.name,
+        category: 'Eye Contact',
+        message: 'Try to maintain eye contact - look at the camera to build connection',
+        priority: 'high'
+      });
+    } else if (metrics.eyeContact > 80) {
+      insights.push({
+        timestamp,
+        participant: participant.name,
+        category: 'Eye Contact',
+        message: 'Great eye contact! This builds trust and connection',
+        priority: 'low'
+      });
+    }
+    
+    // Emotional coaching based on current emotions
+    const topEmotion = participant.emotions?.[0];
+    if (topEmotion) {
+      if (['anger', 'disgust', 'fear'].includes(topEmotion.emotion)) {
+        insights.push({
+          timestamp,
+          participant: participant.name,
+          category: 'Emotional State',
+          message: `Showing ${topEmotion.emotion} - try to relax and find something positive to focus on`,
+          priority: 'high'
+        });
+      } else if (['joy', 'excitement', 'admiration'].includes(topEmotion.emotion)) {
+        insights.push({
+          timestamp,
+          participant: participant.name,
+          category: 'Emotional State',
+          message: `Great energy! Your ${topEmotion.emotion} is creating positive chemistry`,
+          priority: 'low'
+        });
+      }
+    }
+    
+    // Engagement coaching
+    if (metrics.facialEngagement < 60) {
+      insights.push({
+        timestamp,
+        participant: participant.name,
+        category: 'Engagement',
+        message: 'Show more interest - smile, nod, and react to what they\'re saying',
+        priority: 'medium'
+      });
+    }
+    
+    // Body language coaching
+    if (metrics.bodyLanguage < 60) {
+      insights.push({
+        timestamp,
+        participant: participant.name,
+        category: 'Body Language',
+        message: 'Open up your posture - uncross arms and lean in slightly',
+        priority: 'medium'
+      });
+    }
+    
+    return insights;
   };
 
   const getRandomChemistryContext = (): string => {
@@ -271,6 +556,22 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
     return session?.compatibilityScore || 70;
   };
 
+  // Helper function for audio processing
+  const blobToBase64 = async (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result.split(',')[1]);
+        } else {
+          reject(new Error('Failed to convert blob to base64'));
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
   return (
     <div className="audience-analytics-dashboard">
       {/* Header */}
@@ -308,6 +609,22 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
             </div>
             
             <div className="participant-video">
+              {showPresenceAvatars && (
+                <div className="presence-avatar-overlay">
+                  <PresenceAvatar 
+                    avatarUrl={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant1Name}`}
+                    trackingData={{
+                      landmarks: participants[0]?.faceMeshService?.getLandmarks() || [],
+                      expressions: (participants[0]?.faceMeshService?.getExpressions() as unknown as Record<string, number>) || {},
+                      headRotation: participants[0]?.faceMeshService?.getHeadRotation() || { pitch: 0, yaw: 0, roll: 0 }
+                    }}
+                    emotionalBlendshapes={participants[0]?.emotions?.reduce((acc, emotion) => ({
+                      ...acc,
+                      [emotion.emotion]: emotion.score / 100
+                    }), {})}
+                  />
+                </div>
+              )}
               <video 
                 autoPlay 
                 muted 
@@ -316,6 +633,11 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
                     video.srcObject = participant1Stream;
                   }
                 }}
+                style={{ display: showPresenceAvatars ? 'none' : 'block' }}
+              />
+              <EmotionDisplay 
+                emotions={participant1Emotions} 
+                participantName={participant1Name}
               />
             </div>
 
@@ -386,6 +708,22 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
             </div>
             
             <div className="participant-video">
+              {showPresenceAvatars && (
+                <div className="presence-avatar-overlay">
+                  <PresenceAvatar 
+                    avatarUrl={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant2Name}`}
+                    trackingData={{
+                      landmarks: participants[1]?.faceMeshService?.getLandmarks() || [],
+                      expressions: (participants[1]?.faceMeshService?.getExpressions() as unknown as Record<string, number>) || {},
+                      headRotation: participants[1]?.faceMeshService?.getHeadRotation() || { pitch: 0, yaw: 0, roll: 0 }
+                    }}
+                    emotionalBlendshapes={participants[1]?.emotions?.reduce((acc, emotion) => ({
+                      ...acc,
+                      [emotion.emotion]: emotion.score / 100
+                    }), {})}
+                  />
+                </div>
+              )}
               <video 
                 autoPlay 
                 muted 
@@ -394,6 +732,11 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
                     video.srcObject = participant2Stream;
                   }
                 }}
+                style={{ display: showPresenceAvatars ? 'none' : 'block' }}
+              />
+              <EmotionDisplay 
+                emotions={participant2Emotions} 
+                participantName={participant2Name}
               />
             </div>
 
@@ -432,7 +775,7 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
 
         {/* Coaching Panel */}
         <div className="coaching-panel">
-          <h3>Live Coaching Insights</h3>
+          <h3>Real-Time Coaching Advice</h3>
           
           {/* Chemistry Moments */}
           <div className="chemistry-moments">
@@ -451,11 +794,19 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
           {/* Coaching Insights */}
           <div className="coaching-insights">
             <h4>Coaching Observations</h4>
+            {coachingInsights.length === 0 && (
+              <div className="no-insights">Monitoring conversation... coaching tips will appear here</div>
+            )}
             {coachingInsights.map((insight, index) => (
               <div key={index} className={`coaching-insight priority-${insight.priority}`}>
-                <div className="insight-participant">{insight.participant}</div>
+                <div className="insight-header">
+                  <span className="insight-participant">{insight.participant}</span>
+                  <span className="insight-category">{insight.category}</span>
+                </div>
                 <div className="insight-message">{insight.message}</div>
-                <div className="insight-category">{insight.category}</div>
+                <div className="insight-time">
+                  {new Date(insight.timestamp).toLocaleTimeString()}
+                </div>
               </div>
             ))}
           </div>

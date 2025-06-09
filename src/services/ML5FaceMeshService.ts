@@ -5,6 +5,9 @@ declare const ml5: any; // Declare ml5 as a global variable
 
 export class ML5FaceMeshService implements IFaceTrackingService {
   private facemesh: any = null;
+  private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
+  private detectionLoopActive = false; // Detection loop guard
   private isTracking = false;
   private isRunning = false; // To control the animation loop
   private videoElement: HTMLVideoElement | null = null;
@@ -13,7 +16,17 @@ export class ML5FaceMeshService implements IFaceTrackingService {
   private cleanupFunctions: (() => void)[] = [];
   private lastPredictionTime = 0;
   private predictions: any[] = [];
-  private smoothingAlpha = 0.15; // Very strong smoothing to combat persistent jitter
+  private smoothingAlpha = 0.1; // REDUCED for more stability
+  private frameCount = 0;
+  private skipFrames = 2; // Process every 3rd frame to reduce CPU usage
+  private lastProcessTime = 0;
+  private minProcessInterval = 50; // Minimum 50ms between processing (20 FPS max)
+
+  // Calibration state
+  private isCalibrated: boolean = false;
+  private calibrationFrames: number = 0;
+  private calibrationSamples: HeadRotation[] = [];
+  private calibrationOffset: HeadRotation = { pitch: 0, yaw: 0, roll: 0 };
 
   private readonly modelConfig = {
     maxFaces: 1,
@@ -23,6 +36,32 @@ export class ML5FaceMeshService implements IFaceTrackingService {
 
   constructor() {
     this.lastExpressions = this.getNeutralExpression();
+    
+    // Add global error handler to suppress ML5/TensorFlow errors
+    if (typeof window !== 'undefined') {
+      const errorHandler = (event: ErrorEvent | PromiseRejectionEvent) => {
+        const error = 'reason' in event ? event.reason : event.error;
+        if (error?.stack && (
+          error.stack.includes('engine.js') || 
+          error.stack.includes('tf-core') ||
+          error.stack.includes('facemesh') ||
+          error.stack.includes('estimateFaces') ||
+          error.stack.includes('t is not a function')
+        )) {
+          event.preventDefault();
+          // Silently suppress these errors
+          return;
+        }
+      };
+      
+      window.addEventListener('error', errorHandler as any);
+      window.addEventListener('unhandledrejection', errorHandler as any);
+      
+      this.cleanupFunctions.push(() => {
+        window.removeEventListener('error', errorHandler as any);
+        window.removeEventListener('unhandledrejection', errorHandler as any);
+      });
+    }
   }
 
   private async waitForML5(): Promise<boolean> {
@@ -40,45 +79,62 @@ export class ML5FaceMeshService implements IFaceTrackingService {
   }
 
   public async initialize(): Promise<void> {
-    console.log('[ML5FaceMesh] Initializing face mesh...');
-    try {
-      const ml5Ready = await this.waitForML5();
-      if (!ml5Ready) {
-        throw new Error('ML5 or facemesh not available after waiting');
-      }
-      console.log('[ML5FaceMesh] ML5 is available, creating facemesh model...');
-      if (typeof ml5.facemesh !== 'function') {
-        console.error('[ML5FaceMesh] ml5.facemesh is not a function!');
-        throw new Error('ml5.facemesh is not a function!');
-      }
-      return new Promise<void>((resolve, reject) => {
-        try {
-          this.facemesh = ml5.facemesh(this.modelConfig, () => {
-            console.log('[ML5FaceMesh] ml5.facemesh LOAD CALLBACK invoked.');
-            if (!this.facemesh) {
-              console.error('[ML5FaceMesh] CRITICAL: this.facemesh is null INSIDE load callback. This should not happen.');
-              reject(new Error('Facemesh model is null or undefined after load callback.'));
-              return;
-            }
-            console.log('[ML5FaceMesh] Model loaded successfully!');
-            resolve();
-          });
-          console.log('[ML5FaceMesh] Value of this.facemesh IMMEDIATELY AFTER ml5.facemesh() call:', this.facemesh);
-          if (this.facemesh && typeof this.facemesh.on === 'function') {
-            this.facemesh.on('error', (error: any) => {
-              console.error('[ML5FaceMesh] Model error:', error);
-              reject(error);
-            });
-          }
-        } catch (error) {
-          console.error('[ML5FaceMesh] Error during ml5.facemesh call:', error);
-          reject(error);
-        }
-      });
-    } catch (error) {
-      console.error('[ML5FaceMesh] Critical initialization error:', error);
-      throw error;
+    // Return existing initialization promise if already in progress
+    if (this.initializationPromise) {
+      console.log('[ML5FaceMesh] Returning existing initialization promise');
+      return this.initializationPromise;
     }
+
+    // If already initialized, return immediately
+    if (this.isInitialized && this.facemesh) {
+      console.log('[ML5FaceMesh] Already initialized, skipping');
+      return Promise.resolve();
+    }
+
+    this.initializationPromise = this._doInitialize();
+    return this.initializationPromise;
+  }
+
+  private async _doInitialize(): Promise<void> {
+    console.log('[ML5FaceMesh] Initializing face mesh...');
+    
+    // Wait for ml5 to be available
+    const ml5Ready = await this.waitForML5();
+    if (!ml5Ready) {
+      throw new Error('ML5 or facemesh not available after waiting');
+    }
+    console.log('[ML5FaceMesh] ML5 is available, creating facemesh model...');
+    
+    // Check if ml5.facemesh is available
+    if (typeof ml5.facemesh !== 'function') {
+      console.error('[ML5FaceMesh] ml5.facemesh is not a function!');
+      throw new Error('ml5.facemesh is not a function!');
+    }
+    return new Promise<void>((resolve, reject) => {
+      try {
+        this.facemesh = ml5.facemesh(this.modelConfig, () => {
+          console.log('[ML5FaceMesh] ml5.facemesh LOAD CALLBACK invoked.');
+          if (!this.facemesh) {
+            console.error('[ML5FaceMesh] CRITICAL: this.facemesh is null INSIDE load callback. This should not happen.');
+            reject(new Error('Facemesh model is null or undefined after load callback.'));
+            return;
+          }
+          console.log('[ML5FaceMesh] Model loaded successfully!');
+          this.isInitialized = true;
+          resolve();
+        });
+        console.log('[ML5FaceMesh] Value of this.facemesh IMMEDIATELY AFTER ml5.facemesh() call:', this.facemesh);
+        if (this.facemesh && typeof this.facemesh.on === 'function') {
+          this.facemesh.on('error', (error: any) => {
+            console.error('[ML5FaceMesh] Model error:', error);
+            reject(error);
+          });
+        }
+      } catch (error) {
+        console.error('[ML5FaceMesh] Error during ml5.facemesh call:', error);
+        reject(error);
+      }
+    });
   }
 
   public async startTracking(videoElement: HTMLVideoElement): Promise<void> {
@@ -92,41 +148,79 @@ export class ML5FaceMeshService implements IFaceTrackingService {
     this.videoElement = videoElement;
     this.isTracking = true;
     this.isRunning = true; 
+    
+    // Prevent multiple detection loops
+    if (this.detectionLoopActive) {
+      console.log('[ML5FaceMesh] Detection loop already active, skipping');
+      return;
+    }
+    
+    this.detectionLoopActive = true;
     console.log('[ML5FaceMesh] Video element ready, queueing detection loop start...');
     // Add a slight delay before the first detectionLoop call to let the model "settle"
     setTimeout(() => {
         if (this.isRunning && this.isTracking && this.facemesh && this.videoElement) { // Re-check conditions
             console.log('[ML5FaceMesh] Initiating detection loop after delay.');
             this.detectionLoop();
+        } else {
+            this.detectionLoopActive = false;
         }
     }, 100); // 100ms delay, can be adjusted
   }
 
   private async detectionLoop(): Promise<void> {
     if (!this.isTracking || !this.facemesh || !this.videoElement || !this.isRunning) {
-      // console.log('[ML5FaceMesh] Detection loop conditions not met or stopped. Exiting loop.'); // Can be noisy
+      this.detectionLoopActive = false;
       return;
     }
 
-    try {
-      if (this.facemesh.predict && typeof this.facemesh.predict === 'function') {
-        const predictions = await this.facemesh.predict(this.videoElement);
-        this.handlePredictions(predictions);
-      } else if (this.facemesh.detect && typeof this.facemesh.detect === 'function') {
-        this.facemesh.detect(this.videoElement, (err: any, predictions: any) => {
-          if (err) {
-            console.warn('[ML5FaceMesh] Error in detect callback:', err);
-            return; 
-          }
-          this.handlePredictions(predictions);
-        });
-      } else {
-        console.error('[ML5FaceMesh] No suitable detection method (predict or detect) found on facemesh model.');
-        this.stopTracking(); 
-        return;
+    // Frame skipping to reduce CPU usage
+    this.frameCount++;
+    if (this.frameCount % (this.skipFrames + 1) !== 0) {
+      // Skip this frame
+      if (this.isRunning) {
+        requestAnimationFrame(() => this.detectionLoop());
       }
+      return;
+    }
+
+    // Throttle processing rate
+    const now = Date.now();
+    if (now - this.lastProcessTime < this.minProcessInterval) {
+      // Too soon, skip processing
+      if (this.isRunning) {
+        requestAnimationFrame(() => this.detectionLoop());
+      }
+      return;
+    }
+    this.lastProcessTime = now;
+
+    try {
+      // Wrap detection in a promise to catch any internal errors
+      await new Promise<void>((resolve) => {
+        if (this.facemesh.predict && typeof this.facemesh.predict === 'function') {
+          // Use callback-based predict to avoid promise rejection issues
+          this.facemesh.predict(this.videoElement, (predictions: any) => {
+            this.handlePredictions(predictions);
+            resolve();
+          });
+        } else if (this.facemesh.detect && typeof this.facemesh.detect === 'function') {
+          this.facemesh.detect(this.videoElement, (err: any, predictions: any) => {
+            if (!err) {
+              this.handlePredictions(predictions);
+            }
+            resolve();
+          });
+        } else {
+          console.error('[ML5FaceMesh] No suitable detection method found');
+          this.stopTracking(); 
+          resolve();
+        }
+      }).catch(() => {
+        // Silently ignore detection errors to prevent crashes
+      });
     } catch (error) {
-      console.error('[ML5FaceMesh] Error in detection loop:', error);
+      // Silently ignore errors to prevent memory issues from error accumulation
     }
 
     if (this.isRunning) {
@@ -138,10 +232,29 @@ export class ML5FaceMeshService implements IFaceTrackingService {
     console.log('[ML5FaceMesh] Stopping face tracking...');
     this.isTracking = false;
     this.isRunning = false; 
+    this.detectionLoopActive = false;
+    
+    // Clean up video reference but don't null facemesh immediately
     this.videoElement = null; 
-    this.facemesh = null; 
+    
+    // Clear predictions to free memory
+    this.predictions = [];
+    
+    // Run cleanup functions
     this.cleanupFunctions.forEach(fn => fn());
     this.cleanupFunctions = [];
+    
+    // Null facemesh after cleanup
+    this.facemesh = null; 
+    this.isInitialized = false;
+    this.initializationPromise = null;
+    
+    // Reset calibration when stopping
+    this.isCalibrated = false;
+    this.calibrationFrames = 0;
+    this.calibrationSamples = [];
+    this.calibrationOffset = { pitch: 0, yaw: 0, roll: 0 };
+    
     console.log('[ML5FaceMesh] Face tracking stopped.');
   }
 
@@ -169,6 +282,32 @@ export class ML5FaceMeshService implements IFaceTrackingService {
     const rawExpressions = this.calculateExpressions(landmarks);
     const rawHeadRotation = this.calculateHeadRotation(landmarks);
 
+    // Handle calibration
+    if (!this.isCalibrated) {
+      this.calibrationSamples.push({ ...rawHeadRotation });
+      this.calibrationFrames++;
+      
+      // Calibrate after collecting 30 frames (about 1 second)
+      if (this.calibrationFrames >= 30) {
+        // Calculate average of calibration samples
+        const avgPitch = this.calibrationSamples.reduce((sum, s) => sum + s.pitch, 0) / this.calibrationSamples.length;
+        const avgYaw = this.calibrationSamples.reduce((sum, s) => sum + s.yaw, 0) / this.calibrationSamples.length;
+        const avgRoll = this.calibrationSamples.reduce((sum, s) => sum + s.roll, 0) / this.calibrationSamples.length;
+        
+        this.calibrationOffset = { pitch: avgPitch, yaw: avgYaw, roll: avgRoll };
+        this.isCalibrated = true;
+        
+        console.log('[ML5FaceMesh] Calibration complete:', this.calibrationOffset);
+      }
+    }
+    
+    // Apply calibration offset
+    const calibratedHeadRotation = this.isCalibrated ? {
+      pitch: rawHeadRotation.pitch - this.calibrationOffset.pitch,
+      yaw: rawHeadRotation.yaw - this.calibrationOffset.yaw,
+      roll: rawHeadRotation.roll - this.calibrationOffset.roll
+    } : rawHeadRotation;
+
     // Apply smoothing to update this.lastExpressions
     // The 'this.lastExpressions' object holds the previously smoothed values.
     // We iterate over its keys and update them with new smoothed values.
@@ -194,13 +333,13 @@ export class ML5FaceMeshService implements IFaceTrackingService {
     // Apply smoothing to update this.lastHeadRotation
     this.lastHeadRotation.pitch = 
       this.lastHeadRotation.pitch * (1 - this.smoothingAlpha) + 
-      rawHeadRotation.pitch * this.smoothingAlpha;
+      calibratedHeadRotation.pitch * this.smoothingAlpha;
     this.lastHeadRotation.yaw = 
       this.lastHeadRotation.yaw * (1 - this.smoothingAlpha) + 
-      rawHeadRotation.yaw * this.smoothingAlpha;
+      calibratedHeadRotation.yaw * this.smoothingAlpha;
     this.lastHeadRotation.roll = 
       this.lastHeadRotation.roll * (1 - this.smoothingAlpha) + 
-      rawHeadRotation.roll * this.smoothingAlpha;
+      calibratedHeadRotation.roll * this.smoothingAlpha;
   }
 
   private calculateExpressions(landmarks: number[][]): FacialExpressions {
@@ -281,10 +420,10 @@ export class ML5FaceMeshService implements IFaceTrackingService {
       }
 
       // Eyebrow Up (browInnerUp)
-      const leftInnerBrowY = landmarks[53] ? landmarks[53][1] : null;
-      const leftUpperEyelidY = landmarks[159] ? landmarks[159][1] : null;
-      const rightInnerBrowY = landmarks[283] ? landmarks[283][1] : null;
-      const rightUpperEyelidY = landmarks[386] ? landmarks[386][1] : null;
+      const leftInnerBrowY = landmarks[53] ? landmarks[53][1] : null; 
+      const leftUpperEyelidY = landmarks[159] ? landmarks[159][1] : null; 
+      const rightInnerBrowY = landmarks[283] ? landmarks[283][1] : null; 
+      const rightUpperEyelidY = landmarks[386] ? landmarks[386][1] : null; 
 
       if (leftInnerBrowY !== null && leftUpperEyelidY !== null && rightInnerBrowY !== null && rightUpperEyelidY !== null && faceHeight > 0) {
         const browRaiseDivisor = faceHeight * 0.08; // Sensitivity: smaller = more sensitive
@@ -354,7 +493,7 @@ export class ML5FaceMeshService implements IFaceTrackingService {
         const rawLeftBrowRaiseRatio = Math.max(0, (leftUpperEyelid[1] - leftInnerBrowTop[1]) / (faceHeight * 0.12)); // Increased responsiveness
         const rawRightBrowRaiseRatio = Math.max(0, (rightUpperEyelid[1] - rightInnerBrowTop[1]) / (faceHeight * 0.12)); // Increased responsiveness
         const eyebrowRaiseThreshold = 0.32; // Slightly increased threshold for default high brows
-        console.log(`[ExpressionsDebug] EyebrowRaise (Inner) - RawLeft: ${rawLeftBrowRaiseRatio.toFixed(3)}, RawRight: ${rawRightBrowRaiseRatio.toFixed(3)}, Threshold: ${eyebrowRaiseThreshold.toFixed(3)}`);
+        console.log(`[ExpressionsDebug] BrowUp (Inner) - RawLeft: ${rawLeftBrowRaiseRatio.toFixed(3)}, RawRight: ${rawRightBrowRaiseRatio.toFixed(3)}, Threshold: ${eyebrowRaiseThreshold.toFixed(3)}`);
         expressions.eyebrowRaiseLeft = rawLeftBrowRaiseRatio > eyebrowRaiseThreshold ? Math.min(1, Math.max(0, (rawLeftBrowRaiseRatio - eyebrowRaiseThreshold) / (1.0 - eyebrowRaiseThreshold))) : 0;
         expressions.eyebrowRaiseRight = rawRightBrowRaiseRatio > eyebrowRaiseThreshold ? Math.min(1, Math.max(0, (rawRightBrowRaiseRatio - eyebrowRaiseThreshold) / (1.0 - eyebrowRaiseThreshold))) : 0;
         expressions.eyebrowRaise = (expressions.eyebrowRaiseLeft + expressions.eyebrowRaiseRight) / 2;

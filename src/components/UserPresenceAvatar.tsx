@@ -4,12 +4,21 @@ import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingSer
 import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
 import { TrackingData, FacialExpressions } from '../types/tracking';
 
+// Add unique ID to identify this component instance
+let instanceCounter = 0;
+
 interface UserPresenceAvatarProps {
   avatarUrl: string;
   position?: [number, number, number];
   scale?: number;
   enableTracking?: boolean;
   useHumeEmotions?: boolean;
+}
+
+interface HeadRotation {
+  pitch: number;
+  yaw: number;
+  roll: number;
 }
 
 const UserPresenceAvatar: React.FC<UserPresenceAvatarProps> = ({
@@ -19,9 +28,11 @@ const UserPresenceAvatar: React.FC<UserPresenceAvatarProps> = ({
   enableTracking = true,
   useHumeEmotions = false
 }) => {
+  const [instanceId] = useState(() => ++instanceCounter);
   const [expressions, setExpressions] = useState<FacialExpressions | null>(null);
   const [trackingService, setTrackingService] = useState<ML5FaceMeshService | CombinedFaceTrackingService | null>(null);
   const [isTracking, setIsTracking] = useState(false);
+  const [lastHeadRotation, setLastHeadRotation] = useState<HeadRotation | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -92,10 +103,11 @@ const UserPresenceAvatar: React.FC<UserPresenceAvatarProps> = ({
 
     const interval = setInterval(() => {
       const currentExpressions = trackingService.getExpressions();
+      const headRotation = trackingService.getHeadRotation();
       
-      // 🚨 DEBUG: Log jawOpen at the source
+      // DEBUG: Log jawOpen at the source
       if (currentExpressions && 'jawOpen' in currentExpressions) {
-        console.log(`🚨 [UserPresenceAvatar] SOURCE jawOpen=${currentExpressions.jawOpen}`);
+        console.log(` [UserPresenceAvatar #${instanceId}] SOURCE jawOpen=${currentExpressions.jawOpen}`);
       }
       
       if (currentExpressions) {
@@ -109,20 +121,27 @@ const UserPresenceAvatar: React.FC<UserPresenceAvatarProps> = ({
           // Add any other missing keys from FacialExpressions here if needed
         });
       }
-    }, 50); // Update at 20 FPS
+      
+      if (headRotation) {
+        setLastHeadRotation(headRotation);
+      }
+    }, 16); // Update at 60 FPS for 1:1 tracking
 
     return () => clearInterval(interval);
-  }, [trackingService, isTracking]);
+  }, [trackingService, isTracking, instanceId]);
 
   // Convert expressions to tracking data format
   const getTrackingData = (): TrackingData | undefined => {
     if (!expressions) return undefined;
 
-    return {
+    const trackingData: TrackingData = {
       facialExpressions: expressions,
+      headRotation: lastHeadRotation || undefined,
       posture: null,
       hands: null
     };
+
+    return trackingData;
   };
 
   return (
@@ -131,6 +150,7 @@ const UserPresenceAvatar: React.FC<UserPresenceAvatarProps> = ({
       position={position}
       scale={scale}
       trackingData={getTrackingData()}
+      participantId={`user-${instanceId}`}
     />
   );
 };

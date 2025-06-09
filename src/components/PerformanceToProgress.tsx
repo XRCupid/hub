@@ -20,6 +20,14 @@ export const PerformanceToProgress: React.FC<PerformanceToProgressProps> = ({
   lastDatePerformance,
   overallProgress
 }) => {
+  // Provide default values if overallProgress is not provided
+  const safeOverallProgress = overallProgress || {
+    totalDates: 0,
+    averageScores: {},
+    unlockedModules: [],
+    nextUnlocks: []
+  };
+
   const renderLastDateAnalysis = () => {
     if (!lastDatePerformance) return null;
 
@@ -59,9 +67,9 @@ export const PerformanceToProgress: React.FC<PerformanceToProgressProps> = ({
               
               <div className="skill-feedback">
                 {lastDatePerformance.conversationMetrics.listeningRatio < 0.4 && 
-                  "💡 Try asking more open-ended questions and giving space for responses"}
+                  "Try asking more open-ended questions and giving space for responses"}
                 {lastDatePerformance.conversationMetrics.listeningRatio > 0.6 && 
-                  "💡 Share more about yourself to create balance"}
+                  "Share more about yourself to create balance"}
               </div>
             </div>
           </div>
@@ -84,7 +92,7 @@ export const PerformanceToProgress: React.FC<PerformanceToProgressProps> = ({
               
               <div className="skill-feedback">
                 {lastDatePerformance.chemistryMetrics.energyMatch < 0.7 && 
-                  "💡 Practice matching their enthusiasm level - not too high, not too low"}
+                  "Practice matching their enthusiasm level - not too high, not too low"}
               </div>
             </div>
           </div>
@@ -107,7 +115,7 @@ export const PerformanceToProgress: React.FC<PerformanceToProgressProps> = ({
               
               <div className="skill-feedback positive">
                 {lastDatePerformance.respectMetrics.boundaryRecognition > 0.9 && 
-                  "✨ Excellent boundary awareness! This is the foundation of healthy connections."}
+                  "Excellent boundary awareness! This is the foundation of healthy connections."}
               </div>
             </div>
           </div>
@@ -136,12 +144,22 @@ export const PerformanceToProgress: React.FC<PerformanceToProgressProps> = ({
   };
 
   const renderProgressToUnlocks = () => {
+    // Check if nextUnlocks exists and has items
+    if (!safeOverallProgress.nextUnlocks || safeOverallProgress.nextUnlocks.length === 0) {
+      return (
+        <div className="progress-to-unlocks">
+          <h3>Your Path to Advanced Training</h3>
+          <p className="no-unlocks">Complete more dates to unlock new training modules!</p>
+        </div>
+      );
+    }
+
     return (
       <div className="progress-to-unlocks">
         <h3>Your Path to Advanced Training</h3>
         
         <div className="unlocks-list">
-          {overallProgress.nextUnlocks.map((unlock, idx) => (
+          {safeOverallProgress.nextUnlocks.map((unlock, idx) => (
             <div key={idx} className="unlock-item">
               <div className="unlock-header">
                 <h4>{unlock.moduleName}</h4>
@@ -164,9 +182,9 @@ export const PerformanceToProgress: React.FC<PerformanceToProgressProps> = ({
 
         <div className="motivation-message">
           <p>
-            {overallProgress.totalDates < 3 
+            {safeOverallProgress.totalDates < 3 
               ? "Keep practicing! Each date teaches valuable lessons."
-              : overallProgress.totalDates < 10
+              : safeOverallProgress.totalDates < 10
               ? "You're building solid foundations. Advanced techniques await!"
               : "You're mastering the art of connection. Keep refining your skills!"}
           </p>
@@ -187,18 +205,20 @@ export const PerformanceToProgress: React.FC<PerformanceToProgressProps> = ({
 
       <div className="overall-stats">
         <div className="stat-card">
-          <span className="stat-number">{overallProgress.totalDates}</span>
+          <span className="stat-number">{safeOverallProgress.totalDates}</span>
           <span className="stat-label">Practice Dates</span>
         </div>
         <div className="stat-card">
-          <span className="stat-number">{overallProgress.unlockedModules.length}</span>
+          <span className="stat-number">{safeOverallProgress.unlockedModules.length}</span>
           <span className="stat-label">Modules Unlocked</span>
         </div>
         <div className="stat-card">
           <span className="stat-number">
             {Math.round(
-              Object.values(overallProgress.averageScores).reduce((a, b) => a + b, 0) / 
-              Object.keys(overallProgress.averageScores).length * 100
+              Object.keys(safeOverallProgress.averageScores).length > 0
+                ? Object.values(safeOverallProgress.averageScores).reduce((a, b) => a + b, 0) / 
+                  Object.keys(safeOverallProgress.averageScores).length * 100
+                : 0
             )}%
           </span>
           <span className="stat-label">Overall Mastery</span>
