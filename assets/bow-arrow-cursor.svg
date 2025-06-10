@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Bow -->
+  <path d="M 8 4 Q 4 16 8 28" stroke="#FF1493" stroke-width="2" fill="none"/>
+  
+  <!-- Bowstring -->
+  <line x1="8" y1="4" x2="8" y2="28" stroke="#FF69B4" stroke-width="1"/>
+  
+  <!-- Arrow -->
+  <line x1="8" y1="16" x2="24" y2="16" stroke="#FF1493" stroke-width="2"/>
+  
+  <!-- Arrowhead -->
+  <path d="M 24 16 L 20 12 L 20 14 L 8 14 L 8 18 L 20 18 L 20 20 Z" fill="#FF1493"/>
+  
+  <!-- Heart decoration on arrow -->
+  <path d="M 14 14 C 14 12, 12 12, 12 13 C 12 12, 10 12, 10 13 Q 10 15, 12 16 Q 14 15, 14 13" fill="#FF69B4"/>
+</svg>

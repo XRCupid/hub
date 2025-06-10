@@ -1,0 +1,15 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <g transform="rotate(-45 16 16)">
+    <!-- Arrow shaft -->
+    <rect x="14" y="8" width="4" height="16" fill="#3B4063" stroke="#E5A4B6" stroke-width="1"/>
+    <!-- Arrow head -->
+    <polygon points="16,4 10,10 22,10" fill="#3B4063" stroke="#E5A4B6" stroke-width="1"/>
+  </g>
+  <!-- Heart -->
+  <g transform="translate(18, 18)">
+    <path d="M6 3C4.5 1.5 2.5 1.5 1 3C-0.5 4.5 -0.5 6.5 1 8L6 13L11 8C12.5 6.5 12.5 4.5 11 3C9.5 1.5 7.5 1.5 6 3Z" 
+          fill="#E5A4B6" 
+          stroke="#3B4063" 
+          stroke-width="1.5"/>
+  </g>
+</svg>
