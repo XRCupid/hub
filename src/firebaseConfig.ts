@@ -15,10 +15,10 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
-console.log('🔥 Initializing Firebase with config:', {
-  ...firebaseConfig,
-  apiKey: firebaseConfig.apiKey ? '***' : 'NOT SET'
-});
+console.log('🔍 Environment variables check:');
+console.log('- API Key present:', !!process.env.REACT_APP_FIREBASE_API_KEY);
+console.log('- Project ID:', process.env.REACT_APP_FIREBASE_PROJECT_ID);
+console.log('- Database URL:', process.env.REACT_APP_FIREBASE_DATABASE_URL);
 
 // Initialize Firebase
 let app;
@@ -27,35 +27,41 @@ let firestore;
 let auth;
 let database: Database | null = null;
 
-try {
-  console.log('🚀 Attempting to initialize Firebase app...');
-  app = initializeApp(firebaseConfig);
-  console.log('✅ Firebase app initialized:', app);
-  
-  console.log('🚀 Attempting to get database...');
-  database = getDatabase(app);
-  db = database;
-  console.log('✅ Database initialized:', database);
-  
-  console.log('🚀 Attempting to get firestore...');
-  firestore = getFirestore(app);
-  console.log('✅ Firestore initialized:', firestore);
-  
-  console.log('🚀 Attempting to get auth...');
-  auth = getAuth(app);
-  console.log('✅ Auth initialized:', auth);
-  
-  console.log('✅ Firebase initialized successfully with real credentials');
-} catch (error) {
-  console.error('❌ Firebase initialization error:', error);
-  if (error instanceof Error) {
-    console.error('❌ Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-  } else {
-    console.error('❌ Unknown error:', error);
+// Flag to prevent duplicate initialization
+let isInitialized = false;
+
+if (!isInitialized) {
+  try {
+    console.log('🚀 Initializing Firebase app with project:', process.env.REACT_APP_FIREBASE_PROJECT_ID);
+    app = initializeApp(firebaseConfig);
+    console.log('✅ Firebase app initialized:', app);
+    
+    console.log('🚀 Attempting to get database...');
+    database = getDatabase(app);
+    db = database;
+    console.log('✅ Database initialized:', database);
+    
+    console.log('🚀 Attempting to get firestore...');
+    firestore = getFirestore(app);
+    console.log('✅ Firestore initialized:', firestore);
+    
+    console.log('🚀 Attempting to get auth...');
+    auth = getAuth(app);
+    console.log('✅ Auth initialized:', auth);
+    
+    console.log('✅ Firebase initialized successfully with real credentials');
+    isInitialized = true;
+  } catch (error) {
+    console.error('❌ Firebase initialization error:', error);
+    if (error instanceof Error) {
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+    } else {
+      console.error('❌ Unknown error:', error);
+    }
   }
 }
 
