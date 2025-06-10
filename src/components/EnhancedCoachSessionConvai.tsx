@@ -14,7 +14,7 @@ import { SafeVisualEffects } from './SafeVisualEffects';
 import './EnhancedCoachSession.css';
 
 const EnhancedCoachSessionConvai: React.FC = () => {
-  const { coachId = 'alex', lessonId = 'confidence' } = useParams<{ coachId: string; lessonId: string }>();
+  const { coachId = 'grace', lessonId = 'confidence' } = useParams<{ coachId: string; lessonId: string }>();
   const navigate = useNavigate();
 
   const coach = getCoachById(coachId || "");

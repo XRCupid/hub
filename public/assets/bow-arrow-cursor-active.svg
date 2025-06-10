@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Bow (pulled back) -->
+  <path d="M 6 4 Q 2 16 6 28" stroke="#FF1493" stroke-width="2" fill="none"/>
+  
+  <!-- Bowstring (pulled) -->
+  <path d="M 6 4 Q 12 16 6 28" stroke="#FF69B4" stroke-width="1" fill="none"/>
+  
+  <!-- Arrow (pulled back) -->
+  <line x1="12" y1="16" x2="26" y2="16" stroke="#FF1493" stroke-width="2"/>
+  
+  <!-- Arrowhead -->
+  <path d="M 26 16 L 22 12 L 22 14 L 12 14 L 12 18 L 22 18 L 22 20 Z" fill="#FF1493"/>
+  
+  <!-- Heart decoration (pulsing) -->
+  <path d="M 16 14 C 16 11, 13 11, 13 13 C 13 11, 10 11, 10 13 Q 10 16, 13 17 Q 16 16, 16 13" fill="#FF69B4">
+    <animate attributeName="fill" values="#FF69B4;#FF1493;#FF69B4" dur="0.3s" repeatCount="1"/>
+  </path>
+  
+  <!-- Sparkles -->
+  <circle cx="20" cy="12" r="1" fill="#FFD700">
+    <animate attributeName="opacity" values="0;1;0" dur="0.3s" repeatCount="1"/>
+  </circle>
+  <circle cx="18" cy="20" r="1" fill="#FFD700">
+    <animate attributeName="opacity" values="0;1;0" dur="0.3s" repeatCount="1"/>
+  </circle>
+</svg>

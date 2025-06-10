@@ -16,7 +16,7 @@ import { SafeVisualEffects } from './SafeVisualEffects';
 import './EnhancedCoachSession.css';
 
 const EnhancedCoachSession: React.FC = () => {
-  const { coachId = 'alex', lessonId = 'confidence' } = useParams<{ coachId: string; lessonId: string }>();
+  const { coachId = 'grace', lessonId = 'confidence' } = useParams<{ coachId: string; lessonId: string }>();
   const navigate = useNavigate();
 
   const coach = getCoachById(coachId || "");
@@ -999,14 +999,14 @@ const EnhancedCoachSession: React.FC = () => {
       )}
       
       <div ref={canvasRef} className="immersive-container">
-        <Canvas camera={{ position: [0, 0, 1.8], fov: 35 }}>
+        <Canvas camera={{ position: [0, 0.8, 3], fov: 35 }}>
           <ambientLight intensity={0.8} />
           <directionalLight position={[0, 1, 2]} intensity={1.2} />
           <Suspense fallback={null}>
             <PresenceAvatar
-              avatarUrl={coach?.avatar || `/avatars/coach_${coachId}.glb`}
+              avatarUrl={coach?.avatar || '/avatars/coach_grace.glb'}
               trackingData={undefined} // Coach's expressions are driven by Hume EVI, not user face tracking
-              position={[0, -1.4, 0]}
+              position={[0, -0.8, 0]}
               scale={1.0}
               animationName={currentAnimation} // For idle/talking states
               emotionalBlendshapes={blendShapes} // For expressions from Hume EVI prosody
@@ -1020,7 +1020,7 @@ const EnhancedCoachSession: React.FC = () => {
       
       {showPiP && (
         <div className="pip-avatar">
-          <Canvas camera={{ position: [0, 0, 1.5], fov: 35 }}>
+          <Canvas camera={{ position: [0, 0.8, 2.5], fov: 35 }}>
             <ambientLight intensity={0.8} />
             <directionalLight position={[0, 1, 2]} intensity={1.2} />
             <Suspense fallback={null}>

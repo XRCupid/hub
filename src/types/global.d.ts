@@ -13,7 +13,7 @@ declare module 'firebase/app' {
 }
 
 declare module 'firebase/firestore' {
-  export function getFirestore(): any;
+  export function getFirestore(app?: any): any;
   export function doc(db: any, path: string, ...pathSegments: string[]): any;
   export function getDoc(docRef: any): Promise<any>;
   export function updateDoc(docRef: any, data: any): Promise<void>;
@@ -36,4 +36,3 @@ declare module '../contexts/AuthContext' {
     updatePassword: (password: string) => Promise<void>;
   };
 }
-

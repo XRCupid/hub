@@ -1,6 +1,9 @@
-import React, { useState, useRef, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import Peer from 'simple-peer';
-import { firestore } from '../firebase';
+import { mockFirebaseConference } from '../services/mockFirebaseConference';
+import { conferenceFirebaseService } from '../services/conferenceFirebaseService';
+import { isRealFirebase } from '../firebaseConfig';
+import QRCode from 'qrcode';
 import AudienceAnalyticsDashboard from './AudienceAnalyticsDashboard';
 import PresenceAvatar from './PresenceAvatar';
 import { Canvas } from '@react-three/fiber';
@@ -52,6 +55,8 @@ const ConferenceBoothDemo: React.FC<Props> = ({
   const [showAvatars, setShowAvatars] = useState(true);
   const [selectedAvatar1, setSelectedAvatar1] = useState('/avatars/coach_grace.glb');
   const [selectedAvatar2, setSelectedAvatar2] = useState('/avatars/coach_rizzo.glb');
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [showQrCode, setShowQrCode] = useState(false);
 
   console.log('ConferenceBoothDemo - Current mode:', mode);
   console.log('ConferenceBoothDemo - isInRoom:', isInRoom);
@@ -81,6 +86,12 @@ const ConferenceBoothDemo: React.FC<Props> = ({
     { id: 'generic_f', url: '/avatars/xrcupid_avatar_generic_female.glb', name: 'Generic F' },
     { id: 'generic_m', url: '/avatars/xrcupid_avatar_generic_male.glb', name: 'Generic M' }
   ];
+
+  // Use real Firebase if configured, otherwise fall back to mock
+  const firebaseService = isRealFirebase() ? conferenceFirebaseService : mockFirebaseConference;
+  const usingRealFirebase = isRealFirebase();
+
+  console.log('ConferenceBoothDemo - Using real Firebase:', usingRealFirebase);
 
   // Initialize tracking for participants
   useEffect(() => {
@@ -394,99 +405,95 @@ const ConferenceBoothDemo: React.FC<Props> = ({
   };
 
   const createRoom = async (userName: string) => {
-    const newRoomId = generateRoomId();
-    setRoomId(newRoomId);
+    const createdRoomId = await firebaseService.createRoom(userName);
+    if (!createdRoomId) {
+      console.error('Failed to create room');
+      return;
+    }
+    setRoomId(createdRoomId);
     setIsHost(true);
     setCurrentUserName(userName);
     setParticipant1Data({ name: userName, stream: localStream || undefined, avatarUrl: selectedAvatar1 });
     
-    // Create room in Firebase Firestore
-    const roomData = {
-      host: { name: userName, peerId: myPeerIdRef.current },
-      createdAt: Date.now()
-    };
-    
-    if (!firestore) {
-      console.error('Firestore not available');
-      return;
+    // Generate QR code for mobile joining
+    try {
+      const mobileUrl = firebaseService.getMobileJoinUrl ? 
+        firebaseService.getMobileJoinUrl(createdRoomId) : 
+        `${window.location.origin}/conference-mobile?room=${createdRoomId}`;
+      
+      const qrDataUrl = await QRCode.toDataURL(mobileUrl, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      setQrCodeUrl(qrDataUrl);
+      setShowQrCode(true);
+    } catch (err) {
+      console.error('Error generating QR code:', err);
     }
-    
-    await firestore.collection('rooms').doc(newRoomId).set(roomData); // Update usage
-    roomRef.current = newRoomId;
-    setIsInRoom(true);
-    setConnectionStatus('Waiting for guest...');
     
     // Listen for guest
-    if (!firestore) {
-      console.error('Firestore not available');
-      return;
-    }
-    
-    firestore.collection('rooms').doc(newRoomId).collection('guest').onSnapshot((snapshot: any) => { // Update usage
-      if (snapshot.docs.length > 0 && peerRef.current === null) {
-        const guestData = snapshot.docs[0].data();
-        setParticipant2Data({ name: guestData.name, avatarUrl: selectedAvatar2 });
-        setConnectionStatus('Guest joined, connecting...');
-        createPeer(true, guestData.peerId);
-      }
-    });
+    const unsubscribe = usingRealFirebase ? 
+      firebaseService.onRoomUpdate(createdRoomId, (roomData: any) => {
+        if (roomData.participants && roomData.participants.length > 1 && peerRef.current === null) {
+          const guestName = roomData.participants.find((p: string) => p !== userName);
+          if (guestName) {
+            setParticipant2Data({ name: guestName, avatarUrl: selectedAvatar2 });
+            setConnectionStatus('Guest joined, connecting...');
+            setShowQrCode(false);
+            createPeer(true, 'guest-peer');
+          }
+        }
+      }) :
+      firebaseService.onSnapshot(`rooms/${createdRoomId}/participants`, (participants: string[]) => {
+        if (participants.length > 1 && peerRef.current === null) {
+          const guestName = participants.find(p => p !== userName);
+          if (guestName) {
+            setParticipant2Data({ name: guestName, avatarUrl: selectedAvatar2 });
+            setConnectionStatus('Guest joined, connecting...');
+            setShowQrCode(false);
+            createPeer(true, 'guest-peer');
+          }
+        }
+      });
   };
 
-  const joinRoom = async (roomIdToJoin: string, userName?: string) => {
-    const name = userName || currentUserName;
-    if (!name) return;
-    
-    setIsHost(false);
-    setCurrentUserName(name);
+  const joinRoom = async (roomIdToJoin: string, name: string) => {
+    setRoomId(roomIdToJoin);
+    roomRef.current = roomIdToJoin;
+    myPeerIdRef.current = `guest-${Date.now()}`;
     setParticipant2Data({ name, stream: localStream || undefined, avatarUrl: selectedAvatar2 });
     
     // Check if room exists
-    if (!firestore) {
-      console.error('Firestore not available');
+    if (!firebaseService) {
+      console.error('Firebase service not available');
       return;
     }
     
-    const roomSnapshot = await firestore.collection('rooms').doc(roomIdToJoin).get(); // Update usage
-    console.log('Room snapshot:', roomSnapshot);
-    console.log('Type of snapshot:', typeof roomSnapshot);
-    console.log('Snapshot keys:', Object.keys(roomSnapshot || {}));
-    console.log('Has exists method?:', typeof roomSnapshot?.exists);
+    const room = await firebaseService.getRoom(roomIdToJoin);
     
-    if (!roomSnapshot || typeof roomSnapshot.exists !== 'function') {
-      console.error('Invalid snapshot object received');
-      setConnectionStatus('Error: Invalid room data');
+    if (!room) {
+      alert('Room not found!');
       return;
     }
     
-    if (!roomSnapshot.exists) {
-      setConnectionStatus('Room does not exist');
-      return;
-    }
-    
-    const roomData = roomSnapshot.data();
-    if (roomData && roomData.host) {
-      setParticipant1Data({ name: roomData.host.name, avatarUrl: selectedAvatar1 });
-    }
+    setParticipant1Data({ name: room.host, avatarUrl: selectedAvatar1 });
     
     // Join room
-    if (!firestore) {
-      console.error('Firestore not available');
+    const joined = await firebaseService.joinRoom(roomIdToJoin, name);
+    if (!joined) {
+      alert('Failed to join room');
       return;
     }
-    
-    await firestore.collection('rooms').doc(roomIdToJoin).collection('guest').doc().set({ // Update usage
-      name,
-      peerId: myPeerIdRef.current
-    });
     
     roomRef.current = roomIdToJoin;
     setIsInRoom(true);
-    setConnectionStatus('Joining room...');
     
     // Create peer connection
-    if (roomData && roomData.host) {
-      createPeer(false, roomData.host.peerId);
-    }
+    createPeer(false, 'host-peer');
   };
 
   const createPeer = (initiator: boolean, targetPeerId: string) => {
@@ -504,9 +511,8 @@ const ConferenceBoothDemo: React.FC<Props> = ({
 
     peer.on('signal', (data: any) => {
       // Send signal to the other peer
-      const signalPath = `rooms/${roomRef.current}/signals/${myPeerIdRef.current}_to_${targetPeerId}`;
-      if (roomRef.current && firestore) {
-        firestore.collection('rooms').doc(roomRef.current).collection('signals').doc(`${myPeerIdRef.current}_to_${targetPeerId}`).set(data); // Update usage
+      if (roomRef.current && firebaseService) {
+        firebaseService.sendSignal(roomRef.current, myPeerIdRef.current, targetPeerId, data);
       }
     });
 
@@ -538,17 +544,20 @@ const ConferenceBoothDemo: React.FC<Props> = ({
     peerRef.current = peer;
 
     // Listen for signals from the other peer
-    const signalPath = `rooms/${roomRef.current}/signals/${targetPeerId}_to_${myPeerIdRef.current}`;
-    if (roomRef.current && firestore) {
-      firestore.collection('rooms').doc(roomRef.current).collection('signals').doc(`${targetPeerId}_to_${myPeerIdRef.current}`).onSnapshot((snapshot: any) => { // Update usage
-      const signal = snapshot.data();
-      const signalKey = snapshot.id;
-      
-      if (signalKey && !processedSignalsRef.current.has(signalKey)) {
-          processedSignalsRef.current.add(signalKey);
-          peer.signal(signal);
-        }
-      });
+    if (roomRef.current && firebaseService) {
+      const unsubscribe = usingRealFirebase ?
+        firebaseService.onSignal(roomRef.current, myPeerIdRef.current, (signal: any) => {
+          if (signal && !processedSignalsRef.current.has(targetPeerId)) {
+            processedSignalsRef.current.add(targetPeerId);
+            peer.signal(signal);
+          }
+        }) :
+        firebaseService.onSnapshot(`rooms/${roomRef.current}/signals/${targetPeerId}_to_${myPeerIdRef.current}`, (signal: any) => {
+          if (signal && !processedSignalsRef.current.has(targetPeerId)) {
+            processedSignalsRef.current.add(targetPeerId);
+            peer.signal(signal);
+          }
+        });
     }
   };
 
@@ -558,16 +567,13 @@ const ConferenceBoothDemo: React.FC<Props> = ({
       peerRef.current = null;
     }
 
-    if (roomRef.current && firestore) {
-      const roomPath = firestore.collection('rooms').doc(roomRef.current); // Update usage
-      roomPath.delete();
-    }
-
-    setRemoteStream(null);
-    setIsInRoom(false);
-    setConnectionStatus('Not connected');
+    // Clean up room data
     roomRef.current = null;
-    processedSignalsRef.current.clear();
+    setRoomId('');
+    setIsInRoom(false);
+    setConnectionStatus('');
+    setParticipant1Data({ name: '', avatarUrl: '' });
+    setParticipant2Data({ name: '', avatarUrl: '' });
   };
 
   // Participant View
@@ -630,7 +636,7 @@ const ConferenceBoothDemo: React.FC<Props> = ({
                   className="riso-input"
                 />
                 <button
-                  onClick={() => joinRoom(roomId)}
+                  onClick={() => joinRoom(roomId, currentUserName)}
                   disabled={!currentUserName || !roomId}
                   className="riso-button secondary"
                 >
@@ -679,6 +685,20 @@ const ConferenceBoothDemo: React.FC<Props> = ({
             <button onClick={leaveRoom} className="riso-button danger">
               Leave Room
             </button>
+            
+            <div className="room-section">
+              <h3>Room Code</h3>
+              <div className="room-code-display">{roomId}</div>
+              {showQrCode && qrCodeUrl && (
+                <div className="qr-code-section">
+                  <p>Scan with mobile device to join:</p>
+                  <img src={qrCodeUrl} alt="QR Code" className="qr-code" />
+                  <p className="firebase-status">
+                    {usingRealFirebase ? '🟢 Using Real Firebase' : '🟡 Using Mock Firebase'}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

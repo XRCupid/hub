@@ -44,6 +44,20 @@ const CoachRizzoSession: React.FC = () => {
   const humeVoiceServiceRef = useRef(humeVoiceService);
   const [humeConnected, setHumeConnected] = useState(false);
 
+  // CRITICAL: Clean up WebSocket connection on unmount
+  useEffect(() => {
+    return () => {
+      console.log('[CoachRizzoSession] Cleaning up on unmount');
+      if (humeConnected) {
+        humeVoiceService.disconnect();
+      }
+      // Clean up face tracking
+      if (ml5FaceMeshServiceRef.current) {
+        ml5FaceMeshServiceRef.current.stopTracking();
+      }
+    };
+  }, []);
+
   // Initialize face tracking
   useEffect(() => {
     const initializeFaceTracking = async () => {
@@ -163,8 +177,11 @@ const CoachRizzoSession: React.FC = () => {
     const initializeHume = async () => {
       try {
         // Set up callbacks
-        humeVoiceServiceRef.current.onMessage((message) => {
-          setMessages(prev => [...prev, { role: 'coach', content: message }]);
+        humeVoiceServiceRef.current.onMessage((message: any) => {
+          // Extract the actual message content from the Hume message object
+          const messageContent = typeof message === 'string' ? message : 
+                                (message.message?.content || message.message || JSON.stringify(message));
+          setMessages(prev => [...prev, { role: 'coach', content: messageContent }]);
         });
 
         humeVoiceServiceRef.current.onAudio(async (audioBlob) => {
@@ -188,8 +205,9 @@ const CoachRizzoSession: React.FC = () => {
         });
 
         // Connect to Hume
-        await humeVoiceServiceRef.current.connect();
-        setHumeConnected(true);
+        // DISABLED AUTO-CONNECT TO SAVE CREDITS - Use manual connect button instead
+        // await humeVoiceServiceRef.current.connect();
+        // setHumeConnected(true);
 
         // Send initial context for Coach Rizzo
         const context = {

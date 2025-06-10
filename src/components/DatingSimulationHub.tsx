@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { DatingSimulationMaster } from './DatingSimulationMaster';
+import { useNavigate } from 'react-router-dom';
 import { NPCPersonalities } from '../config/NPCPersonalities';
 import RisographAngel from './RisographAngel';
 import RisographHeart from './RisographHeart';
+import PracticeDate from './PracticeDate';
 import './DatingSimulationHub.css';
 
 export const DatingSimulationHub: React.FC = () => {
   const [selectedNPC, setSelectedNPC] = useState<string | null>(null);
   const [showSimulation, setShowSimulation] = useState(false);
+  const navigate = useNavigate();
 
-  const startChat = (npcId: string) => {
+  const startDate = (npcId: string) => {
     setSelectedNPC(npcId);
     setShowSimulation(true);
   };
@@ -26,12 +28,7 @@ export const DatingSimulationHub: React.FC = () => {
         >
           ← Back to Character Selection
         </button>
-        <DatingSimulationMaster 
-          onBack={() => {
-            setShowSimulation(false);
-            setSelectedNPC(null);
-          }}
-        />
+        <PracticeDate />
       </div>
     );
   }
@@ -48,7 +45,7 @@ export const DatingSimulationHub: React.FC = () => {
             <RisographHeart size={40} className="title-heart" animated />
           </h1>
           <p className="hero-subtitle">
-            Practice conversation skills with our unique AI personalities
+            Experience immersive cafe dates with AI-powered personalities
           </p>
         </div>
       </div>
@@ -62,56 +59,101 @@ export const DatingSimulationHub: React.FC = () => {
             if (id.includes('alex')) return '🏔️';
             if (id.includes('maya')) return '📚';
             if (id.includes('marcus')) return '🎭';
+            if (id.includes('haseeb')) return '💻';
+            if (id.includes('dougie')) return '🎨';
+            if (id.includes('mindy')) return '💎';
+            if (id.includes('erika')) return '📈';
+            if (id.includes('moh')) return '🤖';
             return '💗';
           };
 
+          // Get avatar image if available
+          const getAvatarImage = (id: string) => {
+            if (id.includes('haseeb')) return '/avatars/ProfilePics/Haseeb_profile.png';
+            if (id.includes('dougie')) return '/avatars/ProfilePics/Dougie_profile.png';
+            if (id.includes('mindy')) return '/avatars/ProfilePics/Mindy_profile.png';
+            if (id.includes('erika')) return '/avatars/ProfilePics/Erika_profile.png';
+            if (id.includes('moh')) return '/avatars/ProfilePics/Moh_profile.png';
+            // Default profile pictures for standard NPCs
+            if (id.includes('sarah')) return '/avatars/ProfilePics/sarah_profile.png';
+            if (id.includes('emma')) return '/avatars/ProfilePics/emma_profile.png';
+            if (id.includes('alex')) return '/avatars/ProfilePics/alex_profile.png';
+            if (id.includes('maya')) return '/avatars/ProfilePics/maya_profile.png';
+            if (id.includes('marcus')) return '/avatars/ProfilePics/marcus_profile.png';
+            return null;
+          };
+
+          const avatarImage = getAvatarImage(id);
+
           return (
-            <div key={id} className="character-card riso-card">
+            <div key={id} className="character-card">
               <div className="card-decoration">
                 <RisographHeart size={25} />
               </div>
               <div className="character-avatar">
-                <div className="avatar-placeholder">
-                  {getEmoji(id)}
-                </div>
+                {avatarImage ? (
+                  <img 
+                    src={avatarImage} 
+                    alt={personality.name}
+                    className="avatar-image"
+                  />
+                ) : (
+                  <div className="avatar-placeholder">
+                    {getEmoji(id)}
+                  </div>
+                )}
               </div>
-              <h3 className="character-name">{personality.name}</h3>
-              <p className="character-age">{personality.age} years old</p>
-              <p className="character-occupation">{personality.occupation}</p>
-              <p className="character-bio">{personality.personality}</p>
-              <div className="character-interests">
-                <h4>Interests:</h4>
-                <div className="interest-tags">
-                  {personality.interests.map((interest, index) => (
-                    <span key={index} className="interest-tag">
-                      {interest}
-                    </span>
-                  ))}
+              <div className="character-info">
+                <h3 className="character-name">{personality.name}</h3>
+                <p className="character-age">{personality.age} years old</p>
+                <p className="character-occupation">{personality.occupation}</p>
+                <p className="character-bio">{personality.personality}</p>
+                <div className="character-interests">
+                  <h4>Interests:</h4>
+                  <div className="interest-tags">
+                    {personality.interests.map((interest, index) => (
+                      <span key={index} className="interest-tag">
+                        {interest}
+                      </span>
+                    ))}
+                  </div>
                 </div>
+                <button 
+                  className="chat-button"
+                  onClick={() => navigate(`/practice-date/${id}`)}
+                >
+                  Start Cafe Date with {personality.name}
+                </button>
               </div>
-              <button 
-                className="chat-button riso-button"
-                onClick={() => startChat(id)}
-              >
-                Start Chat with {personality.name}
-              </button>
             </div>
           );
         })}
       </div>
 
-      <div className="tips-section riso-card">
-        <h2 className="tips-title">
-          <span className="icon">💡</span>
-          Dating Tips
-        </h2>
-        <ul className="tips-list">
-          <li>Be genuine and authentic in your conversations</li>
-          <li>Ask open-ended questions to keep the conversation flowing</li>
-          <li>Listen actively and respond thoughtfully</li>
-          <li>Share your own experiences when appropriate</li>
-          <li>Practice makes perfect - try different approaches!</li>
-        </ul>
+      <div className="simulation-features">
+        <h2>🌟 Immersive Dating Experience Features</h2>
+        <div className="feature-grid">
+          <div className="feature-card">
+            <div className="feature-icon">☕</div>
+            <h3>Cafe Environment</h3>
+            <p>Beautiful 3D cafe setting with ambient sounds and atmosphere</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🎭</div>
+            <h3>3D Avatars</h3>
+            <p>Realistic avatars with emotional expressions and body language</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🎤</div>
+            <h3>Voice Interaction</h3>
+            <p>Natural voice conversations with AI-powered responses</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">📊</div>
+            <h3>Real-time Feedback</h3>
+            <p>Track connection, attraction, and engagement scores</p>
+          </div>
+        </div>
       </div>
     </div>
   );

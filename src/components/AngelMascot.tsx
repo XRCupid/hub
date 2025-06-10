@@ -28,10 +28,19 @@ const AngelMascot: React.FC<AngelMascotProps> = ({
     <div 
       className={`angel-mascot ${sizeClasses[size]} ${variantClasses[variant]} ${animate ? 'angel-animate' : ''}`}
     >
+      {/* 
+        IMPORTANT: Save your risograph cupid image to:
+        /Users/douglasgoldstein/XRCupid_Clone/hub/public/assets/angel-cupid.png
+        
+        The image should be the pink and blue cupid with wings, bow and arrow, and golden halo.
+      */}
       <img 
         src="/assets/angel-cupid.png" 
         alt="XRCupid Angel Mascot"
         className="angel-image"
+        onError={(e) => {
+          console.error('Angel mascot image not found. Please save your image to: /public/assets/angel-cupid.png');
+        }}
       />
       <div className="angel-effects">
         <span className="sparkle sparkle-1">✨</span>

@@ -170,6 +170,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
   const lastDebugLogRef = useRef<number>(0);
   const morphTargetMapping = useRef<{ logged?: boolean }>({});
   const currentInfluences = useRef<Record<string, number>>({});
+  const morphTargetsLoggedRef = useRef(false);
   
   const { scene } = useGLTF(avatarUrl || DEFAULT_AVATAR_URL);
   
@@ -668,6 +669,12 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
 
     // Lip Sync Override (if talking and audioData is present)
     if (animationName === 'talking' && audioData && audioData.length > 0 && mesh.morphTargetDictionary) {
+      // Debug: Log morph targets once
+      if (!morphTargetsLoggedRef.current) {
+        console.log('[PresenceAvatar] Available morph targets:', Object.keys(mesh.morphTargetDictionary));
+        morphTargetsLoggedRef.current = true;
+      }
+      
       let totalEnergy = 0;
       const relevantBins = Math.min(16, audioData.length); // Use first 16 bins
       for (let i = 0; i < relevantBins; i++) {
@@ -677,6 +684,11 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       
       const jawOpenTargetRpm = HUME_TO_RPM_MAPPING['jawOpen']?.target || 'jawOpen'; 
       const lipSyncJawOpenValue = MathUtils.clamp(averageEnergy * 0.4, 0, 0.25); // Further reduced: 0.4x multiplier, max 0.25
+
+      // Debug lip sync
+      if (lipSyncJawOpenValue > 0) {
+        console.log('[PresenceAvatar] Lip sync:', { averageEnergy, lipSyncJawOpenValue, jawOpenTargetRpm });
+      }
 
       frameMorphTargetValues[jawOpenTargetRpm] = lipSyncJawOpenValue;
     }

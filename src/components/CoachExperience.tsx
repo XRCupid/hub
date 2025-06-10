@@ -98,7 +98,7 @@ const CoachExperience: React.FC = () => {
       <div className="coach-content">
         <div className="avatar-section">
           <Canvas
-            camera={{ position: [0, 1.6, 1.8], fov: 35 }}
+            camera={{ position: [0, 1.0, 2.5], fov: 35 }}
             style={{ background: '#f0f4f8' }}
           >
             <ambientLight intensity={0.6} />
@@ -117,7 +117,7 @@ const CoachExperience: React.FC = () => {
               enableZoom={false}
               minPolarAngle={Math.PI / 2.1}
               maxPolarAngle={Math.PI / 1.9}
-              target={[0, 1.4, 0]}
+              target={[0, 0.8, 0]}
             />
           </Canvas>
         </div>

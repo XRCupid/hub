@@ -76,17 +76,25 @@ const TrainingHub: React.FC<TrainingHubProps> = ({ onStartModule }) => {
         />
       ) : (
         <div className="training-content">
-          <div className="coach-info-bar" style={{ backgroundColor: selectedCoach.color }}>
-            <div className="coach-details">
+          <div className="selected-coach-header">
+            <div className="coach-info">
               <h2>Training with {selectedCoach.name}</h2>
               <p>{selectedCoach.personality} coach</p>
             </div>
-            <button 
-              className="change-coach-btn"
-              onClick={() => setSelectedCoach(null)}
-            >
-              Change Coach
-            </button>
+            <div className="coach-actions">
+              <button 
+                className="live-session-btn"
+                onClick={() => navigate(`/coach-call/${selectedCoach.id}`)}
+              >
+                Start Live Session
+              </button>
+              <button 
+                className="change-coach-btn"
+                onClick={() => setSelectedCoach(null)}
+              >
+                Change Coach
+              </button>
+            </div>
           </div>
 
           <div className="training-layout">

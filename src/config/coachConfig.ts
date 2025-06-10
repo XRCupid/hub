@@ -12,12 +12,14 @@ export interface CoachProfile {
   color: string; // Theme color for UI
   techniques: string[];
   scenarios: string[];
+  humeConfigId?: string; // Hume EVI configuration ID
   voice: {
     elevenLabsVoiceId?: string;
     pitch?: number;
     speed?: number;
     style?: 'conversational' | 'professional' | 'friendly' | 'flirty';
   };
+  venue?: string; // Background venue image
 }
 
 export const COACHES: Record<string, CoachProfile> = {
@@ -45,12 +47,14 @@ export const COACHES: Record<string, CoachProfile> = {
       'Intellectual conversations',
       'Wine tasting dates'
     ],
+    humeConfigId: process.env.REACT_APP_HUME_CONFIG_ID_GRACE || process.env.REACT_APP_HUME_CONFIG_ID,
     voice: {
       elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL', // Sarah - warm, sophisticated
       pitch: 1.0,
       speed: 0.95,
       style: 'professional'
-    }
+    },
+    venue: 'GreatBistro.png'
   },
   
   posie: {
@@ -77,12 +81,14 @@ export const COACHES: Record<string, CoachProfile> = {
       'Non-verbal flirting practice',
       'Creating chemistry through presence'
     ],
+    humeConfigId: process.env.REACT_APP_HUME_CONFIG_ID_POSIE || process.env.REACT_APP_HUME_CONFIG_ID,
     voice: {
       elevenLabsVoiceId: 'MF3mGyEYCl7XYWbV9V6O', // Elli - gentle, empathetic
       pitch: 1.05,
       speed: 0.9,
       style: 'friendly'
-    }
+    },
+    venue: 'GreatCafe.png'
   },
   
   rizzo: {
@@ -90,31 +96,33 @@ export const COACHES: Record<string, CoachProfile> = {
     name: 'Rizzo',
     avatar: '/avatars/coach_rizzo.glb',
     avatarType: 'female',
-    specialty: ['sex appeal', 'humor', 'sass', 'snark', 'confidence', 'attitude'],
-    personality: 'bold',
-    description: 'Your confidence and charisma coach. Rizzo brings the heat with sass, humor, and unapologetic sex appeal.',
+    specialty: ['magnetic confidence', 'living out loud', 'dance & movement', 'irresistible energy', 'bold authenticity', 'empowering presence'],
+    personality: 'magnetic',
+    description: 'The life of every party and master of magnetic confidence. Rizzo doesn\'t just teach attraction - she awakens the irresistible energy already within you. With her, you\'ll learn to live out loud, own every room, and make everyone around you feel like the sexiest version of themselves.',
     welcomeMessage: "Hey hot stuff! I'm Rizzo, and I'm about to turn your dating game up to eleven. We're talking confidence, humor, and that irresistible edge that makes hearts race. Ready to get spicy?",
     color: '#FF1744', // Hot red
     techniques: [
-      'Witty banter and comebacks',
-      'Sexual tension building',
-      'Confidence projection',
-      'Playful teasing mastery',
-      'Bold move execution'
+      'Dance as confidence therapy',
+      'Magnetic presence cultivation',
+      'Owning your sexy energy',
+      'Living out loud methodology',
+      'Rejection as redirection'
     ],
     scenarios: [
-      'Bar and nightclub flirting',
-      'Handling rejection with style',
-      'Making bold first moves',
-      'Sexting and digital flirting',
-      'Keeping the spark alive'
+      'Becoming the life of the party',
+      'Dance floor confidence',
+      'Making everyone feel desirable',
+      'Bold first moves with style',
+      'Turning nervousness into excitement'
     ],
+    humeConfigId: process.env.REACT_APP_HUME_CONFIG_ID_RIZZO || process.env.REACT_APP_HUME_CONFIG_ID,
     voice: {
       elevenLabsVoiceId: 'jsCqWAovK2LkecY7zXl4', // Freya - confident, playful
       pitch: 0.95,
       speed: 1.05,
       style: 'flirty'
-    }
+    },
+    venue: 'GreatPark.png'
   }
 };
 

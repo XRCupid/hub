@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { ConversationAvatar } from './ConversationAvatar';
 import { UserAvatarPiP } from './UserAvatarPiP';
@@ -50,6 +50,15 @@ const HumeCoachCall: React.FC = () => {
       analyserRef.current.smoothingTimeConstant = 0.8;
     }
 
+    // CRITICAL: Clean up audio context on unmount
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
+  }, [config]);
+
+  useEffect(() => {
     // Connect to Hume
     connectToHume();
 
@@ -60,9 +69,6 @@ const HumeCoachCall: React.FC = () => {
       humeVoiceService.disconnect();
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.stop();
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
       }
     };
   }, [config, navigate]);
@@ -81,9 +87,12 @@ const HumeCoachCall: React.FC = () => {
         await playAudioBlob(audioBlob);
       });
       
-      humeVoiceService.onMessage((message) => {
-        setCoachMessage(message);
-        console.log('Coach message:', message);
+      humeVoiceService.onMessage((message: any) => {
+        // Extract the actual message content from the Hume message object
+        const messageContent = typeof message === 'string' ? message : 
+                              (message.message?.content || message.message || JSON.stringify(message));
+        setCoachMessage(messageContent);
+        console.log('Coach message:', messageContent);
       });
       
       // Connect with coachId
@@ -285,49 +294,39 @@ Important instructions:
       <div className="main-content">
         <div className="avatar-section">
           <Canvas 
-            camera={{ position: [0, 1.6, 2.5], fov: 35 }}
-            gl={{ antialias: true, alpha: true }}
+            camera={{ position: [0, 1.0, 3.5], fov: 35 }}
+            className="coach-canvas"
           >
-            <ambientLight intensity={lighting.intensity} color={lighting.color} />
+            <ambientLight intensity={0.5 * lighting.intensity} color={lighting.color} />
             <directionalLight 
-              position={[2, 2, 2]} 
-              intensity={0.6} 
+              position={[5, 5, 5]} 
+              intensity={0.5 * lighting.intensity} 
               color={lighting.color}
-              castShadow 
             />
-            <spotLight 
-              position={[-2, 3, 1]} 
-              angle={0.5} 
-              penumbra={0.3} 
-              intensity={0.3} 
-              color="#ffeedd"
-            />
-            <spotLight 
-              position={[2, 3, -1]} 
-              angle={0.5} 
-              penumbra={0.3} 
-              intensity={0.2} 
-              color="#ddddff"
+            <directionalLight 
+              position={[-5, 3, -5]} 
+              intensity={0.3 * lighting.intensity} 
+              color={lighting.color}
             />
             
             <ConversationAvatar
               avatarUrl={config.avatar}
+              position={[0, 0, 0]}
+              scale={1}
               isSpeaking={isSpeaking}
               audioData={audioData}
               audioContext={audioContextRef.current}
-              position={[0, 0.8, 0]}
-              scale={1}
             />
             
-            <OrbitControls 
-              enablePan={true}
-              enableZoom={true}
-              enableRotate={true}
-              minPolarAngle={0}
-              maxPolarAngle={Math.PI}
-              minDistance={0.5}
-              maxDistance={10}
+            <OrbitControls
+              enablePan={false}
+              enableZoom={false}
+              minPolarAngle={Math.PI / 2.5}
+              maxPolarAngle={Math.PI / 1.8}
+              target={[0, 0.8, 0]}
             />
+            
+            <Environment preset="city" />
           </Canvas>
 
           {showInstructions && (

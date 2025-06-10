@@ -38,6 +38,20 @@ export const DEMO_RPM_AVATARS: RPMAvatarConfig[] = [
     gender: 'male',
     style: 'realistic',
     avatarUrl: 'https://models.readyplayer.me/6409c2e6d4bb6b0001b84d60.glb' // Official RPM demo male
+  },
+  {
+    id: 'haseeb-avatar',
+    name: 'Haseeb',
+    gender: 'male',
+    style: 'realistic',
+    avatarUrl: '/avatars/Haseeb.glb' // Local custom avatar
+  },
+  {
+    id: 'dougie-avatar',
+    name: 'Dougie',
+    gender: 'male',
+    style: 'realistic',
+    avatarUrl: '/avatars/Dougie.glb' // Local custom avatar
   }
 ];
 

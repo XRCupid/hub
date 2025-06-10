@@ -490,7 +490,7 @@ export const ImmersiveCoachCall: React.FC<ImmersiveCoachCallProps> = ({ onEnd })
     <div className="immersive-coach-call" style={{ background: getBackground() }}>
       {/* Main 3D Canvas - adjusted for better framing with full controls */}
       <div className="coach-canvas">
-        <Canvas camera={{ position: [0, 1.6, 2.5], fov: 35 }}>
+        <Canvas camera={{ position: [0, 1.0, 3.5], fov: 35 }}>
           <ambientLight intensity={0.8} />
           <directionalLight position={[5, 5, 5]} intensity={0.6} />
           <spotLight position={[0, 3, 2]} angle={0.4} penumbra={0.8} intensity={0.5} />
@@ -503,7 +503,7 @@ export const ImmersiveCoachCall: React.FC<ImmersiveCoachCallProps> = ({ onEnd })
             maxDistance={10}
             minPolarAngle={0}
             maxPolarAngle={Math.PI}
-            target={[0, 1.4, 0]}
+            target={[0, 1.0, 0]}
             makeDefault
           />
           <ConversationAvatar
@@ -556,7 +556,7 @@ export const ImmersiveCoachCall: React.FC<ImmersiveCoachCallProps> = ({ onEnd })
         {/* User avatar mode */}
         {userVideoEnabled && useAvatarMode && (
           <div className="user-avatar-container">
-            <Canvas camera={{ position: [0, 1.6, 2], fov: 50 }}>
+            <Canvas camera={{ position: [0, 1.0, 2], fov: 50 }}>
               <ambientLight intensity={0.6} />
               <directionalLight position={[5, 5, 5]} intensity={0.4} />
               <OrbitControls

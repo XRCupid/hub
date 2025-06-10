@@ -3,9 +3,12 @@ import { HumeVoiceService } from '../services/humeVoiceService';
 
 const QuickDebug: React.FC = () => {
   const [envVars, setEnvVars] = useState<any>({});
+  const [logs, setLogs] = useState<string[]>([]);
+  const [humeStatus, setHumeStatus] = useState('');
+  const [error, setError] = useState<string>('');
+  const [humeService, setHumeService] = useState<HumeVoiceService | null>(null);
   const [status, setStatus] = useState<string>('Initializing...');
   const [connectionDetails, setConnectionDetails] = useState<any>({});
-  const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
     // Capture console logs
@@ -41,6 +44,7 @@ const QuickDebug: React.FC = () => {
       try {
         setStatus('Creating HumeVoiceService...');
         const service = new HumeVoiceService();
+        setHumeService(service);
         
         // Add error callback to capture more details
         service.setOnErrorCallback((error) => {
@@ -57,7 +61,10 @@ const QuickDebug: React.FC = () => {
           }
         });
         
-        setStatus('Attempting to connect...');
+        service.setOnOpenCallback(() => {
+          setStatus('Attempting to connect...');
+        });
+        
         await service.connect();
         
         setStatus('Connected successfully!');
@@ -87,6 +94,11 @@ const QuickDebug: React.FC = () => {
     return () => {
       console.log = originalLog;
       console.error = originalError;
+      // CRITICAL: Clean up WebSocket connection - FLUSH THE TOILET!
+      if (humeService) {
+        console.log('[QuickDebug] Cleaning up Hume connection');
+        humeService.disconnect();
+      }
     };
   }, []);
 

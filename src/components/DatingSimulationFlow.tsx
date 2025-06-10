@@ -151,8 +151,58 @@ const SAMPLE_PROFILES: Profile[] = [
       traits: ['mysterious', 'artistic', 'deep'],
       responseStyle: 'romantic',
       rizzLevel: 6,
-      interests: ['artistic expression', 'philosophical discussions'],
-      dealBreakers: ['superficiality', 'materialism']
+      interests: ['philosophy', 'creative expression'],
+      dealBreakers: ['superficiality', 'closed-mindedness']
+    }
+  },
+  {
+    id: 'haseeb',
+    name: 'Haseeb',
+    age: 29,
+    photos: ['/avatars/ProfilePics/Haseeb_profile.png'], // Local profile pic
+    avatar: DEMO_RPM_AVATARS.find(a => a.name === 'Haseeb') || { 
+      id: 'haseeb-avatar', 
+      name: 'Haseeb', 
+      gender: 'male' as const, 
+      style: 'realistic' as const, 
+      avatarUrl: '/avatars/Haseeb.glb'
+    },
+    bio: "Tech enthusiast and fitness lover. Building the future one line of code at a time. Looking for someone who shares my passion for growth and adventure! 💻🏋️‍♂️🚀",
+    interests: ['Technology', 'Fitness', 'Entrepreneurship', 'Travel'],
+    occupation: 'Senior Software Engineer',
+    education: 'MS Computer Engineering',
+    distance: 2.5,
+    personality: {
+      traits: ['driven', 'analytical', 'adventurous'],
+      responseStyle: 'intellectual',
+      rizzLevel: 8,
+      interests: ['tech innovation', 'fitness goals', 'startup culture'],
+      dealBreakers: ['lack of ambition', 'negativity']
+    }
+  },
+  {
+    id: 'dougie',
+    name: 'Dougie',
+    age: 32,
+    photos: ['/avatars/ProfilePics/Dougie_profile.png'], // Local profile pic
+    avatar: DEMO_RPM_AVATARS.find(a => a.name === 'Dougie') || { 
+      id: 'dougie-avatar', 
+      name: 'Dougie', 
+      gender: 'male' as const, 
+      style: 'realistic' as const, 
+      avatarUrl: '/avatars/Dougie.glb'
+    },
+    bio: "Creative technologist bridging art and code. Building immersive experiences by day, exploring new restaurants by night. Let's create something amazing together! 🎨💡🍜",
+    interests: ['VR/AR', 'Creative Coding', 'Food', 'Design'],
+    occupation: 'Creative Director',
+    education: 'MFA Interactive Media',
+    distance: 1.5,
+    personality: {
+      traits: ['creative', 'innovative', 'social'],
+      responseStyle: 'humorous',
+      rizzLevel: 9,
+      interests: ['immersive tech', 'design thinking', 'culinary adventures'],
+      dealBreakers: ['closed-mindedness', 'lack of creativity']
     }
   }
 ];

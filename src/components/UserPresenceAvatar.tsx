@@ -66,9 +66,10 @@ const UserPresenceAvatar: React.FC<UserPresenceAvatarProps> = ({
         
         setTrackingService(service);
 
-        // Start tracking with video element
+        // Initialize and start tracking with video element
         if (service instanceof ML5FaceMeshService) {
-          service.startTracking(video);
+          await service.initialize(); // Initialize first
+          await service.startTracking(video);
         } else if (service instanceof CombinedFaceTrackingService) {
           await service.startTracking(video);
         }

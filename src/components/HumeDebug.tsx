@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HumeVoiceService } from '../services/humeVoiceService';
 
 const HumeDebug: React.FC = () => {
   const [status, setStatus] = useState<string>('Not connected');
   const [error, setError] = useState<string>('');
   const [logs, setLogs] = useState<string[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [service, setService] = useState<HumeVoiceService | null>(null);
 
   const addLog = (message: string) => {
     setLogs(prev => [...prev, `${new Date().toISOString()}: ${message}`]);
@@ -30,10 +32,12 @@ const HumeDebug: React.FC = () => {
       }
 
       const service = new HumeVoiceService();
+      setService(service);
       
       service.setOnOpenCallback(() => {
         addLog('WebSocket opened successfully!');
         setStatus('Connected');
+        setIsConnected(true);
       });
 
       service.setOnErrorCallback((err) => {
@@ -44,6 +48,7 @@ const HumeDebug: React.FC = () => {
       service.setOnCloseCallback((code, reason) => {
         addLog(`WebSocket closed: ${code} - ${reason}`);
         setStatus('Disconnected');
+        setIsConnected(false);
       });
 
       await service.connect(configId);
@@ -54,6 +59,17 @@ const HumeDebug: React.FC = () => {
       setStatus('Failed');
     }
   };
+
+  // CRITICAL: Clean up WebSocket connection on unmount - FLUSH THE TOILET!
+  useEffect(() => {
+    return () => {
+      console.log('[HumeDebug] Cleaning up on unmount');
+      if (isConnected && service) {
+        // Disconnect any test connections
+        service.disconnect();
+      }
+    };
+  }, [isConnected, service]);
 
   return (
     <div style={{ padding: '20px', fontFamily: 'monospace' }}>

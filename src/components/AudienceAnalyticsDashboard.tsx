@@ -65,6 +65,26 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
   const humeVoiceService = useRef<HumeVoiceService | null>(null);
   const reconnectTimeoutId = useRef<number | null>(null);
 
+  // CRITICAL: Clean up WebSocket connection on unmount - FLUSH THE TOILET!
+  useEffect(() => {
+    return () => {
+      console.log('[AudienceAnalyticsDashboard] Cleaning up on unmount');
+      if (humeVoiceService.current) {
+        humeVoiceService.current.disconnect();
+      }
+      // Clear any reconnect timeouts
+      if (reconnectTimeoutId.current) {
+        clearTimeout(reconnectTimeoutId.current);
+      }
+      // Stop all tracking services
+      participants.forEach(p => {
+        p.faceMeshService.stopTracking();
+        p.postureService.stopTracking();
+        p.analytics.endSession();
+      });
+    };
+  }, []);
+
   // Initialize participants when streams are available
   useEffect(() => {
     if (participant1Stream && participant2Stream) {
@@ -309,7 +329,7 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
     // Stop all tracking services
     participants.forEach(p => {
       p.faceMeshService.stopTracking();
-      // PostureTrackingService doesn't have stopTracking method, but we can clean up
+      p.postureService.stopTracking();
     });
   };
 
@@ -533,6 +553,33 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
     return '#F44336';
   };
 
+  const getEmotionColor = (emotion: string): string => {
+    const emotionColors: Record<string, string> = {
+      joy: '#FFD700',
+      excitement: '#FF6B6B',
+      admiration: '#FF69B4',
+      amusement: '#FFA500',
+      love: '#FF1493',
+      desire: '#DC143C',
+      romance: '#FF69B4',
+      interest: '#4ECDC4',
+      realization: '#9B59B6',
+      surprise: '#F39C12',
+      confusion: '#95A5A6',
+      fear: '#8B4513',
+      nervousness: '#D2691E',
+      sadness: '#4682B4',
+      disappointment: '#708090',
+      embarrassment: '#DDA0DD',
+      anger: '#B22222',
+      contempt: '#8B0000',
+      disgust: '#556B2F',
+      distress: '#483D8B',
+      neutral: '#BDC3C7'
+    };
+    return emotionColors[emotion.toLowerCase()] || '#95A5A6';
+  };
+
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -608,9 +655,21 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
               )}
             </div>
             
-            <div className="participant-video">
+            <div className="participant-video-container">
+              <video 
+                autoPlay 
+                muted 
+                ref={(video) => {
+                  if (video && participant1Stream) {
+                    video.srcObject = participant1Stream;
+                  }
+                }}
+                className="participant-video"
+              />
+              
+              {/* PiP Avatar Display */}
               {showPresenceAvatars && (
-                <div className="presence-avatar-overlay">
+                <div className="pip-avatar-container">
                   <PresenceAvatar 
                     avatarUrl={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant1Name}`}
                     trackingData={{
@@ -623,22 +682,40 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
                       [emotion.emotion]: emotion.score / 100
                     }), {})}
                   />
+                  <div className="head-tracking-indicator">
+                    <div className="head-rotation-viz">
+                      <span>Pitch: {participants[0]?.faceMeshService?.getHeadRotation()?.pitch.toFixed(0) || 0}°</span>
+                      <span>Yaw: {participants[0]?.faceMeshService?.getHeadRotation()?.yaw.toFixed(0) || 0}°</span>
+                    </div>
+                  </div>
                 </div>
               )}
-              <video 
-                autoPlay 
-                muted 
-                ref={(video) => {
-                  if (video && participant1Stream) {
-                    video.srcObject = participant1Stream;
-                  }
-                }}
-                style={{ display: showPresenceAvatars ? 'none' : 'block' }}
-              />
-              <EmotionDisplay 
-                emotions={participant1Emotions} 
-                participantName={participant1Name}
-              />
+              
+              {/* Enhanced Emotion Display */}
+              <div className="emotion-overlay">
+                <EmotionDisplay 
+                  emotions={participant1Emotions} 
+                  participantName={participant1Name}
+                />
+                {participant1Emotions.length > 0 && (
+                  <div className="emotion-bars">
+                    {participant1Emotions.slice(0, 3).map((emotion, idx) => (
+                      <div key={idx} className="emotion-bar-item">
+                        <span className="emotion-label">{emotion.emotion}</span>
+                        <div className="emotion-bar-bg">
+                          <div 
+                            className="emotion-bar-fill"
+                            style={{
+                              width: `${emotion.score * 100}%`,
+                              backgroundColor: getEmotionColor(emotion.emotion)
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="participant-metrics">
@@ -707,9 +784,21 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
               )}
             </div>
             
-            <div className="participant-video">
+            <div className="participant-video-container">
+              <video 
+                autoPlay 
+                muted 
+                ref={(video) => {
+                  if (video && participant2Stream) {
+                    video.srcObject = participant2Stream;
+                  }
+                }}
+                className="participant-video"
+              />
+              
+              {/* PiP Avatar Display */}
               {showPresenceAvatars && (
-                <div className="presence-avatar-overlay">
+                <div className="pip-avatar-container">
                   <PresenceAvatar 
                     avatarUrl={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant2Name}`}
                     trackingData={{
@@ -722,22 +811,40 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
                       [emotion.emotion]: emotion.score / 100
                     }), {})}
                   />
+                  <div className="head-tracking-indicator">
+                    <div className="head-rotation-viz">
+                      <span>Pitch: {participants[1]?.faceMeshService?.getHeadRotation()?.pitch.toFixed(0) || 0}°</span>
+                      <span>Yaw: {participants[1]?.faceMeshService?.getHeadRotation()?.yaw.toFixed(0) || 0}°</span>
+                    </div>
+                  </div>
                 </div>
               )}
-              <video 
-                autoPlay 
-                muted 
-                ref={(video) => {
-                  if (video && participant2Stream) {
-                    video.srcObject = participant2Stream;
-                  }
-                }}
-                style={{ display: showPresenceAvatars ? 'none' : 'block' }}
-              />
-              <EmotionDisplay 
-                emotions={participant2Emotions} 
-                participantName={participant2Name}
-              />
+              
+              {/* Enhanced Emotion Display */}
+              <div className="emotion-overlay">
+                <EmotionDisplay 
+                  emotions={participant2Emotions} 
+                  participantName={participant2Name}
+                />
+                {participant2Emotions.length > 0 && (
+                  <div className="emotion-bars">
+                    {participant2Emotions.slice(0, 3).map((emotion, idx) => (
+                      <div key={idx} className="emotion-bar-item">
+                        <span className="emotion-label">{emotion.emotion}</span>
+                        <div className="emotion-bar-bg">
+                          <div 
+                            className="emotion-bar-fill"
+                            style={{
+                              width: `${emotion.score * 100}%`,
+                              backgroundColor: getEmotionColor(emotion.emotion)
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="participant-metrics">

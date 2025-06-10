@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import humeVoiceService from '../services/humeVoiceService';
 
 export function HumeConnectionTest() {
@@ -38,7 +38,10 @@ export function HumeConnectionTest() {
     try {
       // Set up callbacks
       humeVoiceService.onMessage((message: any) => {
-        addStatus(`Message received: ${message}`);
+        addStatus(`Message received: type=${message.type}, id=${message.id}`);
+        if (message.message) {
+          addStatus(`Message content: ${JSON.stringify(message.message)}`);
+        }
       });
       
       humeVoiceService.onAudio((audioBlob: Blob) => {
@@ -103,6 +106,15 @@ export function HumeConnectionTest() {
     }
   };
   
+  useEffect(() => {
+    return () => {
+      console.log('[HumeConnectionTest] Cleaning up on unmount');
+      if (connected) {
+        humeVoiceService.disconnect();
+      }
+    };
+  }, [connected]);
+
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
       <h1>Hume Connection Test</h1>
