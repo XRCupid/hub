@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { FC } from 'react';
 import ConferenceBoothDemo from './ConferenceBoothDemo';
 
-const ConferenceAudience: React.FC = () => {
+const ConferenceAudience: FC = () => {
   return <ConferenceBoothDemo initialMode="audience" />;
 };
 

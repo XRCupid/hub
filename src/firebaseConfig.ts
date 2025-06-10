@@ -1,8 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getDatabase } from 'firebase/database';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { Database } from 'firebase/database';
+import { getDatabase, Database } from 'firebase/database';
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -29,15 +28,35 @@ let auth;
 let database: Database | null = null;
 
 try {
+  console.log('🚀 Attempting to initialize Firebase app...');
   app = initializeApp(firebaseConfig);
+  console.log('✅ Firebase app initialized:', app);
+  
+  console.log('🚀 Attempting to get database...');
   database = getDatabase(app);
   db = database;
-  firestore = getFirestore(app);
-  auth = getAuth(app);
+  console.log('✅ Database initialized:', database);
   
-  console.log('✅ Firebase initialized successfully');
+  console.log('🚀 Attempting to get firestore...');
+  firestore = getFirestore(app);
+  console.log('✅ Firestore initialized:', firestore);
+  
+  console.log('🚀 Attempting to get auth...');
+  auth = getAuth(app);
+  console.log('✅ Auth initialized:', auth);
+  
+  console.log('✅ Firebase initialized successfully with real credentials');
 } catch (error) {
   console.error('❌ Firebase initialization error:', error);
+  if (error instanceof Error) {
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+  } else {
+    console.error('❌ Unknown error:', error);
+  }
 }
 
 // Export Firebase services

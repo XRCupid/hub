@@ -8,8 +8,23 @@ interface Room {
 }
 
 class ConferenceFirebaseService {
-  private db: Database | null = database;
+  private db: Database | null = null;
   
+  constructor() {
+    console.log('[ConferenceFirebaseService] Constructor called');
+    console.log('[ConferenceFirebaseService] Database from import:', database);
+    this.db = database;
+  }
+  
+  // Ensure database is available
+  private getDatabase(): Database | null {
+    if (!this.db && database) {
+      console.log('[ConferenceFirebaseService] Database was null, reinitializing from import');
+      this.db = database;
+    }
+    return this.db;
+  }
+
   // Generate a 6-character room code
   generateRoomCode(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -22,11 +37,20 @@ class ConferenceFirebaseService {
 
   // Create a new room
   async createRoom(hostName: string): Promise<string | null> {
-    if (!this.db) return null;
+    console.log('[ConferenceFirebaseService] createRoom called with hostName:', hostName);
+    console.log('[ConferenceFirebaseService] Database instance:', this.getDatabase());
+    
+    if (!this.getDatabase()) {
+      console.error('[ConferenceFirebaseService] Database is null!');
+      return null;
+    }
     
     try {
       const roomId = this.generateRoomCode();
-      const roomRef = ref(this.db, `conference-rooms/${roomId}`);
+      console.log('[ConferenceFirebaseService] Generated room ID:', roomId);
+      
+      const roomRef = ref(this.getDatabase()!, `conference-rooms/${roomId}`);
+      console.log('[ConferenceFirebaseService] Room ref created:', roomRef);
       
       await set(roomRef, {
         host: hostName,
@@ -34,19 +58,20 @@ class ConferenceFirebaseService {
         createdAt: new Date().toISOString()
       });
       
+      console.log('[ConferenceFirebaseService] Room data set successfully');
       return roomId;
     } catch (error) {
-      console.error('Error creating room:', error);
+      console.error('[ConferenceFirebaseService] Error creating room:', error);
       return null;
     }
   }
 
   // Join an existing room
   async joinRoom(roomId: string, participantName: string): Promise<boolean> {
-    if (!this.db) return false;
+    if (!this.getDatabase()) return false;
     
     try {
-      const roomRef = ref(this.db, `conference-rooms/${roomId}`);
+      const roomRef = ref(this.getDatabase()!, `conference-rooms/${roomId}`);
       const snapshot = await get(roomRef);
       
       if (!snapshot.exists()) {
@@ -58,7 +83,7 @@ class ConferenceFirebaseService {
       
       if (!participants.includes(participantName)) {
         participants.push(participantName);
-        await set(ref(this.db, `conference-rooms/${roomId}/participants`), participants);
+        await set(ref(this.getDatabase()!, `conference-rooms/${roomId}/participants`), participants);
       }
       
       return true;
@@ -70,10 +95,10 @@ class ConferenceFirebaseService {
 
   // Get room data
   async getRoom(roomId: string): Promise<Room | null> {
-    if (!this.db) return null;
+    if (!this.getDatabase()) return null;
     
     try {
-      const roomRef = ref(this.db, `conference-rooms/${roomId}`);
+      const roomRef = ref(this.getDatabase()!, `conference-rooms/${roomId}`);
       const snapshot = await get(roomRef);
       
       if (!snapshot.exists()) {
@@ -89,9 +114,9 @@ class ConferenceFirebaseService {
 
   // Listen to room updates
   onRoomUpdate(roomId: string, callback: (data: any) => void): () => void {
-    if (!this.db) return () => {};
+    if (!this.getDatabase()) return () => {};
     
-    const roomRef = ref(this.db, `conference-rooms/${roomId}`);
+    const roomRef = ref(this.getDatabase()!, `conference-rooms/${roomId}`);
     
     const listener = (snapshot: DataSnapshot) => {
       if (snapshot.exists()) {
@@ -109,10 +134,10 @@ class ConferenceFirebaseService {
 
   // Send WebRTC signal
   async sendSignal(roomId: string, fromPeer: string, toPeer: string, signal: any): Promise<void> {
-    if (!this.db) return;
+    if (!this.getDatabase()) return;
     
     try {
-      const signalsRef = ref(this.db, `conference-rooms/${roomId}/signals`);
+      const signalsRef = ref(this.getDatabase()!, `conference-rooms/${roomId}/signals`);
       const newSignalRef = push(signalsRef);
       
       await set(newSignalRef, {
@@ -128,9 +153,9 @@ class ConferenceFirebaseService {
 
   // Listen for signals
   onSignal(roomId: string, myPeerId: string, callback: (data: any) => void): () => void {
-    if (!this.db) return () => {};
+    if (!this.getDatabase()) return () => {};
     
-    const signalsRef = ref(this.db, `conference-rooms/${roomId}/signals`);
+    const signalsRef = ref(this.getDatabase()!, `conference-rooms/${roomId}/signals`);
     
     const listener = (snapshot: DataSnapshot) => {
       if (snapshot.exists()) {
@@ -156,9 +181,9 @@ class ConferenceFirebaseService {
 
   // Generic onSnapshot method for compatibility with mock service
   onSnapshot(path: string, callback: (data: any) => void): () => void {
-    if (!this.db) return () => {};
+    if (!this.getDatabase()) return () => {};
     
-    const dataRef = ref(this.db, path);
+    const dataRef = ref(this.getDatabase()!, path);
     
     const listener = (snapshot: DataSnapshot) => {
       if (snapshot.exists()) {
@@ -176,10 +201,10 @@ class ConferenceFirebaseService {
 
   // Clean up room
   async cleanupRoom(roomId: string): Promise<void> {
-    if (!this.db) return;
+    if (!this.getDatabase()) return;
     
     try {
-      const roomRef = ref(this.db, `conference-rooms/${roomId}`);
+      const roomRef = ref(this.getDatabase()!, `conference-rooms/${roomId}`);
       await set(roomRef, null);
     } catch (error) {
       console.error('Error cleaning up room:', error);

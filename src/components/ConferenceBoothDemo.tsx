@@ -88,10 +88,43 @@ const ConferenceBoothDemo: React.FC<Props> = ({
   ];
 
   // Use real Firebase if configured, otherwise fall back to mock
-  const firebaseService = isRealFirebase() ? conferenceFirebaseService : mockFirebaseConference;
-  const usingRealFirebase = isRealFirebase();
+  // TEMPORARY: Force mock service for conference demo
+  const firebaseService = mockFirebaseConference; // isRealFirebase() ? conferenceFirebaseService : mockFirebaseConference;
+  const usingRealFirebase = false; // isRealFirebase();
 
   console.log('ConferenceBoothDemo - Using real Firebase:', usingRealFirebase);
+  console.log('ConferenceBoothDemo - State:', {
+    roomId,
+    isInRoom,
+    isHost,
+    currentUserName,
+    localStream: !!localStream,
+    remoteStream: !!remoteStream,
+    connectionStatus
+  });
+
+  // Ensure clean state on component mount
+  useEffect(() => {
+    // Reset state on mount to ensure clean start
+    console.log('[ConferenceBoothDemo] Component mounted, resetting state');
+    setIsInRoom(false);
+    setRoomId('');
+    setConnectionStatus('');
+    setIsHost(false);
+    setCurrentUserName('');
+    setParticipant1Data({ name: '', avatarUrl: selectedAvatar1 });
+    setParticipant2Data({ name: '', avatarUrl: selectedAvatar2 });
+    
+    // Cleanup on unmount
+    return () => {
+      if (peerRef.current) {
+        peerRef.current.destroy();
+      }
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []); // Empty dependency array means this runs once on mount
 
   // Initialize tracking for participants
   useEffect(() => {
@@ -378,14 +411,22 @@ const ConferenceBoothDemo: React.FC<Props> = ({
   }, []);
 
   const initializeMedia = async () => {
+    console.log('[ConferenceBoothDemo] Starting media initialization...');
     try {
+      console.log('[ConferenceBoothDemo] Requesting getUserMedia...');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true
       });
+      console.log('[ConferenceBoothDemo] getUserMedia successful, stream:', stream);
+      console.log('[ConferenceBoothDemo] Stream tracks:', stream.getTracks().map(t => ({ kind: t.kind, label: t.label, enabled: t.enabled })));
+      
       setLocalStream(stream);
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        console.log('[ConferenceBoothDemo] Set video element srcObject');
+      } else {
+        console.log('[ConferenceBoothDemo] Warning: localVideoRef.current is null');
       }
       // Set participant1 stream if host, participant2 if guest
       if (isHost) {
@@ -393,9 +434,13 @@ const ConferenceBoothDemo: React.FC<Props> = ({
       } else {
         setParticipant2Data(prev => ({ ...prev, stream }));
       }
-      console.log('Local stream obtained and set');
+      console.log('[ConferenceBoothDemo] Local stream obtained and set');
     } catch (error) {
-      console.error('Error accessing media:', error);
+      console.error('[ConferenceBoothDemo] Error accessing media:', error);
+      if (error instanceof DOMException) {
+        console.error('[ConferenceBoothDemo] DOMException name:', error.name);
+        console.error('[ConferenceBoothDemo] DOMException message:', error.message);
+      }
       setConnectionStatus('Media access denied');
     }
   };
@@ -405,21 +450,29 @@ const ConferenceBoothDemo: React.FC<Props> = ({
   };
 
   const createRoom = async (userName: string) => {
+    console.log('[ConferenceBoothDemo] Creating room for user:', userName);
+    console.log('[ConferenceBoothDemo] Using Firebase service:', usingRealFirebase ? 'Real' : 'Mock');
+    
     const createdRoomId = await firebaseService.createRoom(userName);
+    console.log('[ConferenceBoothDemo] Room created with ID:', createdRoomId);
+    
     if (!createdRoomId) {
-      console.error('Failed to create room');
+      console.error('[ConferenceBoothDemo] Failed to create room');
       return;
     }
     setRoomId(createdRoomId);
     setIsHost(true);
     setCurrentUserName(userName);
     setParticipant1Data({ name: userName, stream: localStream || undefined, avatarUrl: selectedAvatar1 });
+    setIsInRoom(true); // Add this line to mark that we're in a room
     
     // Generate QR code for mobile joining
     try {
       const mobileUrl = firebaseService.getMobileJoinUrl ? 
         firebaseService.getMobileJoinUrl(createdRoomId) : 
         `${window.location.origin}/conference-mobile?room=${createdRoomId}`;
+      
+      console.log('[ConferenceBoothDemo] Generating QR code for URL:', mobileUrl);
       
       const qrDataUrl = await QRCode.toDataURL(mobileUrl, {
         width: 300,
@@ -432,15 +485,18 @@ const ConferenceBoothDemo: React.FC<Props> = ({
       setQrCodeUrl(qrDataUrl);
       setShowQrCode(true);
     } catch (err) {
-      console.error('Error generating QR code:', err);
+      console.error('[ConferenceBoothDemo] Error generating QR code:', err);
     }
     
     // Listen for guest
+    console.log('[ConferenceBoothDemo] Setting up guest listener...');
     const unsubscribe = usingRealFirebase ? 
       firebaseService.onRoomUpdate(createdRoomId, (roomData: any) => {
+        console.log('[ConferenceBoothDemo] Room update received:', roomData);
         if (roomData.participants && roomData.participants.length > 1 && peerRef.current === null) {
           const guestName = roomData.participants.find((p: string) => p !== userName);
           if (guestName) {
+            console.log('[ConferenceBoothDemo] Guest joined:', guestName);
             setParticipant2Data({ name: guestName, avatarUrl: selectedAvatar2 });
             setConnectionStatus('Guest joined, connecting...');
             setShowQrCode(false);
@@ -449,9 +505,11 @@ const ConferenceBoothDemo: React.FC<Props> = ({
         }
       }) :
       firebaseService.onSnapshot(`rooms/${createdRoomId}/participants`, (participants: string[]) => {
+        console.log('[ConferenceBoothDemo] Participants update:', participants);
         if (participants.length > 1 && peerRef.current === null) {
           const guestName = participants.find(p => p !== userName);
           if (guestName) {
+            console.log('[ConferenceBoothDemo] Guest joined:', guestName);
             setParticipant2Data({ name: guestName, avatarUrl: selectedAvatar2 });
             setConnectionStatus('Guest joined, connecting...');
             setShowQrCode(false);

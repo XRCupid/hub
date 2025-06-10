@@ -5,6 +5,7 @@ import { PostureTrackingService } from '../services/PostureTrackingService';
 import { HumeVoiceService } from '../services/humeVoiceService';
 import { EmotionDisplay } from './EmotionDisplay';
 import PresenceAvatar from './PresenceAvatar';
+import { Canvas } from '@react-three/fiber';
 import './AudienceAnalyticsDashboard.css';
 
 interface ParticipantData {
@@ -197,18 +198,24 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
     
     // Start face mesh and posture tracking for each participant
     participants.forEach(async (p) => {
-      await p.faceMeshService.initialize();
-      await p.postureService.initialize();
+      try {
+        console.log('[AudienceDashboard] Initializing face mesh for participant:', p.id);
+        await p.faceMeshService.initialize();
+        await p.postureService.initialize();
 
-      if (!p.stream) return;
+        if (!p.stream) return;
 
-      // Create video element for tracking
-      const video = document.createElement('video');
-      video.srcObject = p.stream || null;
-      video.play();
+        // Create video element for tracking
+        const video = document.createElement('video');
+        video.srcObject = p.stream || null;
+        video.play();
 
-      p.faceMeshService.startTracking(video);
-      p.postureService.startTracking(video);
+        p.faceMeshService.startTracking(video);
+        p.postureService.startTracking(video);
+      } catch (error) {
+        console.error('[AudienceDashboard] Failed to initialize tracking for participant:', p.id, error);
+        // Continue without face tracking - avatars will still work without tracking data
+      }
     });
 
     // Start analytics update loop
@@ -291,18 +298,24 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
     
     // Start face mesh and posture tracking for each participant
     participants.forEach(async (p) => {
-      await p.faceMeshService.initialize();
-      await p.postureService.initialize();
+      try {
+        console.log('[AudienceDashboard] Initializing face mesh for participant:', p.id);
+        await p.faceMeshService.initialize();
+        await p.postureService.initialize();
 
-      if (!p.stream) return;
+        if (!p.stream) return;
 
-      // Create video element for tracking
-      const video = document.createElement('video');
-      video.srcObject = p.stream || null;
-      video.play();
+        // Create video element for tracking
+        const video = document.createElement('video');
+        video.srcObject = p.stream || null;
+        video.play();
 
-      p.faceMeshService.startTracking(video);
-      p.postureService.startTracking(video);
+        p.faceMeshService.startTracking(video);
+        p.postureService.startTracking(video);
+      } catch (error) {
+        console.error('[AudienceDashboard] Failed to initialize tracking for participant:', p.id, error);
+        // Continue without face tracking - avatars will still work without tracking data
+      }
     });
 
     // Start analytics update loop
@@ -670,18 +683,22 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
               {/* PiP Avatar Display */}
               {showPresenceAvatars && (
                 <div className="pip-avatar-container">
-                  <PresenceAvatar 
-                    avatarUrl={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant1Name}`}
-                    trackingData={{
-                      landmarks: participants[0]?.faceMeshService?.getLandmarks() || [],
-                      expressions: (participants[0]?.faceMeshService?.getExpressions() as unknown as Record<string, number>) || {},
-                      headRotation: participants[0]?.faceMeshService?.getHeadRotation() || { pitch: 0, yaw: 0, roll: 0 }
-                    }}
-                    emotionalBlendshapes={participants[0]?.emotions?.reduce((acc, emotion) => ({
-                      ...acc,
-                      [emotion.emotion]: emotion.score / 100
-                    }), {})}
-                  />
+                  <Canvas camera={{ position: [0, 0, 3], fov: 50 }}>
+                    <ambientLight intensity={0.5} />
+                    <directionalLight position={[0, 0, 5]} />
+                    <PresenceAvatar 
+                      avatarUrl="/avatars/coach_grace.glb"
+                      trackingData={{
+                        landmarks: participants[0]?.faceMeshService?.getLandmarks() || [],
+                        expressions: (participants[0]?.faceMeshService?.getExpressions() as unknown as Record<string, number>) || {},
+                        headRotation: participants[0]?.faceMeshService?.getHeadRotation() || { pitch: 0, yaw: 0, roll: 0 }
+                      }}
+                      emotionalBlendshapes={participants[0]?.emotions?.reduce((acc, emotion) => ({
+                        ...acc,
+                        [emotion.emotion]: emotion.score / 100
+                      }), {})}
+                    />
+                  </Canvas>
                   <div className="head-tracking-indicator">
                     <div className="head-rotation-viz">
                       <span>Pitch: {participants[0]?.faceMeshService?.getHeadRotation()?.pitch.toFixed(0) || 0}°</span>
@@ -799,18 +816,22 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
               {/* PiP Avatar Display */}
               {showPresenceAvatars && (
                 <div className="pip-avatar-container">
-                  <PresenceAvatar 
-                    avatarUrl={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant2Name}`}
-                    trackingData={{
-                      landmarks: participants[1]?.faceMeshService?.getLandmarks() || [],
-                      expressions: (participants[1]?.faceMeshService?.getExpressions() as unknown as Record<string, number>) || {},
-                      headRotation: participants[1]?.faceMeshService?.getHeadRotation() || { pitch: 0, yaw: 0, roll: 0 }
-                    }}
-                    emotionalBlendshapes={participants[1]?.emotions?.reduce((acc, emotion) => ({
-                      ...acc,
-                      [emotion.emotion]: emotion.score / 100
-                    }), {})}
-                  />
+                  <Canvas camera={{ position: [0, 0, 3], fov: 50 }}>
+                    <ambientLight intensity={0.5} />
+                    <directionalLight position={[0, 0, 5]} />
+                    <PresenceAvatar 
+                      avatarUrl="/avatars/coach_rizzo.glb"
+                      trackingData={{
+                        landmarks: participants[1]?.faceMeshService?.getLandmarks() || [],
+                        expressions: (participants[1]?.faceMeshService?.getExpressions() as unknown as Record<string, number>) || {},
+                        headRotation: participants[1]?.faceMeshService?.getHeadRotation() || { pitch: 0, yaw: 0, roll: 0 }
+                      }}
+                      emotionalBlendshapes={participants[1]?.emotions?.reduce((acc, emotion) => ({
+                        ...acc,
+                        [emotion.emotion]: emotion.score / 100
+                      }), {})}
+                    />
+                  </Canvas>
                   <div className="head-tracking-indicator">
                     <div className="head-rotation-viz">
                       <span>Pitch: {participants[1]?.faceMeshService?.getHeadRotation()?.pitch.toFixed(0) || 0}°</span>

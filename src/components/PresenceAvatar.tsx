@@ -6,7 +6,7 @@ import { SkeletonUtils } from 'three-stdlib';
 import { MathUtils } from 'three';
 import type { TrackingData, FacialExpressions } from '../types/tracking';
 
-const DEFAULT_AVATAR_URL = '/models/feminine/FeminineAvatar.gltf';
+const DEFAULT_AVATAR_URL = '/avatars/coach_grace.glb';
 
 interface PresenceAvatarProps {
   avatarUrl?: string;
