@@ -11,6 +11,40 @@ interface Room {
 class MockFirebaseConference {
   private rooms: Map<string, Room> = new Map();
   private listeners: Map<string, Set<(data: any) => void>> = new Map();
+  private STORAGE_KEY = 'xrcupid_mock_rooms';
+
+  constructor() {
+    // Load rooms from localStorage on initialization
+    this.loadRoomsFromStorage();
+  }
+
+  private loadRoomsFromStorage(): void {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (stored) {
+        const roomsData = JSON.parse(stored);
+        Object.entries(roomsData).forEach(([id, room]) => {
+          this.rooms.set(id, room as Room);
+        });
+        console.log('[MockFirebase] Loaded rooms from storage:', this.rooms.size);
+      }
+    } catch (error) {
+      console.error('[MockFirebase] Error loading rooms from storage:', error);
+    }
+  }
+
+  private saveRoomsToStorage(): void {
+    try {
+      const roomsData: { [key: string]: Room } = {};
+      this.rooms.forEach((room, id) => {
+        roomsData[id] = room;
+      });
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(roomsData));
+      console.log('[MockFirebase] Saved rooms to storage:', this.rooms.size);
+    } catch (error) {
+      console.error('[MockFirebase] Error saving rooms to storage:', error);
+    }
+  }
 
   // Generate a 6-character room code
   generateRoomCode(): string {
@@ -33,23 +67,29 @@ class MockFirebaseConference {
       createdAt: Date.now()
     };
     this.rooms.set(roomId, room);
+    this.saveRoomsToStorage(); // Persist to localStorage
     this.notifyListeners(`rooms/${roomId}`, room);
+    console.log('[MockFirebase] Created room:', roomId);
     return roomId;
   }
 
   // Join an existing room
   async joinRoom(roomId: string, participantName: string): Promise<boolean> {
+    console.log('[MockFirebase] Attempting to join room:', roomId, 'as', participantName);
     const room = this.rooms.get(roomId);
     if (!room) {
+      console.error('[MockFirebase] Room not found:', roomId);
+      console.log('[MockFirebase] Available rooms:', Array.from(this.rooms.keys()));
       return false;
     }
     
     if (!room.participants.includes(participantName)) {
       room.participants.push(participantName);
+      this.saveRoomsToStorage(); // Persist to localStorage
     }
     
     this.notifyListeners(`rooms/${roomId}`, room);
-    this.notifyListeners(`rooms/${roomId}/participants`, room.participants);
+    console.log('[MockFirebase] Successfully joined room:', roomId);
     return true;
   }
 
@@ -99,6 +139,7 @@ class MockFirebaseConference {
 
     const signalKey = `${from}_to_${to}`;
     room.signals[signalKey] = signal;
+    this.saveRoomsToStorage(); // Persist to localStorage
     this.notifyListeners(`rooms/${roomId}/signals/${signalKey}`, room.signals[signalKey]);
   }
 
@@ -154,6 +195,7 @@ class MockFirebaseConference {
     for (const [roomId, room] of this.rooms.entries()) {
       if (room.createdAt < oneHourAgo) {
         this.rooms.delete(roomId);
+        this.saveRoomsToStorage(); // Persist to localStorage
       }
     }
   }
