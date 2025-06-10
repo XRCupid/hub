@@ -49,7 +49,6 @@ export class HumeVoiceService {
   private socket: any; // Consider typing this more strictly if possible, e.g., ChatSocket from '@humeai/voice/dist/src/socket'
   private isConnected: boolean = false;
   private hasConnectedBefore: boolean = false; // New
-  
   private onAudioCallback?: (audioBlob: Blob) => void;
   private onMessageCallback?: (message: any) => void; // Type changed
   private onEmotionCallback?: (emotions: EmotionalState) => void;
@@ -113,6 +112,17 @@ export class HumeVoiceService {
   }
 
   async connect(configId?: string): Promise<void> {
+    console.log('[HumeVoiceService] Connect called with configId:', configId);
+    
+    // CRITICAL: Prevent multiple connections
+    if (this.client) {
+      console.warn('[HumeVoiceService] Already connected! Disconnecting first to prevent connection leak.');
+      await this.disconnect();
+    }
+    
+    // Store the config ID
+    this.currentConfigId = configId;
+    
     try {
       console.log('[HumeVoiceService] Connect method called');
       
@@ -156,16 +166,28 @@ export class HumeVoiceService {
       const apiKey = process.env.REACT_APP_HUME_API_KEY || process.env.REACT_APP_HUME_CLIENT_ID;
       const secretKey = process.env.REACT_APP_HUME_SECRET_KEY || process.env.REACT_APP_HUME_CLIENT_SECRET;
       
+      // Check if API keys are available
       if (!apiKey || !secretKey) {
-        const error = new Error('Missing Hume API credentials. Please set REACT_APP_HUME_API_KEY/CLIENT_ID and REACT_APP_HUME_SECRET_KEY/CLIENT_SECRET in your .env file');
+        const error = new Error('Hume API credentials not configured. Please contact support.');
         console.error('[HumeVoiceService]', error.message);
+        if (this.onErrorCallback) {
+          this.onErrorCallback(error);
+        }
         throw error;
       }
       
+      // Debug: Show partial credentials being used
+      console.log('[HumeVoiceService] Using credentials from environment:', {
+        apiKeyPrefix: apiKey?.substring(0, 10) + '...',
+        apiKeyLength: apiKey?.length,
+        secretKeyPrefix: secretKey?.substring(0, 10) + '...',
+        secretKeyLength: secretKey?.length
+      });
+      
       // Initialize client with API key
       this.client = new HumeClient({
-        apiKey: apiKey,
-        secretKey: secretKey
+        apiKey,
+        secretKey
       });
       
       console.log('[HumeVoiceService] Client initialized:', {
@@ -326,7 +348,7 @@ export class HumeVoiceService {
       
       // Log the raw message for audio_output debugging
       if (message.type === 'audio_output') {
-        console.log('[HumeVoiceService] 🎵 AUDIO_OUTPUT MESSAGE RECEIVED!');
+        console.log('[HumeVoiceService] 🎵 Received audio_output');
         console.log('[HumeVoiceService] Audio data present:', !!message.data);
         console.log('[HumeVoiceService] Audio data length:', message.data?.length);
         console.log('[HumeVoiceService] First 100 chars of data:', message.data?.substring(0, 100));
@@ -749,6 +771,14 @@ export class HumeVoiceService {
       isReady
     });
     return isReady;
+  }
+
+  getConnectionStatus(): { connected: boolean; configId?: string; hasClient: boolean } {
+    return {
+      connected: !!this.client,
+      configId: this.currentConfigId,
+      hasClient: !!this.client
+    };
   }
 
   // Callback setters
