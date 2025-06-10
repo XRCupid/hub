@@ -1,5 +1,5 @@
-import { database } from '../firebaseConfig';
 import { ref, set, push, onValue, off, get, DataSnapshot, Database } from 'firebase/database';
+import { database } from '../firebaseConfig';
 
 interface Room {
   host: string;
