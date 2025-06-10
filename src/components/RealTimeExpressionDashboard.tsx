@@ -184,18 +184,28 @@ const RealTimeExpressionDashboard: React.FC<RealTimeExpressionDashboardProps> = 
   };
 
   return (
-    <div className={`realtime-expression-dashboard ${overallMood}`}>
-      {/* Header with chemistry score */}
+    <div className={`real-time-expression-dashboard ${overallMood}`}>
+      {/* Header with Connection Status */}
       <div className="dashboard-header">
-        <h2>🎭 Real-Time Expression Analysis</h2>
-        <div className="chemistry-meter">
-          <div className="chemistry-label">Chemistry Score</div>
-          <div className="chemistry-score">
-            <div 
-              className="chemistry-fill"
-              style={{ width: `${chemistryScore}%` }}
-            />
-            <span className="chemistry-text">{Math.round(chemistryScore)}%</span>
+        <h1>🎭 Real-Time Expression Analytics</h1>
+        <div className="connection-status">
+          <div className="status-indicator active">
+            <div className="pulse"></div>
+            <span>LIVE</span>
+          </div>
+          <div className="data-indicators">
+            <span className={`indicator ${participant1Data?.voiceEmotions?.length ? 'active' : 'inactive'}`}>
+              🎤 Voice: {participant1Data?.voiceEmotions?.length || 0}
+            </span>
+            <span className={`indicator ${participant1Data?.facialExpressions ? 'active' : 'inactive'}`}>
+              😊 Face: {participant1Data?.facialExpressions ? '✅' : '❌'}
+            </span>
+            <span className={`indicator ${participant2Data?.voiceEmotions?.length ? 'active' : 'inactive'}`}>
+              🎤 Voice: {participant2Data?.voiceEmotions?.length || 0}
+            </span>
+            <span className={`indicator ${participant2Data?.facialExpressions ? 'active' : 'inactive'}`}>
+              😊 Face: {participant2Data?.facialExpressions ? '✅' : '❌'}
+            </span>
           </div>
         </div>
       </div>

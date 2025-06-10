@@ -533,7 +533,6 @@ const ConferenceBoothDemo: React.FC<Props> = ({
     }
   }, [remoteStream, showAvatars, participant2Data.name]);
 
-  // Initialize Hume Voice Service for emotional analysis
   useEffect(() => {
     if (localStream && mode === 'participant') {
       const initializeHumeService = async () => {
@@ -984,10 +983,13 @@ const ConferenceBoothDemo: React.FC<Props> = ({
             <div>Peer ID: {myPeerIdRef.current}</div>
             <div>ML5 Status: {ml5FaceMeshServiceRef1.current ? '✅' : '❌'}</div>
             <div>Tracking: {participant1Data.trackingData ? '✅' : '❌'}</div>
+            <div>Hume Status: {humeVoiceServiceRef.current ? '✅' : '❌'}</div>
+            <div>Emotions: {participant1Data.emotionalData?.length || 0} detected</div>
             <button
               onClick={() => {
-                console.log('=== ML5 DEBUG INFO ===');
+                console.log('=== FULL DEBUG INFO ===');
                 console.log('ML5 Service:', ml5FaceMeshServiceRef1.current);
+                console.log('Hume Service:', humeVoiceServiceRef.current);
                 console.log('Video Element:', localVideoRef.current);
                 console.log('Participant Data:', participant1Data);
                 console.log('Room ID:', roomId);
@@ -997,6 +999,18 @@ const ConferenceBoothDemo: React.FC<Props> = ({
                 if (ml5FaceMeshServiceRef1.current) {
                   const trackingData = ml5FaceMeshServiceRef1.current.getTrackingData();
                   console.log('Live Tracking Data:', trackingData);
+                }
+                
+                // Test Firebase connection
+                if (roomId && myPeerIdRef.current) {
+                  firebaseService.updateParticipant(roomId, myPeerIdRef.current, {
+                    debugTest: Date.now(),
+                    emotionalData: participant1Data.emotionalData || []
+                  }).then(() => {
+                    console.log('✅ Firebase test update successful');
+                  }).catch(error => {
+                    console.error('❌ Firebase test update failed:', error);
+                  });
                 }
               }}
               style={{
@@ -1009,7 +1023,7 @@ const ConferenceBoothDemo: React.FC<Props> = ({
                 fontSize: '12px'
               }}
             >
-              🐛 Debug ML5
+              🐛 Full Debug
             </button>
           </div>
         )}
