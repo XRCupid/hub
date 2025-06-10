@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, FC } from 'react';
 import { HumeVoiceService } from '../services/humeVoiceService';
 import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
 import { PostureTrackingService } from '../services/PostureTrackingService';
+import { UserAvatarPiP } from './UserAvatarPiP';
 import './NPCDateCall.css';
 
 interface NPCDateCallProps {
@@ -21,6 +22,7 @@ const NPCDateCall: React.FC<NPCDateCallProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [userEmotions, setUserEmotions] = useState<any>({});
   const [conversationScore, setConversationScore] = useState(0);
+  const [showPiP, setShowPiP] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const humeService = useRef<HumeVoiceService | null>(null);
   const faceMeshService = useRef<ML5FaceMeshService | null>(null);
@@ -235,12 +237,20 @@ const NPCDateCall: React.FC<NPCDateCallProps> = ({
       
       <div className="call-controls">
         <button 
+          className="pip-toggle"
+          onClick={() => setShowPiP(!showPiP)}
+          title={showPiP ? "Hide Avatar" : "Show Avatar"}
+        >
+          {showPiP ? '👤' : '👥'}
+        </button>
+        <button 
           className="end-call-button"
           onClick={endCall}
         >
           End Date
         </button>
       </div>
+      {showPiP && <UserAvatarPiP />}
     </div>
   );
 };

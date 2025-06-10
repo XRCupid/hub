@@ -20,6 +20,7 @@ export class HumeExpressionService {
   private isTracking: boolean = false;
   private canvas!: HTMLCanvasElement;
   private context!: CanvasRenderingContext2D;
+  private onEmotionCallback?: (emotions: Array<{ emotion: string; score: number }>) => void;
   private lastExpressions: FacialExpressions = {
     mouthSmile: 0,
     mouthSmileLeft: 0,
@@ -164,7 +165,7 @@ export class HumeExpressionService {
     console.log('[HumeExpressionService] API key set');
   }
 
-  startTracking(video: HTMLVideoElement) {
+  startTracking(video: HTMLVideoElement, onEmotionCallback?: (emotions: Array<{ emotion: string; score: number }>) => void) {
     if (!this.apiKey) {
       console.error('[HumeExpressionService] Cannot start tracking without API key');
       return;
@@ -172,6 +173,7 @@ export class HumeExpressionService {
 
     this.video = video;
     this.isTracking = true;
+    this.onEmotionCallback = onEmotionCallback;
     
     // Set canvas size to match video
     this.canvas.width = video.videoWidth;
@@ -302,6 +304,17 @@ export class HumeExpressionService {
       .slice(0, 3); // Top 3 emotions
 
     console.log('[HumeExpressionService] Top emotions:', topEmotions.map(e => `${e.name}: ${e.score.toFixed(2)}`));
+
+    // Format emotions for callback
+    const formattedEmotions = topEmotions.map(e => ({
+      emotion: e.name,
+      score: e.score
+    }));
+
+    // Call emotion callback if provided
+    if (this.onEmotionCallback) {
+      this.onEmotionCallback(formattedEmotions);
+    }
 
     // Apply emotion mappings to blendshapes
     for (const emotion of topEmotions) {

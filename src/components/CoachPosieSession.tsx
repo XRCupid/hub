@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { PresenceAvatar } from './PresenceAvatar';
 import { SafeVisualEffects } from './SafeVisualEffects';
+import { UserAvatarPiP } from './UserAvatarPiP';
 import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
 import humeVoiceService from '../services/humeVoiceService';
 import './EnhancedCoachSession.css';
@@ -351,21 +352,12 @@ const CoachPosieSession: React.FC = () => {
       
       {/* User Avatar PiP */}
       {showPiP && (
-        <div className="pip-avatar">
-          <Canvas camera={{ position: [0, 0, 1.5], fov: 35 }}>
-            <ambientLight intensity={0.8} />
-            <directionalLight position={[0, 1, 2]} intensity={1.2} />
-            <Suspense fallback={null}>
-              <PresenceAvatar
-                avatarUrl="/avatars/babe.glb"
-                trackingData={trackingData || undefined}
-                position={[0, -1.75, 0]}
-                scale={1.2}
-              />
-            </Suspense>
-            <SafeVisualEffects style="subtle" enabled={true} />
-          </Canvas>
-        </div>
+        <UserAvatarPiP
+          trackingData={trackingData}
+          position="bottom-right"
+          size="medium"
+          onClose={() => setShowPiP(false)}
+        />
       )}
       
       {/* Posie-specific Metrics Panel */}

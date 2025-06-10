@@ -3,6 +3,7 @@ import { DaterPerformanceAnalytics } from '../services/DaterPerformanceAnalytics
 import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
 import { PostureTrackingService } from '../services/PostureTrackingService';
 import { HumeVoiceService } from '../services/humeVoiceService';
+import { HumeExpressionService } from '../services/HumeExpressionService';
 import { EmotionDisplay } from './EmotionDisplay';
 import PresenceAvatar from './PresenceAvatar';
 import { Canvas } from '@react-three/fiber';
@@ -15,7 +16,9 @@ interface ParticipantData {
   analytics: DaterPerformanceAnalytics;
   faceMeshService: ML5FaceMeshService;
   postureService: PostureTrackingService;
+  humeExpressionService: HumeExpressionService;
   emotions: Array<{ emotion: string; score: number }>;
+  humeExpressions: Array<{ emotion: string; score: number }>;
 }
 
 interface AudienceAnalyticsDashboardProps {
@@ -57,6 +60,8 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
 }) => {
   const [participants, setParticipants] = useState<ParticipantData[]>([]);
   const [overallChemistry, setOverallChemistry] = useState<number>(50);
+  const [realtimeChemistry, setRealtimeChemistry] = useState<number>(50);
+  const [chemistryTrend, setChemistryTrend] = useState<'up' | 'down' | 'stable'>('stable');
   const [conversationPhase, setConversationPhase] = useState<string>('Getting to know each other');
   const [sessionDuration, setSessionDuration] = useState<number>(0);
   const [isSessionActive, setIsSessionActive] = useState<boolean>(false);
@@ -65,10 +70,13 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
   const [emotionalSync, setEmotionalSync] = useState<number>(75);
   const [participant1Emotions, setParticipant1Emotions] = useState<Array<{ emotion: string; score: number }>>([]);
   const [participant2Emotions, setParticipant2Emotions] = useState<Array<{ emotion: string; score: number }>>([]);
+  const [participant1HumeExpressions, setParticipant1HumeExpressions] = useState<Array<{ emotion: string; score: number }>>([]);
+  const [participant2HumeExpressions, setParticipant2HumeExpressions] = useState<Array<{ emotion: string; score: number }>>([]);
 
   const sessionStartTime = useRef<number>(0);
   const humeVoiceService = useRef<HumeVoiceService | null>(null);
   const reconnectTimeoutId = useRef<number | null>(null);
+  const chemistryHistoryRef = useRef<number[]>([]);
 
   // CRITICAL: Clean up WebSocket connection on unmount - FLUSH THE TOILET!
   useEffect(() => {
@@ -85,6 +93,7 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
       participants.forEach(p => {
         p.faceMeshService.stopTracking();
         p.postureService.stopTracking();
+        p.humeExpressionService.stopTracking();
         p.analytics.endSession();
       });
     };
@@ -101,467 +110,132 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
           analytics: new DaterPerformanceAnalytics(),
           faceMeshService: new ML5FaceMeshService(),
           postureService: new PostureTrackingService(),
-          emotions: []
+          humeExpressionService: new HumeExpressionService(),
+          emotions: [],
+          humeExpressions: []
         },
         {
-          id: 'participant2', 
+          id: 'participant2',
           name: participant2Name,
           stream: participant2Stream,
           analytics: new DaterPerformanceAnalytics(),
           faceMeshService: new ML5FaceMeshService(),
           postureService: new PostureTrackingService(),
-          emotions: []
+          humeExpressionService: new HumeExpressionService(),
+          emotions: [],
+          humeExpressions: []
         }
       ];
+
+      // Initialize video element and start Hume expression tracking for each participant
+      newParticipants.forEach((participant, index) => {
+        if (participant.stream) {
+          // Create video element for Hume analysis
+          const video = document.createElement('video');
+          video.autoplay = true;
+          video.muted = true;
+          video.srcObject = participant.stream;
+          
+          // Start Hume expression tracking on video feed
+          participant.humeExpressionService.startTracking(video, (expressions: Array<{ emotion: string; score: number }>) => {
+            console.log(`[AudienceAnalyticsDashboard] 🎭 Hume expressions for ${participant.name}:`, expressions);
+            
+            if (index === 0) {
+              setParticipant1HumeExpressions(expressions);
+            } else {
+              setParticipant2HumeExpressions(expressions);
+            }
+          });
+        }
+      });
+
       setParticipants(newParticipants);
+      console.log('[AudienceAnalyticsDashboard] Participants initialized with Hume Expression Service');
     }
   }, [participant1Stream, participant2Stream, participant1Name, participant2Name]);
 
-  // Start session and initialize services when streams are available
+  // Realtime chemistry calculation based on Hume expressions
   useEffect(() => {
-    if (!participants.length || !participant1Stream || !participant2Stream) return;
-    if (isSessionActive) return;
-
-    console.log('[AudienceDashboard] Starting session with participants:', participants);
-    setIsSessionActive(true);
-    sessionStartTime.current = Date.now();
-
-    participants.forEach((p) => {
-      p.analytics.startSession([p.id]);
-    });
-
-    // Initialize Hume for emotion tracking with audio streams
-    const initializeHume = async () => {
-      try {
-        humeVoiceService.current = new HumeVoiceService();
-        
-        // Connect Hume service
-        await humeVoiceService.current.connect();
-        
-        // Set up Hume emotion callbacks
-        humeVoiceService.current.onEmotion((emotionData: any) => {
-          console.log('[AudienceDashboard] Received emotion data:', emotionData);
-          
-          if (emotionData?.predictions && emotionData.predictions.length > 0) {
-            const emotions = emotionData.predictions[0].emotions || {};
-            
-            // Transform Hume emotion data to our format
-            const formattedEmotions = Object.entries(emotions)
-              .map(([emotion, score]) => ({ emotion, score: score as number }))
-              .filter(e => e.score > 0.1) // Only show emotions above 10%
-              .sort((a, b) => b.score - a.score);
-            
-            // For demo purposes, alternate between participants
-            // In production, you'd identify which participant is speaking
-            const currentSpeaker = Math.random() > 0.5 ? 1 : 2;
-            if (currentSpeaker === 1) {
-              setParticipant1Emotions(formattedEmotions);
-            } else {
-              setParticipant2Emotions(formattedEmotions);
-            }
-            
-            // Update emotional sync based on similarity of emotions
-            updateEmotionalSync(formattedEmotions);
-          }
-        });
-
-        // Send audio from participant streams to Hume
-        // Note: In production, you'd process audio from each participant separately
-        const audioContext = new AudioContext();
-        
-        // Helper to process audio stream
-        const processAudioStream = async (stream: MediaStream) => {
-          const source = audioContext.createMediaStreamSource(stream);
-          const processor = audioContext.createScriptProcessor(4096, 1, 1);
-          
-          processor.onaudioprocess = async (e) => {
-            const inputData = e.inputBuffer.getChannelData(0);
-            // Convert to base64 for Hume
-            const audioBlob = new Blob([inputData], { type: 'audio/wav' });
-            
-            // Send to Hume (if connected)
-            if (humeVoiceService.current) {
-              humeVoiceService.current.sendAudio(audioBlob);
-            }
-          };
-          
-          source.connect(processor);
-          processor.connect(audioContext.destination);
-        };
-        
-        // Process both participant audio streams
-        await processAudioStream(participant1Stream);
-        await processAudioStream(participant2Stream);
-        
-      } catch (error) {
-        console.error('[AudienceDashboard] Error initializing Hume:', error);
-      }
-    };
-    
-    initializeHume();
-    
-    // Start face mesh and posture tracking for each participant
-    participants.forEach(async (p) => {
-      try {
-        console.log('[AudienceDashboard] Initializing face mesh for participant:', p.id);
-        await p.faceMeshService.initialize();
-        await p.postureService.initialize();
-
-        if (!p.stream) return;
-
-        // Create video element for tracking
-        const video = document.createElement('video');
-        video.srcObject = p.stream || null;
-        video.play();
-
-        p.faceMeshService.startTracking(video);
-        p.postureService.startTracking(video);
-      } catch (error) {
-        console.error('[AudienceDashboard] Failed to initialize tracking for participant:', p.id, error);
-        // Continue without face tracking - avatars will still work without tracking data
-      }
-    });
-
-    // Start analytics update loop
-    const analyticsInterval = setInterval(() => {
-      if (!isSessionActive) {
-        clearInterval(analyticsInterval);
+    const calculateRealtimeChemistry = () => {
+      if (participant1HumeExpressions.length === 0 || participant2HumeExpressions.length === 0) {
         return;
       }
-      updateAnalytics();
-    }, 2000);
 
-    // Update session duration
-    const durationInterval = setInterval(() => {
-      if (isSessionActive) {
-        setSessionDuration(Math.floor((Date.now() - sessionStartTime.current) / 1000));
-      } else {
-        clearInterval(durationInterval);
-      }
-    }, 1000);
-    
-    return () => {
-      console.log('[AudienceDashboard] Cleaning up session');
-      participants.forEach((p) => {
-        p.analytics.endSession();
-        p.faceMeshService.stopTracking();
-        p.postureService.stopTracking();
-      });
-      
-      // Disconnect Hume
-      if (humeVoiceService.current) {
-        humeVoiceService.current.disconnect();
-      }
-      
-      if (reconnectTimeoutId.current) {
-        clearTimeout(reconnectTimeoutId.current);
-      }
-    };
-  }, [participants, isSessionActive, participant1Stream, participant2Stream]);
+      // Get top emotions for each participant
+      const p1TopEmotions = participant1HumeExpressions.slice(0, 3);
+      const p2TopEmotions = participant2HumeExpressions.slice(0, 3);
 
-  const startSession = () => {
-    if (participants.length !== 2) return;
+      // Calculate emotional alignment
+      let alignmentScore = 0;
+      let totalComparisons = 0;
 
-    setIsSessionActive(true);
-    sessionStartTime.current = Date.now();
-
-    // Start analytics for both participants
-    participants.forEach(p => {
-      p.analytics.startSession([p.id]);
-    });
-
-    // Initialize Hume for emotion tracking
-    humeVoiceService.current = new HumeVoiceService();
-    
-    // Set up Hume emotion callbacks
-    if (humeVoiceService.current) {
-      humeVoiceService.current.onEmotion((emotionData: any) => {
-        if (emotionData?.predictions && emotionData.predictions.length > 0) {
-          const emotions = emotionData.predictions[0].emotions || [];
-          
-          // Transform Hume emotion data to our format
-          const formattedEmotions = Object.entries(emotions)
-            .map(([emotion, score]) => ({ emotion, score: score as number }))
-            .filter(e => e.score > 0.1) // Only show emotions above 10%
-            .sort((a, b) => b.score - a.score);
-          
-          // For demo purposes, alternate between participants
-          // In production, you'd identify which participant is speaking
-          const currentSpeaker = Math.random() > 0.5 ? 1 : 2;
-          if (currentSpeaker === 1) {
-            setParticipant1Emotions(formattedEmotions);
+      p1TopEmotions.forEach(p1Emotion => {
+        p2TopEmotions.forEach(p2Emotion => {
+          if (p1Emotion.emotion === p2Emotion.emotion) {
+            // Same emotion - calculate similarity in intensity
+            const similarity = 1 - Math.abs(p1Emotion.score - p2Emotion.score);
+            alignmentScore += similarity * 2; // Bonus for same emotion
           } else {
-            setParticipant2Emotions(formattedEmotions);
+            // Different emotions - check if they're complementary
+            const complementaryPairs: Record<string, string[]> = {
+              'Joy': ['Amusement', 'Surprise'],
+              'Amusement': ['Joy', 'Surprise'],
+              'Interest': ['Concentration', 'Contemplation'],
+              'Concentration': ['Interest', 'Contemplation']
+            };
+            
+            if (complementaryPairs[p1Emotion.emotion]?.includes(p2Emotion.emotion)) {
+              alignmentScore += Math.min(p1Emotion.score, p2Emotion.score);
+            }
           }
-          
-          // Update emotional sync based on similarity of emotions
-          updateEmotionalSync(formattedEmotions);
-        }
+          totalComparisons++;
+        });
       });
-    }
-    
-    // Start face mesh and posture tracking for each participant
-    participants.forEach(async (p) => {
-      try {
-        console.log('[AudienceDashboard] Initializing face mesh for participant:', p.id);
-        await p.faceMeshService.initialize();
-        await p.postureService.initialize();
 
-        if (!p.stream) return;
-
-        // Create video element for tracking
-        const video = document.createElement('video');
-        video.srcObject = p.stream || null;
-        video.play();
-
-        p.faceMeshService.startTracking(video);
-        p.postureService.startTracking(video);
-      } catch (error) {
-        console.error('[AudienceDashboard] Failed to initialize tracking for participant:', p.id, error);
-        // Continue without face tracking - avatars will still work without tracking data
+      const newChemistry = totalComparisons > 0 ? Math.min(100, (alignmentScore / totalComparisons) * 100) : 50;
+      
+      // Update chemistry trend
+      const previousChemistry = chemistryHistoryRef.current[chemistryHistoryRef.current.length - 1] || 50;
+      chemistryHistoryRef.current.push(newChemistry);
+      
+      // Keep only last 10 readings for trend calculation
+      if (chemistryHistoryRef.current.length > 10) {
+        chemistryHistoryRef.current.shift();
       }
-    });
 
-    // Start analytics update loop
-    const analyticsInterval = setInterval(() => {
-      if (!isSessionActive) {
-        clearInterval(analyticsInterval);
-        return;
-      }
-      updateAnalytics();
-    }, 2000);
+      const trend = newChemistry > previousChemistry + 2 ? 'up' : 
+                   newChemistry < previousChemistry - 2 ? 'down' : 'stable';
 
-    // Update session duration
-    const durationInterval = setInterval(() => {
-      if (isSessionActive) {
-        setSessionDuration(Math.floor((Date.now() - sessionStartTime.current) / 1000));
-      } else {
-        clearInterval(durationInterval);
-      }
-    }, 1000);
+      setRealtimeChemistry(newChemistry);
+      setChemistryTrend(trend);
+      setOverallChemistry(newChemistry);
+
+      console.log('[AudienceAnalyticsDashboard] 💕 Chemistry updated:', {
+        newChemistry: newChemistry.toFixed(1),
+        trend,
+        p1Emotions: p1TopEmotions.map(e => `${e.emotion}: ${e.score.toFixed(2)}`),
+        p2Emotions: p2TopEmotions.map(e => `${e.emotion}: ${e.score.toFixed(2)}`)
+      });
+    };
+
+    const interval = setInterval(calculateRealtimeChemistry, 2000); // Update every 2 seconds
+    return () => clearInterval(interval);
+  }, [participant1HumeExpressions, participant2HumeExpressions]);
+
+  // Utility functions
+  const startSession = () => {
+    setIsSessionActive(true);
+    sessionStartTime.current = Date.now();
   };
 
   const endSession = () => {
     setIsSessionActive(false);
-    // Stop all tracking services
-    participants.forEach(p => {
-      p.faceMeshService.stopTracking();
-      p.postureService.stopTracking();
-    });
   };
 
-  const updateAnalytics = () => {
-    if (participants.length !== 2) return;
-
-    const [p1, p2] = participants;
-
-    // Get tracking data
-    const p1FaceData = p1.faceMeshService.getExpressions();
-    const p1HeadRotation = p1.faceMeshService.getHeadRotation();
-    const p1PostureData = p1.postureService.getPostureData();
-
-    const p2FaceData = p2.faceMeshService.getExpressions();
-    const p2HeadRotation = p2.faceMeshService.getHeadRotation();
-    const p2PostureData = p2.postureService.getPostureData();
-
-    // Update analytics with proper parameters
-    p1.analytics.updateMetrics(
-      p1FaceData,
-      p1PostureData,
-      participant1EmotionalData, // emotion data placeholder
-      null, // voice data placeholder
-      'real-time-update'
-    );
-
-    p2.analytics.updateMetrics(
-      p2FaceData,
-      p2PostureData,
-      participant2EmotionalData, // emotion data placeholder  
-      null, // voice data placeholder
-      'real-time-update'
-    );
-
-    // Calculate overall chemistry using session data
-    const p1Session = p1.analytics.getSession();
-    const p2Session = p2.analytics.getSession();
-    
-    if (p1Session && p2Session) {
-      const avgChemistry = (p1Session.compatibilityScore + p2Session.compatibilityScore) / 2;
-      setOverallChemistry(avgChemistry);
-    }
-
-    // Detect chemistry moments
-    if (Math.random() > 0.7) { // Simulate chemistry moment detection
-      const newMoment: ChemistryMoment = {
-        timestamp: Date.now(),
-        score: Math.floor(Math.random() * 30) + 70,
-        context: getRandomChemistryContext()
-      };
-      setChemistryMoments(prev => [...prev.slice(-4), newMoment]);
-    }
-
-    // Generate coaching insights
-    if (enableRealTimeCoaching && isSessionActive) {
-      participants.forEach(participant => {
-        const newInsights = generateCoachingInsight(participant);
-        newInsights.forEach(insight => {
-          setCoachingInsights(prev => {
-            const updated = [insight, ...prev].slice(0, 10); // Keep last 10 insights
-            return updated;
-          });
-        });
-      });
-    }
-
-    // Update conversation phase
-    const duration = sessionDuration;
-    if (duration < 120) {
-      setConversationPhase('Ice breaking');
-    } else if (duration < 300) {
-      setConversationPhase('Getting to know each other');
-    } else if (duration < 600) {
-      setConversationPhase('Deeper conversation');
-    } else {
-      setConversationPhase('Building connection');
-    }
-
-    // Generate mock emotions if Hume isn't providing real data
-    if (participant1Emotions.length === 0) {
-      setParticipant1Emotions([
-        { emotion: 'joy', score: 0.7 + Math.random() * 0.2 },
-        { emotion: 'interest', score: 0.5 + Math.random() * 0.3 },
-        { emotion: 'contentment', score: 0.4 + Math.random() * 0.3 }
-      ]);
-    }
-      
-    if (participant2Emotions.length === 0) {
-      setParticipant2Emotions([
-        { emotion: 'excitement', score: 0.6 + Math.random() * 0.3 },
-        { emotion: 'joy', score: 0.5 + Math.random() * 0.3 },
-        { emotion: 'interest', score: 0.4 + Math.random() * 0.2 }
-      ]);
-    }
-
-    // Update emotional sync
-    updateEmotionalSync(participant1Emotions);
-  };
-
-  const updateEmotionalSync = (currentEmotions: Array<{ emotion: string; score: number }>) => {
-    // Compare current emotions with the other participant's emotions
-    const otherEmotions = currentEmotions === participant1Emotions ? participant2Emotions : participant1Emotions;
-    
-    if (otherEmotions.length === 0) return;
-    
-    // Calculate similarity between emotion sets
-    let similarity = 0;
-    currentEmotions.forEach(e1 => {
-      const matchingEmotion = otherEmotions.find(e2 => e2.emotion === e1.emotion);
-      if (matchingEmotion) {
-        similarity += Math.min(e1.score, matchingEmotion.score);
-      }
-    });
-    
-    setEmotionalSync(Math.round(similarity * 100));
-  };
-
-  const generateCoachingInsight = (participant: ParticipantData) => {
-    const metrics = getParticipantMetrics(participant);
-    const insights: CoachingInsight[] = [];
-    const timestamp = Date.now();
-    
-    // Eye contact coaching
-    if (metrics.eyeContact < 50) {
-      insights.push({
-        timestamp,
-        participant: participant.name,
-        category: 'Eye Contact',
-        message: 'Try to maintain eye contact - look at the camera to build connection',
-        priority: 'high'
-      });
-    } else if (metrics.eyeContact > 80) {
-      insights.push({
-        timestamp,
-        participant: participant.name,
-        category: 'Eye Contact',
-        message: 'Great eye contact! This builds trust and connection',
-        priority: 'low'
-      });
-    }
-    
-    // Emotional coaching based on current emotions
-    const topEmotion = participant.emotions?.[0];
-    if (topEmotion) {
-      if (['anger', 'disgust', 'fear'].includes(topEmotion.emotion)) {
-        insights.push({
-          timestamp,
-          participant: participant.name,
-          category: 'Emotional State',
-          message: `Showing ${topEmotion.emotion} - try to relax and find something positive to focus on`,
-          priority: 'high'
-        });
-      } else if (['joy', 'excitement', 'admiration'].includes(topEmotion.emotion)) {
-        insights.push({
-          timestamp,
-          participant: participant.name,
-          category: 'Emotional State',
-          message: `Great energy! Your ${topEmotion.emotion} is creating positive chemistry`,
-          priority: 'low'
-        });
-      }
-    }
-    
-    // Engagement coaching
-    if (metrics.facialEngagement < 60) {
-      insights.push({
-        timestamp,
-        participant: participant.name,
-        category: 'Engagement',
-        message: 'Show more interest - smile, nod, and react to what they\'re saying',
-        priority: 'medium'
-      });
-    }
-    
-    // Body language coaching
-    if (metrics.bodyLanguage < 60) {
-      insights.push({
-        timestamp,
-        participant: participant.name,
-        category: 'Body Language',
-        message: 'Open up your posture - uncross arms and lean in slightly',
-        priority: 'medium'
-      });
-    }
-    
-    return insights;
-  };
-
-  const getRandomChemistryContext = (): string => {
-    const contexts = [
-      'Simultaneous laughter',
-      'Mirrored body language',
-      'Extended eye contact',
-      'Synchronized gestures',
-      'Shared excitement',
-      'Natural conversation flow'
-    ];
-    return contexts[Math.floor(Math.random() * contexts.length)];
-  };
-
-  const getRandomCategory = (): string => {
-    const categories = ['posture', 'eye contact', 'gestures', 'conversation'];
-    return categories[Math.floor(Math.random() * categories.length)];
-  };
-
-  const getRandomCoachingMessage = (): string => {
-    const messages = [
-      'Great eye contact! Keep it natural.',
-      'Consider leaning in slightly to show engagement.',
-      'Perfect mirroring of their energy level.',
-      'Nice use of hand gestures while speaking.',
-      'Good recovery from that awkward pause.',
-      'Excellent active listening demonstrated.'
-    ];
-    return messages[Math.floor(Math.random() * messages.length)];
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const getMetricColor = (value: number): string => {
@@ -597,13 +271,6 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
     return emotionColors[emotion.toLowerCase()] || '#95A5A6';
   };
 
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Helper function to get metrics safely
   const getParticipantMetrics = (participant: ParticipantData) => {
     const session = participant.analytics.getSession();
     return session?.currentMetrics || {
@@ -618,22 +285,6 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
   const getCompatibilityScore = (participant: ParticipantData): number => {
     const session = participant.analytics.getSession();
     return session?.compatibilityScore || 70;
-  };
-
-  // Helper function for audio processing
-  const blobToBase64 = async (blob: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          resolve(reader.result.split(',')[1]);
-        } else {
-          reject(new Error('Failed to convert blob to base64'));
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
   };
 
   return (
@@ -712,15 +363,18 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
                 </div>
               )}
               
-              {/* Enhanced Emotion Display */}
+              {/* Enhanced Emotion Display using Hume Expression Analysis */}
               <div className="emotion-overlay">
+                <div className="emotion-source-indicator">
+                  <span className="emotion-source-label">📹 Video Analysis</span>
+                </div>
                 <EmotionDisplay 
-                  emotions={participant1Emotions} 
+                  emotions={participant1HumeExpressions} 
                   participantName={participant1Name}
                 />
-                {participant1Emotions.length > 0 && (
+                {participant1HumeExpressions.length > 0 && (
                   <div className="emotion-bars">
-                    {participant1Emotions.slice(0, 3).map((emotion, idx) => (
+                    {participant1HumeExpressions.slice(0, 3).map((emotion, idx) => (
                       <div key={idx} className="emotion-bar-item">
                         <span className="emotion-label">{emotion.emotion}</span>
                         <div className="emotion-bar-bg">
@@ -732,6 +386,7 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
                             }}
                           />
                         </div>
+                        <span className="emotion-score">{(emotion.score * 100).toFixed(0)}%</span>
                       </div>
                     ))}
                   </div>
@@ -773,24 +428,54 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
 
           {/* Chemistry Ring */}
           <div className="chemistry-center">
-            <div className="chemistry-ring">
-              <div 
-                className="chemistry-fill"
-                style={{ 
-                  background: `conic-gradient(from 0deg, #FF6B6B 0%, #4ECDC4 ${overallChemistry}%, #2A2A2A ${overallChemistry}%)`
-                }}
-              >
-                <div className="chemistry-score">
-                  <span className="score-number">{Math.round(overallChemistry)}</span>
-                  <span className="score-label">Chemistry</span>
+            <div className="realtime-chemistry-container">
+              <div className="chemistry-ring-wrapper">
+                <div className="chemistry-ring">
+                  <div 
+                    className="chemistry-fill"
+                    style={{ 
+                      background: `conic-gradient(from 0deg, 
+                        ${realtimeChemistry > 80 ? '#FF69B4' : realtimeChemistry > 60 ? '#4ECDC4' : realtimeChemistry > 40 ? '#FFD93D' : '#FF6B6B'} 0%, 
+                        ${realtimeChemistry > 80 ? '#FF1493' : realtimeChemistry > 60 ? '#20B2AA' : realtimeChemistry > 40 ? '#FFA500' : '#DC143C'} ${realtimeChemistry}%, 
+                        #2A2A2A ${realtimeChemistry}%)`
+                    }}
+                  >
+                    <div className="chemistry-score">
+                      <div className="score-number">{Math.round(realtimeChemistry)}</div>
+                      <div className="score-label">Chemistry</div>
+                      <div className="chemistry-trend">
+                        {chemistryTrend === 'up' && <span className="trend-up">↗️</span>}
+                        {chemistryTrend === 'down' && <span className="trend-down">↘️</span>}
+                        {chemistryTrend === 'stable' && <span className="trend-stable">➡️</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="chemistry-pulse-ring" 
+                     style={{
+                       animation: `pulse ${3 - (realtimeChemistry / 50)}s infinite`,
+                       opacity: realtimeChemistry > 70 ? 0.6 : 0.3
+                     }}
+                />
+              </div>
+              
+              <div className="chemistry-details">
+                <div className="chemistry-status">
+                  {realtimeChemistry > 80 && <span className="status-excellent">🔥 Excellent Chemistry!</span>}
+                  {realtimeChemistry > 60 && realtimeChemistry <= 80 && <span className="status-good">✨ Good Connection</span>}
+                  {realtimeChemistry > 40 && realtimeChemistry <= 60 && <span className="status-moderate">💫 Building Rapport</span>}
+                  {realtimeChemistry <= 40 && <span className="status-low">🌱 Getting Started</span>}
+                </div>
+                
+                <div className="conversation-phase">
+                  {conversationPhase}
+                </div>
+                
+                <div className="emotional-sync">
+                  <span className="sync-label">Emotional Sync:</span>
+                  <span className="sync-value">{emotionalSync}%</span>
                 </div>
               </div>
-            </div>
-            <div className="conversation-phase">
-              {conversationPhase}
-            </div>
-            <div className="emotional-sync">
-              Emotional Sync: {emotionalSync}%
             </div>
           </div>
 
@@ -845,15 +530,18 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
                 </div>
               )}
               
-              {/* Enhanced Emotion Display */}
+              {/* Enhanced Emotion Display using Hume Expression Analysis */}
               <div className="emotion-overlay">
+                <div className="emotion-source-indicator">
+                  <span className="emotion-source-label">📹 Video Analysis</span>
+                </div>
                 <EmotionDisplay 
-                  emotions={participant2Emotions} 
+                  emotions={participant2HumeExpressions} 
                   participantName={participant2Name}
                 />
-                {participant2Emotions.length > 0 && (
+                {participant2HumeExpressions.length > 0 && (
                   <div className="emotion-bars">
-                    {participant2Emotions.slice(0, 3).map((emotion, idx) => (
+                    {participant2HumeExpressions.slice(0, 3).map((emotion, idx) => (
                       <div key={idx} className="emotion-bar-item">
                         <span className="emotion-label">{emotion.emotion}</span>
                         <div className="emotion-bar-bg">
@@ -865,6 +553,7 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
                             }}
                           />
                         </div>
+                        <span className="emotion-score">{(emotion.score * 100).toFixed(0)}%</span>
                       </div>
                     ))}
                   </div>

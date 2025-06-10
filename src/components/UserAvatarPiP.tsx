@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';

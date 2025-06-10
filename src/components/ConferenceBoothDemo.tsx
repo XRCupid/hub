@@ -537,38 +537,45 @@ const ConferenceBoothDemo: React.FC<Props> = ({
     if (localStream && mode === 'participant') {
       const initializeHumeService = async () => {
         try {
-          console.log('[ConferenceBoothDemo] Initializing Hume Voice Service...');
-          console.log('[ConferenceBoothDemo] Environment check:', {
+          console.log('[ConferenceBoothDemo] Initializing Hume Voice Service...', {
             hasApiKey: !!process.env.REACT_APP_HUME_API_KEY,
-            hasSecretKey: !!process.env.REACT_APP_HUME_SECRET_KEY,
+            hasSecretKey: !!process.env.REACT_APP_HUME_SECRET_KEY, 
             hasConfigId: !!process.env.REACT_APP_HUME_CONFIG_ID,
             configId: process.env.REACT_APP_HUME_CONFIG_ID
           });
-          
+
           const humeService = new HumeVoiceService();
           
           // Set up emotion callbacks
           humeService.setOnEmotionCallback((emotions: any) => {
-            console.log('[ConferenceBoothDemo] Received emotions:', emotions);
+            console.log('[ConferenceBoothDemo] 🎭 HUME EMOTIONS RECEIVED:', emotions);
+            console.log('[ConferenceBoothDemo] Emotion count:', emotions?.length || 0);
+            console.log('[ConferenceBoothDemo] Updating participant1Data with emotions');
             
-            // Format emotions for the dashboard
-            const formattedEmotions = emotions.map((emotion: any) => ({
-              emotion: emotion.name || emotion.emotion,
-              score: emotion.score || emotion.confidence || 0,
-              timestamp: Date.now()
-            }));
-            
-            setParticipant1Data(prev => ({ 
-              ...prev, 
-              emotionalData: formattedEmotions
-            }));
-            
-            // Update Firebase with emotional data
+            const formattedEmotions = Array.isArray(emotions) ? emotions : [emotions];
+            setParticipant1Data(prev => {
+              const updated = { 
+                ...prev, 
+                emotionalData: formattedEmotions,
+                voiceEmotions: formattedEmotions
+              };
+              console.log('[ConferenceBoothDemo] Updated participant1Data:', updated);
+              return updated;
+            });
+
+            // Send to Firebase
             if (roomId && myPeerIdRef.current) {
+              console.log('[ConferenceBoothDemo] Sending emotions to Firebase...', {
+                roomId, myPeerIdRef: myPeerIdRef.current, emotionCount: formattedEmotions.length
+              });
               firebaseService.updateParticipant(roomId, myPeerIdRef.current, {
-                emotionalData: formattedEmotions
+                emotionalData: formattedEmotions,
+                voiceEmotions: formattedEmotions,
+                lastEmotionUpdate: new Date().toISOString()
+              }).then(() => {
+                console.log('[ConferenceBoothDemo] ✅ Emotions sent to Firebase successfully');
               }).catch(error => {
-                console.error('[ConferenceBoothDemo] Failed to update emotional data:', error);
+                console.error('[ConferenceBoothDemo] ❌ Failed to send emotions to Firebase:', error);
               });
             }
           });

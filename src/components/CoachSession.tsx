@@ -48,33 +48,48 @@ const CoachSession: React.FC = () => {
       analyserRef.current.smoothingTimeConstant = 0.8;
     }
 
+    // Enhanced Hume initialization with debugging
+    console.log('[CoachSession] Initializing Hume Voice Service...', {
+      hasApiKey: !!process.env.REACT_APP_HUME_API_KEY,
+      hasSecretKey: !!process.env.REACT_APP_HUME_SECRET_KEY, 
+      hasConfigId: !!process.env.REACT_APP_HUME_CONFIG_ID,
+      configId: coach.humeConfigId || process.env.REACT_APP_HUME_CONFIG_ID
+    });
+
     // Set up Hume callbacks
     humeVoiceService.setOnAudioCallback((audioBlob: Blob) => {
       playAudioWithAnalysis(audioBlob);
     });
 
     humeVoiceService.setOnEmotionCallback((emotions: EmotionalState) => {
+      console.log('[CoachSession] 🎭 HUME EMOTIONS RECEIVED:', emotions);
+      console.log('[CoachSession] Emotion type:', typeof emotions);
+      console.log('[CoachSession] Updating currentEmotion state');
       setCurrentEmotion(emotions);
     });
 
     humeVoiceService.setOnMessageCallback((message: any) => {
+      console.log('[CoachSession] 💬 Hume message received:', message);
       // Extract assistant message from Hume message format
       if (message.type === 'assistant_message' && message.message?.content) {
+        console.log('[CoachSession] Setting coach message:', message.message.content);
         setCoachMessage(message.message.content);
       }
     });
 
     humeVoiceService.setOnUserMessageCallback((transcript: string) => {
+      console.log('[CoachSession] 🎤 User transcript:', transcript);
       setUserTranscript(transcript);
     });
 
     humeVoiceService.setOnUserInterruptionCallback(() => {
+      console.log('[CoachSession] 🛑 User interruption detected');
       setIsSpeaking(false);
       setIsListening(true);
     });
 
     humeVoiceService.setOnErrorCallback((error: Error) => {
-      console.error('[CoachSession] Hume error:', error);
+      console.error('[CoachSession] ❌ Hume error:', error);
       setError(error.message);
       setIsConnected(false);
     });
