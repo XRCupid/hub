@@ -271,6 +271,14 @@ const ConferenceBoothDemo: React.FC<Props> = ({
               
               if (facialExpressions || headRotation || landmarks) {
                 setParticipant1Data(prev => ({ ...prev, trackingData }));
+                
+                // Send tracking data to other participants via Firebase
+                if (roomRef.current && firebaseService && myPeerIdRef.current) {
+                  firebaseService.updateParticipant(roomRef.current, myPeerIdRef.current, {
+                    trackingData,
+                    lastUpdate: Date.now()
+                  });
+                }
               }
             }
           }, 1000 / 30); // 30 FPS, same as EnhancedCoachSession
@@ -392,6 +400,14 @@ const ConferenceBoothDemo: React.FC<Props> = ({
               
               if (facialExpressions || headRotation || landmarks) {
                 setParticipant2Data(prev => ({ ...prev, trackingData }));
+                
+                // Send tracking data to other participants via Firebase
+                if (roomRef.current && firebaseService && myPeerIdRef.current) {
+                  firebaseService.updateParticipant(roomRef.current, myPeerIdRef.current, {
+                    trackingData,
+                    lastUpdate: Date.now()
+                  });
+                }
               }
             }
           }, 1000 / 30); // 30 FPS, same as EnhancedCoachSession

@@ -3,7 +3,7 @@
 interface Room {
   id: string;
   host: string;
-  participants: string[];
+  participants: string[] | { [key: string]: any }; // Support both array and object formats
   signals: { [key: string]: any };
   createdAt: number;
 }
@@ -191,13 +191,42 @@ class MockFirebaseConference {
 
   // Clean up old rooms (called periodically)
   cleanupOldRooms(): void {
+    let removedCount = 0;
     const oneHourAgo = Date.now() - 60 * 60 * 1000;
     for (const [roomId, room] of this.rooms.entries()) {
       if (room.createdAt < oneHourAgo) {
         this.rooms.delete(roomId);
         this.saveRoomsToStorage(); // Persist to localStorage
+        removedCount++;
       }
     }
+    console.log(`[MockFirebase] Cleaned up ${removedCount} old rooms`);
+  }
+
+  // Update participant data (for tracking data)
+  async updateParticipant(roomId: string, participantId: string, data: any): Promise<void> {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+    
+    // Convert participants to object format if it's still an array
+    if (Array.isArray(room.participants)) {
+      const participantNames = room.participants;
+      room.participants = {};
+      // Preserve existing participant names
+      participantNames.forEach(name => {
+        (room.participants as { [key: string]: any })[name] = { name };
+      });
+    }
+    
+    const participantsObj = room.participants as { [key: string]: any };
+    participantsObj[participantId] = {
+      ...participantsObj[participantId],
+      ...data,
+      timestamp: new Date().toISOString()
+    };
+    
+    this.saveRoomsToStorage();
+    console.log(`[MockFirebase] Updated participant ${participantId} in room ${roomId}:`, data);
   }
 }
 

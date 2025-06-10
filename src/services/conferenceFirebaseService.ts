@@ -216,6 +216,21 @@ class ConferenceFirebaseService {
     const baseUrl = window.location.origin;
     return `${baseUrl}/conference-mobile?room=${roomId}`;
   }
+
+  // Update participant data (for tracking data)
+  async updateParticipant(roomId: string, participantId: string, data: any): Promise<void> {
+    if (!this.getDatabase()) return;
+    
+    try {
+      const participantRef = ref(this.getDatabase()!, `conference-rooms/${roomId}/participants/${participantId}`);
+      await set(participantRef, {
+        ...data,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating participant:', error);
+    }
+  }
 }
 
 export const conferenceFirebaseService = new ConferenceFirebaseService();
