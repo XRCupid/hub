@@ -88,9 +88,8 @@ const ConferenceBoothDemo: React.FC<Props> = ({
   ];
 
   // Use real Firebase if configured, otherwise fall back to mock
-  // TEMPORARY: Force mock service for conference demo
-  const firebaseService = mockFirebaseConference; // isRealFirebase() ? conferenceFirebaseService : mockFirebaseConference;
-  const usingRealFirebase = false; // isRealFirebase();
+  const firebaseService = isRealFirebase() ? conferenceFirebaseService : mockFirebaseConference;
+  const usingRealFirebase = isRealFirebase();
 
   console.log('ConferenceBoothDemo - Using real Firebase:', usingRealFirebase);
   console.log('ConferenceBoothDemo - State:', {
