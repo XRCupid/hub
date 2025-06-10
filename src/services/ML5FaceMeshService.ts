@@ -30,13 +30,41 @@ export class ML5FaceMeshService implements IFaceTrackingService {
 
   private readonly modelConfig = {
     maxFaces: 1,
-    detectionConfidence: 0.8,
+    detectionConfidence: this.isMobile() ? 0.7 : 0.8,  // Lower confidence for mobile
     flipHorizontal: false,
   };
+
+  private isMobile(): boolean {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+
+  private getMobileOptimizedSettings() {
+    const mobile = this.isMobile();
+    return {
+      skipFrames: mobile ? 4 : 2,  // Skip more frames on mobile
+      minProcessInterval: mobile ? 100 : 50,  // Slower processing on mobile
+      smoothingAlpha: mobile ? 0.2 : 0.1,  // More smoothing on mobile
+      maxAttempts: mobile ? 15 : 10,  // More time to load on mobile
+      delay: mobile ? 500 : 300  // Longer delays for mobile
+    };
+  }
 
   constructor() {
     this.lastExpressions = this.getNeutralExpression();
     
+    // Apply mobile-optimized settings
+    const settings = this.getMobileOptimizedSettings();
+    this.skipFrames = settings.skipFrames;
+    this.minProcessInterval = settings.minProcessInterval;
+    this.smoothingAlpha = settings.smoothingAlpha;
+    
+    console.log('[ML5FaceMesh] Constructor - Mobile optimizations applied:', {
+      isMobile: this.isMobile(),
+      skipFrames: this.skipFrames,
+      minProcessInterval: this.minProcessInterval,
+      smoothingAlpha: this.smoothingAlpha
+    });
+
     // Add global error handler to suppress ML5/TensorFlow errors
     if (typeof window !== 'undefined') {
       const errorHandler = (event: ErrorEvent | PromiseRejectionEvent) => {
@@ -65,8 +93,7 @@ export class ML5FaceMeshService implements IFaceTrackingService {
   }
 
   private async waitForML5(): Promise<boolean> {
-    const maxAttempts = 10;
-    const delay = 300;
+    const { maxAttempts, delay } = this.getMobileOptimizedSettings();
     for (let i = 0; i < maxAttempts; i++) {
       if (typeof ml5 !== 'undefined' && ml5.facemesh) {
         console.log(`[ML5FaceMesh] ML5 loaded after ${i * delay}ms`);
@@ -139,10 +166,33 @@ export class ML5FaceMeshService implements IFaceTrackingService {
 
   public async startTracking(videoElement: HTMLVideoElement): Promise<void> {
     console.log('[ML5FaceMesh] Starting face tracking...');
+    console.log('[ML5FaceMesh] Device info:', {
+      isMobile: this.isMobile(),
+      userAgent: navigator.userAgent,
+      videoWidth: videoElement.videoWidth,
+      videoHeight: videoElement.videoHeight
+    });
+    
     if (!this.facemesh) throw new Error('Face mesh model not loaded. Call initialize() first.');
     if (!videoElement || !videoElement.videoWidth || !videoElement.videoHeight) {
       console.error('[ML5FaceMesh] Video element not ready or invalid.');
-      throw new Error('Video element not ready or invalid.');
+      
+      // On mobile, wait a bit longer for video to be ready
+      if (this.isMobile()) {
+        console.log('[ML5FaceMesh] Mobile detected, waiting for video to be ready...');
+        let attempts = 0;
+        while (attempts < 10 && (!videoElement.videoWidth || !videoElement.videoHeight)) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+          attempts++;
+          console.log(`[ML5FaceMesh] Video check attempt ${attempts}: ${videoElement.videoWidth}x${videoElement.videoHeight}`);
+        }
+        
+        if (!videoElement.videoWidth || !videoElement.videoHeight) {
+          throw new Error('Video element not ready after mobile wait period.');
+        }
+      } else {
+        throw new Error('Video element not ready or invalid.');
+      }
     }
     
     this.videoElement = videoElement;
@@ -176,7 +226,8 @@ export class ML5FaceMeshService implements IFaceTrackingService {
 
     // Frame skipping to reduce CPU usage
     this.frameCount++;
-    if (this.frameCount % (this.skipFrames + 1) !== 0) {
+    const { skipFrames } = this.getMobileOptimizedSettings();
+    if (this.frameCount % (skipFrames + 1) !== 0) {
       // Skip this frame
       if (this.isRunning) {
         requestAnimationFrame(() => this.detectionLoop());
@@ -186,7 +237,8 @@ export class ML5FaceMeshService implements IFaceTrackingService {
 
     // Throttle processing rate
     const now = Date.now();
-    if (now - this.lastProcessTime < this.minProcessInterval) {
+    const { minProcessInterval } = this.getMobileOptimizedSettings();
+    if (now - this.lastProcessTime < minProcessInterval) {
       // Too soon, skip processing
       if (this.isRunning) {
         requestAnimationFrame(() => this.detectionLoop());
@@ -198,15 +250,17 @@ export class ML5FaceMeshService implements IFaceTrackingService {
     try {
       // Wrap detection in a promise to catch any internal errors
       await new Promise<void>((resolve) => {
-        if (this.facemesh.predict && typeof this.facemesh.predict === 'function') {
+        if (this.facemesh && this.facemesh.predict && typeof this.facemesh.predict === 'function') {
           // Use callback-based predict to avoid promise rejection issues
           this.facemesh.predict(this.videoElement, (predictions: any) => {
+            console.log(`[ML5FaceMesh] 📸 Processing frame ${this.frameCount}, device: ${this.isMobile() ? 'mobile' : 'desktop'}`);
             this.handlePredictions(predictions);
             resolve();
           });
-        } else if (this.facemesh.detect && typeof this.facemesh.detect === 'function') {
+        } else if (this.facemesh && this.facemesh.detect && typeof this.facemesh.detect === 'function') {
           this.facemesh.detect(this.videoElement, (err: any, predictions: any) => {
             if (!err) {
+              console.log(`[ML5FaceMesh] 📸 Processing frame ${this.frameCount}, device: ${this.isMobile() ? 'mobile' : 'desktop'}`);
               this.handlePredictions(predictions);
             }
             resolve();
@@ -262,8 +316,15 @@ export class ML5FaceMeshService implements IFaceTrackingService {
     if (predictions && predictions.length > 0) {
       this.lastPredictionTime = Date.now();
       this.predictions = predictions; 
+      console.log(`[ML5FaceMesh] 🎯 Detection results:`, {
+        resultsCount: predictions?.length || 0,
+        hasResults: predictions && predictions.length > 0,
+        hasPredictions: predictions?.[0]?.scaledMesh ? true : false,
+        frameCount: this.frameCount
+      });
       this.processPredictions(predictions[0]); 
     } else {
+      console.warn(`[ML5FaceMesh] ⚠️ No face detected in frame ${this.frameCount}`);
       this.lastExpressions = this.getNeutralExpression();
       this.lastHeadRotation = { pitch: 0, yaw: 0, roll: 0 };
     }
@@ -311,6 +372,7 @@ export class ML5FaceMeshService implements IFaceTrackingService {
     // Apply smoothing to update this.lastExpressions
     // The 'this.lastExpressions' object holds the previously smoothed values.
     // We iterate over its keys and update them with new smoothed values.
+    const { smoothingAlpha } = this.getMobileOptimizedSettings();
     for (const key in this.lastExpressions) {
       if (Object.prototype.hasOwnProperty.call(this.lastExpressions, key) &&
           Object.prototype.hasOwnProperty.call(rawExpressions, key)) {
@@ -321,8 +383,8 @@ export class ML5FaceMeshService implements IFaceTrackingService {
 
         if (typeof rawVal === 'number' && typeof lastVal === 'number') {
           (this.lastExpressions as any)[typedKey] = 
-            lastVal * (1 - this.smoothingAlpha) + 
-            rawVal * this.smoothingAlpha;
+            lastVal * (1 - smoothingAlpha) + 
+            rawVal * smoothingAlpha;
         } else {
           // If for some reason a value isn't a number, assign directly (should not happen for FacialExpressions)
           (this.lastExpressions as any)[typedKey] = rawVal;
@@ -332,14 +394,53 @@ export class ML5FaceMeshService implements IFaceTrackingService {
 
     // Apply smoothing to update this.lastHeadRotation
     this.lastHeadRotation.pitch = 
-      this.lastHeadRotation.pitch * (1 - this.smoothingAlpha) + 
-      calibratedHeadRotation.pitch * this.smoothingAlpha;
+      this.lastHeadRotation.pitch * (1 - smoothingAlpha) + 
+      calibratedHeadRotation.pitch * smoothingAlpha;
     this.lastHeadRotation.yaw = 
-      this.lastHeadRotation.yaw * (1 - this.smoothingAlpha) + 
-      calibratedHeadRotation.yaw * this.smoothingAlpha;
+      this.lastHeadRotation.yaw * (1 - smoothingAlpha) + 
+      calibratedHeadRotation.yaw * smoothingAlpha;
     this.lastHeadRotation.roll = 
-      this.lastHeadRotation.roll * (1 - this.smoothingAlpha) + 
-      calibratedHeadRotation.roll * this.smoothingAlpha;
+      this.lastHeadRotation.roll * (1 - smoothingAlpha) + 
+      calibratedHeadRotation.roll * smoothingAlpha;
+  }
+
+  public getTrackingData(): { facialExpressions: FacialExpressions; headRotation: HeadRotation; landmarks: number[][] | null } {
+    return {
+      facialExpressions: this.getExpressions(),
+      headRotation: this.getHeadRotation(),
+      landmarks: this.getLandmarks()
+    };
+  }
+
+  public getExpressions(): FacialExpressions {
+    return this.lastExpressions;
+  }
+
+  public getHeadRotation(): HeadRotation {
+    return this.lastHeadRotation;
+  }
+
+  public getLandmarks(): number[][] | null {
+    if (this.predictions && this.predictions.length > 0 && this.predictions[0].scaledMesh) {
+      return this.predictions[0].scaledMesh as number[][];
+    }
+    return null;
+  }
+
+  private getNeutralExpression(): FacialExpressions {
+    return {
+      mouthSmile: 0, mouthSmileLeft: 0, mouthSmileRight: 0, mouthFrown: 0,
+      mouthOpen: 0, mouthPucker: 0, mouthDimpleLeft: 0, mouthDimpleRight: 0,
+      mouthStretchLeft: 0, mouthStretchRight: 0, mouthPressLeft: 0, mouthPressRight: 0,
+      lipsSuckUpper: 0, lipsSuckLower: 0, lipsFunnel: 0,
+      browUpLeft: 0, browUpRight: 0, browInnerUp: 0, browInnerUpLeft: 0, browInnerUpRight: 0, browDownLeft: 0, browDownRight: 0,
+      eyeSquintLeft: 0, eyeSquintRight: 0, cheekPuff: 0, cheekSquintLeft: 0, cheekSquintRight: 0,
+      noseSneer: 0, tongueOut: 0, jawOpen: 0, jawLeft: 0, jawRight: 0,
+      eyeBlinkLeft: 0, eyeBlinkRight: 0, eyebrowRaiseLeft: 0, eyebrowRaiseRight: 0, eyebrowFurrow: 0,
+      eyeWideLeft: 0, eyeWideRight: 0, eyeWide: 0, eyeBlink: 0, eyebrowRaise: 0, eyeSquint: 0,
+      eyeLookDownLeft: 0, eyeLookDownRight: 0, eyeLookUpLeft: 0, eyeLookUpRight: 0,
+      eyeLookInLeft: 0, eyeLookInRight: 0, eyeLookOutLeft: 0, eyeLookOutRight: 0
+    };
   }
 
   private calculateExpressions(landmarks: number[][]): FacialExpressions {
@@ -420,10 +521,10 @@ export class ML5FaceMeshService implements IFaceTrackingService {
       }
 
       // Eyebrow Up (browInnerUp)
-      const leftInnerBrowY = landmarks[53] ? landmarks[53][1] : null; 
-      const leftUpperEyelidY = landmarks[159] ? landmarks[159][1] : null; 
-      const rightInnerBrowY = landmarks[283] ? landmarks[283][1] : null; 
-      const rightUpperEyelidY = landmarks[386] ? landmarks[386][1] : null; 
+      const leftInnerBrowY = landmarks[53]?.[1] || 0; 
+      const leftUpperEyelidY = landmarks[159]?.[1] || 0; 
+      const rightInnerBrowY = landmarks[283]?.[1] || 0; 
+      const rightUpperEyelidY = landmarks[386]?.[1] || 0;
 
       if (leftInnerBrowY !== null && leftUpperEyelidY !== null && rightInnerBrowY !== null && rightUpperEyelidY !== null && faceHeight > 0) {
         const browRaiseDivisor = faceHeight * 0.08; // Sensitivity: smaller = more sensitive
@@ -599,37 +700,6 @@ export class ML5FaceMeshService implements IFaceTrackingService {
       console.warn('[ML5FaceMesh] Error calculating head rotation:', e.message);
       return { pitch: 0, yaw: 0, roll: 0 };
     }
-  }
-
-  public getExpressions(): FacialExpressions {
-    return this.lastExpressions;
-  }
-
-  public getHeadRotation(): HeadRotation {
-    return this.lastHeadRotation;
-  }
-
-  public getLandmarks(): number[][] | null {
-    if (this.predictions && this.predictions.length > 0 && this.predictions[0].scaledMesh) {
-      return this.predictions[0].scaledMesh as number[][];
-    }
-    return null;
-  }
-
-  private getNeutralExpression(): FacialExpressions {
-    return {
-      mouthSmile: 0, mouthSmileLeft: 0, mouthSmileRight: 0, mouthFrown: 0,
-      mouthOpen: 0, mouthPucker: 0, mouthDimpleLeft: 0, mouthDimpleRight: 0,
-      mouthStretchLeft: 0, mouthStretchRight: 0, mouthPressLeft: 0, mouthPressRight: 0,
-      lipsSuckUpper: 0, lipsSuckLower: 0, lipsFunnel: 0,
-      browUpLeft: 0, browUpRight: 0, browInnerUp: 0, browInnerUpLeft: 0, browInnerUpRight: 0, browDownLeft: 0, browDownRight: 0,
-      eyeSquintLeft: 0, eyeSquintRight: 0, cheekPuff: 0, cheekSquintLeft: 0, cheekSquintRight: 0,
-      noseSneer: 0, tongueOut: 0, jawOpen: 0, jawLeft: 0, jawRight: 0,
-      eyeBlinkLeft: 0, eyeBlinkRight: 0, eyebrowRaiseLeft: 0, eyebrowRaiseRight: 0, eyebrowFurrow: 0,
-      eyeWideLeft: 0, eyeWideRight: 0, eyeWide: 0, eyeBlink: 0, eyebrowRaise: 0, eyeSquint: 0,
-      eyeLookDownLeft: 0, eyeLookDownRight: 0, eyeLookUpLeft: 0, eyeLookUpRight: 0,
-      eyeLookInLeft: 0, eyeLookInRight: 0, eyeLookOutLeft: 0, eyeLookOutRight: 0
-    };
   }
 
   private eyeAspectRatio(eyePoints: number[][]): number {

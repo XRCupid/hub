@@ -9,9 +9,11 @@ import PresenceAvatar from './PresenceAvatar';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
+import { HumeVoiceService } from '../services/humeVoiceService';
 // DISABLED: Posture tracking causing crashes
 // import { PostureTrackingService } from '../services/PostureTrackingService';
 import { Link } from 'react-router-dom';
+import RealTimeExpressionDashboard from './RealTimeExpressionDashboard';
 import './ConferenceBoothDemo.css';
 
 interface Props {
@@ -25,7 +27,13 @@ interface ParticipantData {
   stream?: MediaStream;
   trackingData?: any;
   ml5Service?: ML5FaceMeshService;
+  emotionalData?: any;
 }
+
+// Utility function to detect mobile devices
+const isMobile = (): boolean => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
 
 const ConferenceBoothDemo: React.FC<Props> = ({ 
   initialMode = 'participant', 
@@ -43,13 +51,15 @@ const ConferenceBoothDemo: React.FC<Props> = ({
     name: '',
     avatarUrl: '/avatars/coach_grace.glb',
     trackingData: null,
-    ml5Service: undefined
+    ml5Service: undefined,
+    emotionalData: null
   });
   const [participant2Data, setParticipant2Data] = useState<ParticipantData>({
     name: '',
     avatarUrl: '/avatars/coach_rizzo.glb',
     trackingData: null,
-    ml5Service: undefined
+    ml5Service: undefined,
+    emotionalData: null
   });
   const [mode, setMode] = useState<'participant' | 'audience'>(initialMode);
   const [showAvatars, setShowAvatars] = useState(true);
@@ -57,6 +67,8 @@ const ConferenceBoothDemo: React.FC<Props> = ({
   const [selectedAvatar2, setSelectedAvatar2] = useState('/avatars/coach_rizzo.glb');
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [showQrCode, setShowQrCode] = useState(false);
+  const [showExpressionDashboard, setShowExpressionDashboard] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   console.log('ConferenceBoothDemo - Current mode:', mode);
   console.log('ConferenceBoothDemo - isInRoom:', isInRoom);
@@ -65,6 +77,7 @@ const ConferenceBoothDemo: React.FC<Props> = ({
   // Tracking services
   const ml5FaceMeshServiceRef1 = useRef<ML5FaceMeshService | null>(null);
   const ml5FaceMeshServiceRef2 = useRef<ML5FaceMeshService | null>(null);
+  const humeVoiceServiceRef = useRef<any | null>(null);
   // DISABLED: Posture tracking causing crashes
   // const postureTrackingServiceRef = useRef<PostureTrackingService | null>(null);
 
@@ -272,6 +285,49 @@ const ConferenceBoothDemo: React.FC<Props> = ({
               if (facialExpressions || headRotation || landmarks) {
                 setParticipant1Data(prev => ({ ...prev, trackingData }));
                 
+                // Send tracking data to Firebase
+                const sendTrackingData = () => {
+                  if (ml5FaceMeshServiceRef1.current && isInRoom && roomRef.current && myPeerIdRef.current) {
+                    const trackingData = ml5FaceMeshServiceRef1.current.getTrackingData();
+                    console.log('[ConferenceBoothDemo] ML5 Tracking data retrieved:', {
+                      hasTrackingData: !!trackingData,
+                      hasExpressions: !!trackingData?.facialExpressions,
+                      hasHeadRotation: !!trackingData?.headRotation,
+                      hasLandmarks: !!trackingData?.landmarks,
+                      participantId: myPeerIdRef.current,
+                      roomId: roomRef.current,
+                      device: isMobile() ? 'mobile' : 'desktop'
+                    });
+                    
+                    if (trackingData) {
+                      console.log('[ConferenceBoothDemo] Sending tracking data to Firebase:', {
+                        roomId: roomRef.current,
+                        participantId: myPeerIdRef.current,
+                        trackingDataKeys: Object.keys(trackingData)
+                      });
+                      
+                      firebaseService.updateParticipant(roomRef.current, myPeerIdRef.current, {
+                        trackingData,
+                        lastTrackingUpdate: Date.now()
+                      }).then(() => {
+                        console.log('[ConferenceBoothDemo] Successfully sent tracking data to Firebase');
+                      }).catch(error => {
+                        console.error('[ConferenceBoothDemo] Failed to send tracking data:', error);
+                      });
+                    } else {
+                      console.warn('[ConferenceBoothDemo] No tracking data available to send');
+                    }
+                  } else {
+                    console.warn('[ConferenceBoothDemo] Cannot send tracking data - missing requirements:', {
+                      hasFaceMeshService: !!ml5FaceMeshServiceRef1.current,
+                      isInRoom,
+                      hasRoom: !!roomRef.current,
+                      hasParticipantId: !!myPeerIdRef.current
+                    });
+                  }
+                };
+                sendTrackingData();
+                
                 // Send tracking data to other participants via Firebase
                 if (roomRef.current && firebaseService && myPeerIdRef.current) {
                   firebaseService.updateParticipant(roomRef.current, myPeerIdRef.current, {
@@ -401,6 +457,49 @@ const ConferenceBoothDemo: React.FC<Props> = ({
               if (facialExpressions || headRotation || landmarks) {
                 setParticipant2Data(prev => ({ ...prev, trackingData }));
                 
+                // Send tracking data to Firebase
+                const sendTrackingData = () => {
+                  if (ml5FaceMeshServiceRef2.current && isInRoom && roomRef.current && myPeerIdRef.current) {
+                    const trackingData = ml5FaceMeshServiceRef2.current.getTrackingData();
+                    console.log('[ConferenceBoothDemo] ML5 Tracking data retrieved:', {
+                      hasTrackingData: !!trackingData,
+                      hasExpressions: !!trackingData?.facialExpressions,
+                      hasHeadRotation: !!trackingData?.headRotation,
+                      hasLandmarks: !!trackingData?.landmarks,
+                      participantId: myPeerIdRef.current,
+                      roomId: roomRef.current,
+                      device: isMobile() ? 'mobile' : 'desktop'
+                    });
+                    
+                    if (trackingData) {
+                      console.log('[ConferenceBoothDemo] Sending tracking data to Firebase:', {
+                        roomId: roomRef.current,
+                        participantId: myPeerIdRef.current,
+                        trackingDataKeys: Object.keys(trackingData)
+                      });
+                      
+                      firebaseService.updateParticipant(roomRef.current, myPeerIdRef.current, {
+                        trackingData,
+                        lastTrackingUpdate: Date.now()
+                      }).then(() => {
+                        console.log('[ConferenceBoothDemo] Successfully sent tracking data to Firebase');
+                      }).catch(error => {
+                        console.error('[ConferenceBoothDemo] Failed to send tracking data:', error);
+                      });
+                    } else {
+                      console.warn('[ConferenceBoothDemo] No tracking data available to send');
+                    }
+                  } else {
+                    console.warn('[ConferenceBoothDemo] Cannot send tracking data - missing requirements:', {
+                      hasFaceMeshService: !!ml5FaceMeshServiceRef2.current,
+                      isInRoom,
+                      hasRoom: !!roomRef.current,
+                      hasParticipantId: !!myPeerIdRef.current
+                    });
+                  }
+                };
+                sendTrackingData();
+                
                 // Send tracking data to other participants via Firebase
                 if (roomRef.current && firebaseService && myPeerIdRef.current) {
                   firebaseService.updateParticipant(roomRef.current, myPeerIdRef.current, {
@@ -433,6 +532,81 @@ const ConferenceBoothDemo: React.FC<Props> = ({
       };
     }
   }, [remoteStream, showAvatars, participant2Data.name]);
+
+  // Initialize Hume Voice Service for emotional analysis
+  useEffect(() => {
+    if (localStream && mode === 'participant') {
+      const initializeHumeService = async () => {
+        try {
+          console.log('[ConferenceBoothDemo] Initializing Hume Voice Service...');
+          console.log('[ConferenceBoothDemo] Environment check:', {
+            hasApiKey: !!process.env.REACT_APP_HUME_API_KEY,
+            hasSecretKey: !!process.env.REACT_APP_HUME_SECRET_KEY,
+            hasConfigId: !!process.env.REACT_APP_HUME_CONFIG_ID,
+            configId: process.env.REACT_APP_HUME_CONFIG_ID
+          });
+          
+          const humeService = new HumeVoiceService();
+          
+          // Set up emotion callbacks
+          humeService.setOnEmotionCallback((emotions: any) => {
+            console.log('[ConferenceBoothDemo] Received emotions:', emotions);
+            
+            // Format emotions for the dashboard
+            const formattedEmotions = emotions.map((emotion: any) => ({
+              emotion: emotion.name || emotion.emotion,
+              score: emotion.score || emotion.confidence || 0,
+              timestamp: Date.now()
+            }));
+            
+            setParticipant1Data(prev => ({ 
+              ...prev, 
+              emotionalData: formattedEmotions
+            }));
+            
+            // Update Firebase with emotional data
+            if (roomId && myPeerIdRef.current) {
+              firebaseService.updateParticipant(roomId, myPeerIdRef.current, {
+                emotionalData: formattedEmotions
+              }).catch(error => {
+                console.error('[ConferenceBoothDemo] Failed to update emotional data:', error);
+              });
+            }
+          });
+          
+          humeService.setOnErrorCallback((error: Error) => {
+            console.error('[ConferenceBoothDemo] Hume Voice Service error:', error);
+          });
+          
+          humeService.setOnOpenCallback(() => {
+            console.log('[ConferenceBoothDemo] Hume Voice Service connection opened successfully!');
+          });
+          
+          humeService.setOnCloseCallback((code: number, reason: string) => {
+            console.log('[ConferenceBoothDemo] Hume Voice Service connection closed:', { code, reason });
+          });
+          
+          // Connect to Hume service
+          await humeService.connect(process.env.REACT_APP_HUME_CONFIG_ID);
+          humeVoiceServiceRef.current = humeService;
+          
+          console.log('[ConferenceBoothDemo] Hume Voice Service connected successfully');
+        } catch (error) {
+          console.error('[ConferenceBoothDemo] Failed to initialize Hume Voice Service:', error);
+          // Continue without Hume - don't break the demo
+        }
+      };
+      
+      initializeHumeService();
+      
+      return () => {
+        if (humeVoiceServiceRef.current) {
+          humeVoiceServiceRef.current.disconnect();
+          humeVoiceServiceRef.current = null;
+        }
+      };
+    }
+  }, [localStream, mode]);
 
   // Initialize user media
   useEffect(() => {
@@ -551,6 +725,53 @@ const ConferenceBoothDemo: React.FC<Props> = ({
           }
         }
       });
+
+    // Listen for tracking data updates from all participants
+    if (firebaseService && createdRoomId) {
+      const handleParticipantDataUpdate = (participantId: string, data: any) => {
+        console.log('[ConferenceBoothDemo] 🔥 Firebase participant data update:', {
+          participantId,
+          dataKeys: Object.keys(data || {}),
+          hasTrackingData: !!data?.trackingData,
+          hasFacialExpressions: !!data?.trackingData?.facialExpressions,
+          hasHeadRotation: !!data?.trackingData?.headRotation,
+          hasLandmarks: !!data?.trackingData?.landmarks,
+          hasEmotionalData: !!data?.emotionalData,
+          myPeerId: myPeerIdRef.current,
+          isMyData: participantId === myPeerIdRef.current,
+          timestamp: new Date().toISOString()
+        });
+
+        if (participantId === myPeerIdRef.current) {
+          console.log('[ConferenceBoothDemo] 📱 Updating my participant data (participant1)');
+          setParticipant1Data(prev => ({
+            ...prev,
+            ...data,
+            trackingData: data.trackingData || prev.trackingData,
+            emotionalData: data.emotionalData || prev.emotionalData
+          }));
+        } else {
+          console.log('[ConferenceBoothDemo] 👥 Updating other participant data (participant2)');
+          setParticipant2Data(prev => ({
+            ...prev,
+            ...data,
+            trackingData: data.trackingData || prev.trackingData,
+            emotionalData: data.emotionalData || prev.emotionalData
+          }));
+        }
+      };
+
+      firebaseService.onSnapshot(`conference-rooms/${createdRoomId}/participants`, (participantData: any) => {
+        console.log('[ConferenceBoothDemo] Participant data update:', participantData);
+        
+        if (participantData) {
+          Object.keys(participantData).forEach(participantId => {
+            const data = participantData[participantId];
+            handleParticipantDataUpdate(participantId, data);
+          });
+        }
+      });
+    }
   };
 
   const joinRoom = async (roomIdToJoin: string, name: string) => {
@@ -571,7 +792,6 @@ const ConferenceBoothDemo: React.FC<Props> = ({
       alert('Room not found!');
       return;
     }
-    
     setParticipant1Data({ name: room.host, avatarUrl: selectedAvatar1 });
     
     // Join room
@@ -583,6 +803,53 @@ const ConferenceBoothDemo: React.FC<Props> = ({
     
     roomRef.current = roomIdToJoin;
     setIsInRoom(true);
+    
+    // Listen for tracking data updates from all participants
+    if (firebaseService) {
+      const handleParticipantDataUpdate = (participantId: string, data: any) => {
+        console.log('[ConferenceBoothDemo] 🔥 Firebase participant data update:', {
+          participantId,
+          dataKeys: Object.keys(data || {}),
+          hasTrackingData: !!data?.trackingData,
+          hasFacialExpressions: !!data?.trackingData?.facialExpressions,
+          hasHeadRotation: !!data?.trackingData?.headRotation,
+          hasLandmarks: !!data?.trackingData?.landmarks,
+          hasEmotionalData: !!data?.emotionalData,
+          myPeerId: myPeerIdRef.current,
+          isMyData: participantId === myPeerIdRef.current,
+          timestamp: new Date().toISOString()
+        });
+
+        if (participantId === myPeerIdRef.current) {
+          console.log('[ConferenceBoothDemo] 📱 Updating my participant data (participant1)');
+          setParticipant1Data(prev => ({
+            ...prev,
+            ...data,
+            trackingData: data.trackingData || prev.trackingData,
+            emotionalData: data.emotionalData || prev.emotionalData
+          }));
+        } else {
+          console.log('[ConferenceBoothDemo] 👥 Updating other participant data (participant2)');
+          setParticipant2Data(prev => ({
+            ...prev,
+            ...data,
+            trackingData: data.trackingData || prev.trackingData,
+            emotionalData: data.emotionalData || prev.emotionalData
+          }));
+        }
+      };
+
+      firebaseService.onSnapshot(`conference-rooms/${roomIdToJoin}/participants`, (participantData: any) => {
+        console.log('[ConferenceBoothDemo] Participant data update (join):', participantData);
+        
+        if (participantData) {
+          Object.keys(participantData).forEach(participantId => {
+            const data = participantData[participantId];
+            handleParticipantDataUpdate(participantId, data);
+          });
+        }
+      });
+    }
     
     // Create peer connection
     createPeer(false, 'host-peer');
@@ -698,6 +965,54 @@ const ConferenceBoothDemo: React.FC<Props> = ({
             </Link>
           </div>
         </div>
+
+        {/* Mobile Debug Panel */}
+        {mode === 'participant' && (
+          <div style={{ 
+            position: 'fixed', 
+            bottom: '10px', 
+            left: '10px', 
+            zIndex: 1000,
+            background: 'rgba(0,0,0,0.8)',
+            color: 'white',
+            padding: '10px',
+            borderRadius: '8px',
+            fontSize: '12px'
+          }}>
+            <div>🔧 Mobile Debug</div>
+            <div>Room: {roomId}</div>
+            <div>Peer ID: {myPeerIdRef.current}</div>
+            <div>ML5 Status: {ml5FaceMeshServiceRef1.current ? '✅' : '❌'}</div>
+            <div>Tracking: {participant1Data.trackingData ? '✅' : '❌'}</div>
+            <button
+              onClick={() => {
+                console.log('=== ML5 DEBUG INFO ===');
+                console.log('ML5 Service:', ml5FaceMeshServiceRef1.current);
+                console.log('Video Element:', localVideoRef.current);
+                console.log('Participant Data:', participant1Data);
+                console.log('Room ID:', roomId);
+                console.log('Peer ID:', myPeerIdRef.current);
+                console.log('Is Mobile:', isMobile());
+                
+                if (ml5FaceMeshServiceRef1.current) {
+                  const trackingData = ml5FaceMeshServiceRef1.current.getTrackingData();
+                  console.log('Live Tracking Data:', trackingData);
+                }
+              }}
+              style={{
+                marginTop: '5px',
+                padding: '5px 10px',
+                background: '#FF6B35',
+                border: 'none',
+                borderRadius: '4px',
+                color: 'white',
+                fontSize: '12px'
+              }}
+            >
+              🐛 Debug ML5
+            </button>
+          </div>
+        )}
 
         {!isInRoom ? (
           <div className="riso-card setup-card">
@@ -866,6 +1181,32 @@ const ConferenceBoothDemo: React.FC<Props> = ({
         )}
       </div>
 
+      {/* Dashboard Toggle Controls */}
+      <div style={{ 
+        position: 'absolute', 
+        top: '20px', 
+        right: '20px', 
+        zIndex: 1000,
+        display: 'flex',
+        gap: '10px'
+      }}>
+        <button
+          onClick={() => setShowExpressionDashboard(!showExpressionDashboard)}
+          style={{
+            padding: '12px 20px',
+            backgroundColor: showExpressionDashboard ? '#FF6B35' : '#333',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '14px'
+          }}
+        >
+          🎭 {showExpressionDashboard ? 'Hide' : 'Show'} Expression Analytics
+        </button>
+      </div>
+
       {/* Display Area */}
       <div className="audience-display">
         {showAvatars ? (
@@ -948,13 +1289,36 @@ const ConferenceBoothDemo: React.FC<Props> = ({
         )}
         
         {/* Analytics Dashboard */}
-        <AudienceAnalyticsDashboard
-          participant1Stream={participant1Data.stream || undefined}
-          participant2Stream={participant2Data.stream || undefined}
-          participant1Name={participant1Data.name}
-          participant2Name={participant2Data.name}
-          roomId={roomId}
-        />
+        {!showExpressionDashboard ? (
+          <AudienceAnalyticsDashboard
+            participant1Stream={participant1Data.stream || undefined}
+            participant2Stream={participant2Data.stream || undefined}
+            participant1Name={participant1Data.name}
+            participant2Name={participant2Data.name}
+            participant1EmotionalData={participant1Data.emotionalData}
+            participant2EmotionalData={participant2Data.emotionalData}
+            roomId={roomId}
+          />
+        ) : (
+          <RealTimeExpressionDashboard
+            participant1Name={participant1Data.name}
+            participant2Name={participant2Data.name}
+            participant1Data={{
+              voiceEmotions: participant1Data.emotionalData || [],
+              facialExpressions: participant1Data.trackingData?.facialExpressions,
+              engagement: 85,
+              chemistry: 0
+            }}
+            participant2Data={{
+              voiceEmotions: participant2Data.emotionalData || [],
+              facialExpressions: participant2Data.trackingData?.facialExpressions,
+              engagement: 82,
+              chemistry: 0
+            }}
+            roomId={roomId}
+            isActive={true}
+          />
+        )}
       </div>
     </div>
   );

@@ -23,6 +23,8 @@ interface AudienceAnalyticsDashboardProps {
   participant2Stream?: MediaStream | undefined;
   participant1Name: string;
   participant2Name: string;
+  participant1EmotionalData?: any;
+  participant2EmotionalData?: any;
   roomId?: string;
   showPresenceAvatars?: boolean;
   enableRealTimeCoaching?: boolean;
@@ -47,6 +49,8 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
   participant2Stream,
   participant1Name,
   participant2Name,
+  participant1EmotionalData,
+  participant2EmotionalData,
   roomId,
   showPresenceAvatars = true,
   enableRealTimeCoaching = true
@@ -364,7 +368,7 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
     p1.analytics.updateMetrics(
       p1FaceData,
       p1PostureData,
-      null, // emotion data placeholder
+      participant1EmotionalData, // emotion data placeholder
       null, // voice data placeholder
       'real-time-update'
     );
@@ -372,7 +376,7 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
     p2.analytics.updateMetrics(
       p2FaceData,
       p2PostureData,
-      null, // emotion data placeholder  
+      participant2EmotionalData, // emotion data placeholder  
       null, // voice data placeholder
       'real-time-update'
     );
