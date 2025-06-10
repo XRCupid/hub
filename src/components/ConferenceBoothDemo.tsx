@@ -87,9 +87,9 @@ const ConferenceBoothDemo: React.FC<Props> = ({
     { id: 'generic_m', url: '/avatars/xrcupid_avatar_generic_male.glb', name: 'Generic M' }
   ];
 
-  // Use mock Firebase for reliable conference demos (no external dependencies)
-  const firebaseService = mockFirebaseConference;
-  const usingRealFirebase = false;
+  // Use real Firebase if configured, otherwise fall back to mock
+  const firebaseService = isRealFirebase() ? conferenceFirebaseService : mockFirebaseConference;
+  const usingRealFirebase = isRealFirebase();
 
   console.log('ConferenceBoothDemo - Using real Firebase:', usingRealFirebase);
   console.log('ConferenceBoothDemo - State:', {
