@@ -235,7 +235,7 @@ let auth: firebase.auth.Auth | undefined;
 let database: firebase.database.Database | MockDatabase;
 
 // Use real Firebase if API key is provided, otherwise use mock for development
-if (process.env.REACT_APP_FIREBASE_API_KEY && process.env.REACT_APP_FIREBASE_API_KEY !== "demo-api-key") {
+if (false) { // Disabled to prevent duplicate Firebase initialization
   try {
     console.log('🚀 Initializing real Firebase with project:', firebaseConfig.projectId);
     
