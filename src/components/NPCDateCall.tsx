@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, FC } from 'react';
+import React, { useState, useRef, useEffect, FC } from 'react';
 import { HumeVoiceService } from '../services/humeVoiceService';
 import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
 import { PostureTrackingService } from '../services/PostureTrackingService';
@@ -51,23 +51,51 @@ const NPCDateCall: React.FC<NPCDateCallProps> = ({
       faceMeshService.current = new ML5FaceMeshService();
       postureService.current = new PostureTrackingService();
       
-      // Initialize Hume voice service
+      // Initialize Hume voice service with real API key
       humeService.current = new HumeVoiceService();
       
-      // Simulate emotion tracking for demo
-      const emotionCheckInterval = setInterval(() => {
-        // Simulate emotion values for demo purposes
-        const simulatedEmotions = {
-          joy: Math.random() * 0.5 + 0.3,
-          interest: Math.random() * 0.4 + 0.4,
-          excitement: Math.random() * 0.3 + 0.2
-        };
-        setUserEmotions(simulatedEmotions);
-        updateConversationScore(simulatedEmotions);
-      }, 2000);
-      
-      // Store interval for cleanup
-      (window as any).emotionInterval = emotionCheckInterval;
+      // Setup real Hume emotion callbacks
+      if (humeService.current) {
+        console.log('[NPCDateCall] Setting up Hume callbacks');
+        
+        // Set up emotion callback to receive real emotion data
+        humeService.current.setOnEmotionCallback((emotions: any) => {
+          console.log('[NPCDateCall] 🎭 Received Hume emotions:', emotions);
+          
+          // Format emotions for display
+          const formattedEmotions = Array.isArray(emotions) ? emotions : [emotions];
+          const emotionMap: any = {};
+          
+          // Convert to emotion map format
+          formattedEmotions.forEach((emotion: any) => {
+            if (emotion.name && emotion.score !== undefined) {
+              emotionMap[emotion.name.toLowerCase()] = emotion.score;
+            }
+          });
+          
+          setUserEmotions(emotionMap);
+          updateConversationScore(emotionMap);
+        });
+
+        // Setup other Hume callbacks
+        humeService.current.setOnMessageCallback((message: any) => {
+          console.log('[NPCDateCall] 💬 Hume message:', message);
+        });
+
+        humeService.current.setOnErrorCallback((error: any) => {
+          console.error('[NPCDateCall] ❌ Hume error:', error);
+        });
+
+        // Initialize and start Hume session
+        try {
+          await humeService.current.connect();
+          console.log('[NPCDateCall] ✅ Hume session started successfully');
+        } catch (humeError) {
+          console.error('[NPCDateCall] Failed to start Hume session:', humeError);
+          // Fallback to simulated emotions if Hume fails
+          setupFallbackEmotions();
+        }
+      }
 
       // Simulate NPC personality based on archetype
       const npcPersonality = getNPCPersonality(npcArchetype);
@@ -81,7 +109,26 @@ const NPCDateCall: React.FC<NPCDateCallProps> = ({
     } catch (error) {
       console.error('Error initializing NPC date call:', error);
       setIsLoading(false);
+      // Setup fallback emotions if initialization fails
+      setupFallbackEmotions();
     }
+  };
+
+  const setupFallbackEmotions = () => {
+    console.log('[NPCDateCall] Setting up fallback emotion simulation');
+    const emotionCheckInterval = setInterval(() => {
+      // Simulate emotion values for demo purposes as fallback
+      const simulatedEmotions = {
+        joy: Math.random() * 0.5 + 0.3,
+        interest: Math.random() * 0.4 + 0.4,
+        excitement: Math.random() * 0.3 + 0.2
+      };
+      setUserEmotions(simulatedEmotions);
+      updateConversationScore(simulatedEmotions);
+    }, 2000);
+    
+    // Store interval for cleanup
+    (window as any).emotionInterval = emotionCheckInterval;
   };
 
   const getNPCPersonality = (archetype: string) => {
@@ -127,20 +174,34 @@ const NPCDateCall: React.FC<NPCDateCallProps> = ({
   };
 
   const cleanupServices = () => {
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
+    console.log('[NPCDateCall] Cleaning up services');
+    
+    // Clean up Hume service
+    if (humeService.current) {
+      humeService.current.disconnect();
+      humeService.current = null;
     }
     
-    // Clean up emotion check interval
+    // Clean up other services
+    if (faceMeshService.current) {
+      faceMeshService.current = null;
+    }
+    
+    if (postureService.current) {
+      postureService.current = null;
+    }
+    
+    // Clear emotion interval
     if ((window as any).emotionInterval) {
       clearInterval((window as any).emotionInterval);
+      (window as any).emotionInterval = null;
     }
     
-    faceMeshService.current = null;
-    postureService.current = null;
-    humeService.current?.disconnect();
-    humeService.current = null;
+    // Clean up video stream
+    if (videoRef.current && videoRef.current.srcObject) {
+      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+      tracks.forEach(track => track.stop());
+    }
   };
 
   const endCall = () => {

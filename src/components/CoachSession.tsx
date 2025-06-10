@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Suspense, FC } from 'react';
+import React, { useState, useRef, useEffect, Suspense, FC, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
