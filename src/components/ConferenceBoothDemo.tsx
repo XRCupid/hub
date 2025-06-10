@@ -126,6 +126,25 @@ const ConferenceBoothDemo: React.FC<Props> = ({
     };
   }, []); // Empty dependency array means this runs once on mount
 
+  // Auto-join room if roomId is provided via props (mobile joining)
+  useEffect(() => {
+    if (propRoomId && !isInRoom && initialMode === 'participant' && !currentUserName) {
+      console.log('[ConferenceBoothDemo] Auto-joining room from URL:', propRoomId);
+      // Set a default name for mobile participants
+      const defaultName = `Mobile User ${Math.floor(Math.random() * 1000)}`;
+      setCurrentUserName(defaultName);
+      setParticipant2Data(prev => ({ ...prev, name: defaultName }));
+    }
+  }, [propRoomId, initialMode, isInRoom, currentUserName]);
+
+  // Trigger join when both roomId and userName are set for mobile
+  useEffect(() => {
+    if (propRoomId && currentUserName && !isInRoom && initialMode === 'participant') {
+      console.log('[ConferenceBoothDemo] Joining room with credentials:', propRoomId, currentUserName);
+      joinRoom(propRoomId, currentUserName);
+    }
+  }, [propRoomId, currentUserName, isInRoom, initialMode]);
+
   // Initialize tracking for participants
   useEffect(() => {
     const initTracking = async () => {
