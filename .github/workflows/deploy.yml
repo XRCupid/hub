@@ -24,7 +24,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
           
       - name: Install dependencies
@@ -38,7 +38,7 @@ jobs:
           node --version
           npm --version
           # Build with CI=false to ignore warnings
-          CI=false npm run build
+          CI=false npm run build || (echo "Build failed with exit code $?"; exit 1)
         env:
           CI: false
           NODE_OPTIONS: --max-old-space-size=4096
