@@ -42,8 +42,9 @@ jobs:
           # List files to ensure everything is present
           echo "Files in src/services:"
           ls -la src/services/
-          # Try to build with verbose output
-          npm run build --verbose
+          # Build
+          echo "Starting build..."
+          npm run build
         env:
           CI: false
           NODE_OPTIONS: --max-old-space-size=4096
