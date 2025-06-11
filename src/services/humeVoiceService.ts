@@ -197,6 +197,7 @@ export class HumeVoiceService {
       
       // Connect using the SDK's chat interface
       console.log('[HumeVoiceService] Calling client.empathicVoice.chat.connect...');
+      
       try {
         this.socket = await this.client.empathicVoice.chat.connect({
           configId: configToUse,
@@ -208,12 +209,20 @@ export class HumeVoiceService {
           status: connectError?.status,
           statusText: connectError?.statusText,
           response: connectError?.response,
-          stack: connectError?.stack
+          stack: connectError?.stack,
+          configId: configToUse,
+          apiKeyFirst5: apiKey?.substring(0, 5) + '...',
+          apiKeyLength: apiKey?.length
         });
         
         // Check if it's an auth error
         if (connectError?.status === 401 || connectError?.message?.includes('401')) {
-          throw new Error('Authentication failed. Please check your Hume API credentials.');
+          throw new Error('Authentication failed. Please check your Hume API credentials. API key starts with: ' + apiKey?.substring(0, 5));
+        }
+        
+        // Check if it's a config not found error
+        if (connectError?.message?.includes('does not exist')) {
+          throw new Error(`Config ID ${configToUse} not found. This config may belong to a different Hume account. Current API key starts with: ${apiKey?.substring(0, 5)}`);
         }
         
         // Check if it's a network error

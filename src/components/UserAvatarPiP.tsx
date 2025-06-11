@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, Suspense } from 'react';
+import React, { useState, useRef, useEffect, Suspense, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';
@@ -43,11 +43,13 @@ class CanvasErrorBoundary extends React.Component<
 const AvatarCanvas = ({ 
   avatarUrl, 
   trackingData,
-  idleAnimationUrl = "/animations/M_Standing_Idle_001.glb"
+  idleAnimationUrl = "/animations/M_Standing_Idle_001.glb",
+  onContextLost
 }: { 
   avatarUrl: string;
   trackingData: any;
   idleAnimationUrl?: string;
+  onContextLost?: () => void;
 }) => {
   console.log('[AvatarCanvas] Rendering with:', { avatarUrl, hasTrackingData: !!trackingData });
   
@@ -77,6 +79,9 @@ const AvatarCanvas = ({
           canvas.addEventListener('webglcontextlost', (e) => {
             console.error('[AvatarCanvas] WebGL context lost!', e);
             e.preventDefault(); // Try to prevent default behavior
+            if (onContextLost) {
+              onContextLost();
+            }
           });
           canvas.addEventListener('webglcontextrestored', (e) => {
             console.log('[AvatarCanvas] WebGL context restored', e);
@@ -159,15 +164,33 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
   
   // Use ref to store tracking data to avoid constant re-renders
   const trackingDataRef = useRef(trackingDataState);
-  
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [attemptReload, setAttemptReload] = useState(0);
   const [trackingSource, setTrackingSource] = useState<string>('ML5');
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const trackingService = useRef<CombinedFaceTrackingService | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle WebGL context loss and recovery
+  const handleContextLost = useCallback(() => {
+    console.error('[UserAvatarPiP] WebGL context lost, attempting recovery...');
+    setError('WebGL context lost');
+    // Trigger a re-render after a short delay
+    setTimeout(() => {
+      setError(null);
+      setAttemptReload(prev => prev + 1);
+    }, 1000);
+  }, []);
+
+  // Update tracking data ref when parent tracking data changes
+  useEffect(() => {
+    if (trackingData) {
+      trackingDataRef.current = trackingData;
+    }
+  }, [trackingData]);
 
   // Camera position for face framing
   const cameraPosition: [number, number, number] = [0, 1.5, 2.0];
@@ -354,16 +377,23 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
         {error ? (
           <div className="pip-error">
             <p>{error}</p>
-            <button onClick={() => window.location.reload()}>
+            <button onClick={() => {
+              setError(null);
+              setAttemptReload(prev => prev + 1);
+            }}>
               Retry
             </button>
           </div>
         ) : (
-          <div key="avatar-canvas-container" style={{ width: '100%', height: '100%' }}>
+          <div 
+            key={`avatar-canvas-container-${attemptReload}`} 
+            style={{ width: '100%', height: '100%' }}
+          >
             <MemoizedAvatarCanvas 
               avatarUrl={avatarUrl}
               trackingData={trackingData || trackingDataState}
               idleAnimationUrl="/animations/M_Standing_Idle_001.glb"
+              onContextLost={handleContextLost}
             />
           </div>
         )}
