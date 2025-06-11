@@ -1,4 +1,5 @@
 import { HumeClient, convertBase64ToBlob, getAudioStream, ensureSingleValidAudioTrack, getBrowserSupportedMimeType, MimeType } from 'hume';
+import { getHumeCredentials } from './humeCredentialsOverride';
 
 // Re-declare base64ToBlob utility if not available from 'hume'
 // (Originally from '@humeai/voice')
@@ -166,14 +167,18 @@ export class HumeVoiceService {
       
       console.log('[HumeVoiceService] Using config ID:', configToUse);
       
-      // Validate credentials - support both naming conventions
-      const apiKey = process.env.REACT_APP_HUME_API_KEY || process.env.REACT_APP_HUME_CLIENT_ID;
-      const secretKey = process.env.REACT_APP_HUME_SECRET_KEY || process.env.REACT_APP_HUME_CLIENT_SECRET;
+      // Get credentials from override system
+      const credentials = getHumeCredentials();
+      
+      // Validate credentials
+      const apiKey = credentials.apiKey;
+      const secretKey = credentials.secretKey;
       
       // Check if API keys are available
       if (!apiKey || !secretKey) {
-        const error = new Error('Hume API credentials not configured. Please contact support.');
+        const error = new Error('Hume API credentials not configured. Please check console for override instructions.');
         console.error('[HumeVoiceService]', error.message);
+        console.error('[HumeVoiceService] Use window.humeCredentials.set("api_key", "secret_key") to set credentials');
         if (this.onErrorCallback) {
           this.onErrorCallback(error);
         }
@@ -181,11 +186,12 @@ export class HumeVoiceService {
       }
       
       // Debug: Show partial credentials being used
-      console.log('[HumeVoiceService] Using credentials from environment:', {
+      console.log('[HumeVoiceService] Using credentials:', {
         apiKeyPrefix: apiKey?.substring(0, 10) + '...',
         apiKeyLength: apiKey?.length,
         secretKeyPrefix: secretKey?.substring(0, 10) + '...',
-        secretKeyLength: secretKey?.length
+        secretKeyLength: secretKey?.length,
+        source: credentials.apiKey === process.env.REACT_APP_HUME_API_KEY ? 'environment' : 'override'
       });
       
       // Initialize client with API key

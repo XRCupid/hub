@@ -10,6 +10,8 @@ import { UserAvatarPiP } from './UserAvatarPiP';
 import { EmotionalState } from '../services/humeVoiceService';
 import { COACHES } from '../config/coachConfig';
 import { mapEmotionsToBlendshapes } from '../utils/emotionMappings';
+import EmergencyCredentialsInput from './EmergencyCredentialsInput';
+import { getHumeCredentials } from '../services/humeCredentialsOverride';
 import './CoachSession.css';
 
 // Main component
@@ -38,6 +40,7 @@ const CoachSession: React.FC = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([]);
+  const [showEmergencyCredentialsInput, setShowEmergencyCredentialsInput] = useState(false);
   
   // Service refs
   const humeVoiceServiceRef = useRef<HybridVoiceService | null>(null);
@@ -353,6 +356,15 @@ const CoachSession: React.FC = () => {
     }
   };
 
+  // Check for credentials on mount
+  useEffect(() => {
+    const credentials = getHumeCredentials();
+    if (!credentials.apiKey || !credentials.secretKey) {
+      setShowEmergencyCredentialsInput(true);
+      setError('Hume credentials not configured. Please use the emergency credentials form.');
+    }
+  }, []);
+
   return (
     <div className="coach-session">
       <MediaDebug />
@@ -364,6 +376,9 @@ const CoachSession: React.FC = () => {
       </div>
 
       <div className="session-container">
+        {showEmergencyCredentialsInput && (
+          <EmergencyCredentialsInput />
+        )}
         <div className="coach-avatar-scene" style={{ 
           backgroundColor: '#1a1a1a',
           backgroundImage: coach?.venue ? `url(/Venues/${coach.venue})` : 'none',
