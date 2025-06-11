@@ -34,9 +34,14 @@ jobs:
         run: |
           # Copy production env file to .env
           cp .env.production .env
-          npm run build
+          # Debug: Show Node version
+          node --version
+          npm --version
+          # Build with CI=false to ignore warnings
+          CI=false npm run build
         env:
           CI: false
+          NODE_OPTIONS: --max-old-space-size=4096
           
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
