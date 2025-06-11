@@ -59,14 +59,17 @@ class NuclearHumeOverride {
   overrideEnvironment() {
     console.log('[NUCLEAR] 🔥 OVERRIDING ALL ENVIRONMENT VARIABLES');
     
+    // NOTE: Cannot override process.env in production builds
+    // The hardcoded credentials are returned directly by getCredentials()
+    
     // Override EVERYTHING with hardcoded values
-    process.env.REACT_APP_HUME_API_KEY = YOUR_CREDENTIALS.apiKey;
-    process.env.REACT_APP_HUME_SECRET_KEY = YOUR_CREDENTIALS.secretKey;
-    process.env.REACT_APP_HUME_CONFIG_ID = YOUR_CREDENTIALS.configId;
-    process.env.REACT_APP_HUME_CONFIG_ID_GRACE = YOUR_CREDENTIALS.graceConfigId;
-    process.env.REACT_APP_HUME_CONFIG_ID_POSIE = YOUR_CREDENTIALS.posieConfigId;
-    process.env.REACT_APP_HUME_CONFIG_ID_RIZZO = YOUR_CREDENTIALS.rizzoConfigId;
-    process.env.REACT_APP_HUME_CONFIG_ID_DOUGIE = YOUR_CREDENTIALS.dougieConfigId;
+    // process.env.REACT_APP_HUME_API_KEY = YOUR_CREDENTIALS.apiKey;
+    // process.env.REACT_APP_HUME_SECRET_KEY = YOUR_CREDENTIALS.secretKey;
+    // process.env.REACT_APP_HUME_CONFIG_ID = YOUR_CREDENTIALS.configId;
+    // process.env.REACT_APP_HUME_CONFIG_ID_GRACE = YOUR_CREDENTIALS.graceConfigId;
+    // process.env.REACT_APP_HUME_CONFIG_ID_POSIE = YOUR_CREDENTIALS.posieConfigId;
+    // process.env.REACT_APP_HUME_CONFIG_ID_RIZZO = YOUR_CREDENTIALS.rizzoConfigId;
+    // process.env.REACT_APP_HUME_CONFIG_ID_DOUGIE = YOUR_CREDENTIALS.dougieConfigId;
     
     // Also set on window for good measure
     if (typeof window !== 'undefined') {

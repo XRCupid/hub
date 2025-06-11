@@ -57,8 +57,8 @@ const HumeConnectionDebug: React.FC = () => {
           stage: 'API Authentication',
           success: true,
           details: { 
-            configCount: configs.configs_page?.length || 0,
-            configs: configs.configs_page?.map(c => ({ id: c.id, name: c.name }))
+            configCount: (configs as any).configs_page?.length || (configs as any).length || 0,
+            configs: (configs as any).configs_page?.map((c: any) => ({ id: c.id, name: c.name })) || []
           }
         });
       } catch (apiError: any) {
