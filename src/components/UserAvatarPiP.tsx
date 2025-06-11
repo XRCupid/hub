@@ -136,13 +136,13 @@ interface UserAvatarPiPProps {
 }
 
 export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
-  avatarUrl = '/avatars/babe.glb',
+  avatarUrl = '/avatars/default_avatar.glb',
   onClose,
   position = 'bottom-right',
   size = 'medium',
   trackingData
 }) => {
-  console.log('[UserAvatarPiP] Component rendering');
+  console.log('[UserAvatarPiP] Component rendering with props:', { avatarUrl, position, size, hasTrackingData: !!trackingData });
   
   const [isTracking, setIsTracking] = useState(false);
   const [trackingDataState, setTrackingData] = useState<{
@@ -189,6 +189,7 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
       console.log('[UserAvatarPiP] Using trackingData from parent');
       setTrackingData(trackingData);
       setIsTracking(true);
+      setTrackingSource('Parent');
       return; // Don't initialize camera tracking
     }
     

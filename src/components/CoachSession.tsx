@@ -124,6 +124,15 @@ const CoachSession: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    console.log('[CoachSession] PiP Debug:', { 
+      isConnected, 
+      coach: coach?.name,
+      hasUserAvatarPiP: !!UserAvatarPiP,
+      faceTrackingData
+    });
+  }, [isConnected, coach, faceTrackingData]);
+
   const handleConnect = async () => {
     try {
       setLoading(true);
@@ -409,12 +418,13 @@ const CoachSession: React.FC = () => {
         </div>
       </div>
       
-      {/* User Avatar PiP */}
+      {/* User Avatar PiP - Render outside main content for proper z-index */}
       {isConnected && (
         <UserAvatarPiP 
           avatarUrl="/avatars/user_avatar.glb"
-          position="top-right"
+          position="bottom-right"
           size="medium"
+          trackingData={faceTrackingData}
         />
       )}
     </div>
