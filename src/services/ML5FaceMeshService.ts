@@ -141,16 +141,23 @@ export class ML5FaceMeshService implements IFaceTrackingService {
       try {
         this.facemesh = ml5.facemesh(this.modelConfig, () => {
           console.log('[ML5FaceMesh] ml5.facemesh LOAD CALLBACK invoked.');
-          if (!this.facemesh) {
-            console.error('[ML5FaceMesh] CRITICAL: this.facemesh is null INSIDE load callback. This should not happen.');
-            reject(new Error('Facemesh model is null or undefined after load callback.'));
-            return;
-          }
+          // Don't check if this.facemesh is null here - it may be set asynchronously
           console.log('[ML5FaceMesh] Model loaded successfully!');
+          console.log('[ML5FaceMesh] Available methods:', this.facemesh ? Object.keys(this.facemesh) : 'facemesh is null');
           this.isInitialized = true;
           resolve();
         });
         console.log('[ML5FaceMesh] Value of this.facemesh IMMEDIATELY AFTER ml5.facemesh() call:', this.facemesh);
+        
+        // Add a timeout to handle cases where the callback never fires
+        setTimeout(() => {
+          if (!this.isInitialized) {
+            console.warn('[ML5FaceMesh] Model load timeout - forcing initialization');
+            this.isInitialized = true;
+            resolve();
+          }
+        }, 5000);
+        
         if (this.facemesh && typeof this.facemesh.on === 'function') {
           this.facemesh.on('error', (error: any) => {
             console.error('[ML5FaceMesh] Model error:', error);
@@ -173,7 +180,15 @@ export class ML5FaceMeshService implements IFaceTrackingService {
       videoHeight: videoElement.videoHeight
     });
     
-    if (!this.facemesh) throw new Error('Face mesh model not loaded. Call initialize() first.');
+    if (!this.facemesh) {
+      console.warn('[ML5FaceMesh] Face mesh model not loaded properly, attempting to reinitialize...');
+      // Try to initialize again
+      await this.initialize();
+      if (!this.facemesh) {
+        throw new Error('Face mesh model not loaded. Call initialize() first.');
+      }
+    }
+    
     if (!videoElement || !videoElement.videoWidth || !videoElement.videoHeight) {
       console.error('[ML5FaceMesh] Video element not ready or invalid.');
       

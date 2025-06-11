@@ -1,4 +1,4 @@
-import { HumeClient, convertBase64ToBlob } from 'hume';
+import { HumeClient, convertBase64ToBlob, getAudioStream, ensureSingleValidAudioTrack, getBrowserSupportedMimeType, MimeType } from 'hume';
 
 // Re-declare base64ToBlob utility if not available from 'hume'
 // (Originally from '@humeai/voice')
@@ -61,6 +61,10 @@ export class HumeVoiceService {
 
   private explicitlyClosed: boolean = false; // New
   private currentConfigId: string | undefined; // New
+
+  private audioStream: MediaStream | null = null;
+  private mediaRecorder: MediaRecorder | null = null;
+  private mimeType: MimeType = MimeType.WEBM;
 
   constructor() {
     console.log('[HumeVoiceService] Constructor called');
@@ -246,6 +250,9 @@ export class HumeVoiceService {
         socketPrototype: this.socket ? Object.getPrototypeOf(this.socket).constructor.name : 'N/A'
       });
 
+      // Set up microphone streaming
+      await this.setupMicrophoneStreaming();
+
       // Try to find the actual WebSocket
       let actualWebSocket: any = null;
       if (this.socket) {
@@ -347,6 +354,49 @@ export class HumeVoiceService {
     }
   }
 
+  private async setupMicrophoneStreaming(): Promise<void> {
+    try {
+      console.log('[HumeVoiceService] Setting up microphone streaming...');
+      
+      // Get supported MIME type
+      const mimeTypeResult = getBrowserSupportedMimeType();
+      this.mimeType = mimeTypeResult.success ? mimeTypeResult.mimeType : MimeType.WEBM;
+      console.log('[HumeVoiceService] Using MIME type:', this.mimeType);
+      
+      // Get audio stream with echo cancellation, noise suppression, etc.
+      this.audioStream = await getAudioStream();
+      ensureSingleValidAudioTrack(this.audioStream);
+      console.log('[HumeVoiceService] Audio stream obtained');
+      
+      // Create MediaRecorder for real-time streaming
+      this.mediaRecorder = new MediaRecorder(this.audioStream, {
+        mimeType: this.mimeType,
+      });
+      
+      // Send audio data in real-time as it's recorded
+      this.mediaRecorder.ondataavailable = async (event) => {
+        if (event.data.size > 0 && this.socket && this.isConnected) {
+          try {
+            // Convert blob to base64
+            const base64Audio = await blobToBase64(event.data);
+            // Send to Hume
+            await this.socket.sendAudioInput({ data: base64Audio });
+          } catch (error) {
+            console.error('[HumeVoiceService] Error sending audio:', error);
+          }
+        }
+      };
+      
+      // Start recording with small time slices for low latency
+      this.mediaRecorder.start(100); // 100ms chunks for real-time streaming
+      console.log('[HumeVoiceService] Microphone streaming started');
+      
+    } catch (error) {
+      console.error('[HumeVoiceService] Error setting up microphone:', error);
+      throw new Error('Failed to set up microphone streaming');
+    }
+  }
+
   private setupEventHandlers(): void {
     if (!this.socket) {
       console.error('[HumeVoiceService] Cannot setup event handlers: socket is null');
@@ -360,37 +410,88 @@ export class HumeVoiceService {
       console.log('[HumeVoiceService] Message type:', message.type);
       console.log('[HumeVoiceService] Message keys:', Object.keys(message));
       
-      // Log the raw message for audio_output debugging
-      if (message.type === 'audio_output') {
-        console.log('[HumeVoiceService] 🎵 Received audio_output');
-        console.log('[HumeVoiceService] Audio data present:', !!message.data);
-        console.log('[HumeVoiceService] Audio data length:', message.data?.length);
-        console.log('[HumeVoiceService] First 100 chars of data:', message.data?.substring(0, 100));
+      // Log ALL message types to understand what we're getting
+      console.log('[HumeVoiceService] 📨 FULL MESSAGE:', JSON.stringify(message, null, 2));
+      
+      // Log specific details for debugging audio issues
+      if (message.type === 'assistant_message') {
+        console.log('[HumeVoiceService] Assistant message has data?', !!message.data);
+        console.log('[HumeVoiceService] Assistant message keys:', message.message ? Object.keys(message.message) : 'no message key');
       }
       
-      // Check for usage limit error
-      if (message.type === 'error' && message.code === 'E0301') {
-        console.error('[HumeVoiceService] ⚠️ CREDIT LIMIT REACHED:', message.message);
-        this.isConnected = false;
-        this.hasConnectedBefore = false; // Prevent reconnect attempts
-        this.explicitlyClosed = true; // Prevent any reconnection
-        if (this.onErrorCallback) {
-          this.onErrorCallback(new Error(`Hume Credit Limit Reached: ${message.message}. Please check your Hume dashboard.`));
-        }
-        // Immediately disconnect to prevent further attempts
-        this.disconnect();
-        return;
+      switch (message.type) {
+        case 'audio_output':
+          console.log('[HumeVoiceService] 🎵 Received audio_output');
+          if (message.data && this.onAudioCallback) {
+            try {
+              // Use Hume SDK's convertBase64ToBlob if available, otherwise fallback
+              const audioBlob = typeof convertBase64ToBlob === 'function' 
+                ? convertBase64ToBlob(message.data)
+                : base64ToBlob(message.data, 'audio/wav');
+              console.log('[HumeVoiceService] Created audio blob:', audioBlob.size, 'type:', audioBlob.type);
+              this.onAudioCallback(audioBlob);
+            } catch (error) {
+              console.error('[HumeVoiceService] Error creating audio blob:', error);
+            }
+          } else {
+            console.warn('[HumeVoiceService] ⚠️ No audio data in audio_output message or no callback set');
+          }
+          break;
+
+        case 'assistant_message':
+          if (message.message?.content && this.onMessageCallback) {
+            console.log('[HumeVoiceService] Assistant message:', message.message.content);
+            console.log('[HumeVoiceService] Invoking onMessageCallback with message type:', message.type);
+            this.onMessageCallback?.(message);
+            console.log('[HumeVoiceService] onMessageCallback invoked.');
+          }
+          // Extract emotion data from prosody scores in assistant messages
+          if (message.models?.prosody?.scores && this.onEmotionCallback) {
+            console.log('[HumeVoiceService] Found emotion data in assistant message');
+            const emotions = this.convertEmotions(message.models.prosody.scores);
+            console.log('[HumeVoiceService] Converted emotions:', emotions);
+            this.onEmotionCallback(emotions);
+          }
+          break;
+
+        case 'assistant_end':
+          console.log('[HumeVoiceService] Assistant finished');
+          if (this.onAssistantEndCallback) {
+            this.onAssistantEndCallback();
+          }
+          break;
+
+        case 'user_message':
+          if (message.message?.content && this.onUserMessageCallback) {
+            console.log('[HumeVoiceService] User message:', message.message.content);
+            this.onUserMessageCallback(message.message.content);
+          }
+          break;
+
+        case 'user_interruption':
+          console.log('[HumeVoiceService] User interruption');
+          if (this.onUserInterruptionCallback) {
+            this.onUserInterruptionCallback();
+          }
+          break;
+
+        case 'emotion_features':
+          if (message.models?.prosody?.scores && this.onEmotionCallback) {
+            const emotions = this.convertEmotions(message.models.prosody.scores);
+            this.onEmotionCallback(emotions);
+          }
+          break;
+
+        case 'error':
+          console.error('[HumeVoiceService] Error message:', message);
+          if (message.message?.includes('too many active chats')) {
+            console.error('[HumeVoiceService] Too many active chats - consider closing old connections');
+            if (this.onErrorCallback) {
+              this.onErrorCallback(new Error('Too many active chats. Please close other sessions and try again.'));
+            }
+          }
+          break;
       }
-      
-      // Check for config not found error
-      if (message.type === 'error' && message.code === 'E0709') {
-        console.error('[HumeVoiceService] ⚠️ CONFIG NOT FOUND:', message.message);
-        this.explicitlyClosed = true; // Prevent reconnection with bad config
-        this.disconnect();
-        return;
-      }
-      
-      this.handleMessage(message);
     });
 
     this.socket.on('error', (error: any) => {
@@ -504,6 +605,17 @@ export class HumeVoiceService {
     this.reconnectAttempts = 0; // Reset attempts on explicit disconnect
     console.log('[HumeVoiceService] Disconnecting explicitly...');
     this.explicitlyClosed = true;
+    
+    // Stop microphone streaming
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+      this.mediaRecorder = null;
+    }
+    
+    if (this.audioStream) {
+      this.audioStream.getTracks().forEach(track => track.stop());
+      this.audioStream = null;
+    }
     
     // Force close the websocket if it exists
     if (this.socket) {

@@ -34,7 +34,6 @@ class CanvasErrorBoundary extends React.Component<
         </div>
       );
     }
-
     return this.props.children;
   }
 }
@@ -97,7 +96,12 @@ const AvatarCanvas = ({
         />
         <directionalLight position={[0, 5, 10]} intensity={0.5} />
         
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <mesh position={[0, 1.5, 0]}>
+            <sphereGeometry args={[0.5, 32, 32]} />
+            <meshStandardMaterial color="yellow" />
+          </mesh>
+        }>
           <PresenceAvatar
             avatarUrl={avatarUrl}
             trackingData={trackingData}
@@ -134,18 +138,24 @@ const MemoizedAvatarCanvas = React.memo(AvatarCanvas, arePropsEqual);
 
 interface UserAvatarPiPProps {
   avatarUrl?: string;
-  onClose?: () => void;
   position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   size?: 'small' | 'medium' | 'large';
   trackingData?: any;
+  onClose?: () => void;
+  className?: string;
+  enableOwnTracking?: boolean;
+  cameraStream?: MediaStream | null;
 }
 
-export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
-  avatarUrl = '/avatars/default_avatar.glb',
-  onClose,
+export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({ 
+  avatarUrl = '/avatars/user_avatar.glb',
   position = 'bottom-right',
-  size = 'medium',
-  trackingData
+  size = 'large',
+  trackingData,
+  onClose,
+  className,
+  enableOwnTracking = false,
+  cameraStream
 }) => {
   console.log('[UserAvatarPiP] Component rendering with props:', { avatarUrl, position, size, hasTrackingData: !!trackingData });
   
@@ -169,7 +179,7 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
   const [attemptReload, setAttemptReload] = useState(0);
   const [trackingSource, setTrackingSource] = useState<string>('ML5');
   
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const trackingService = useRef<CombinedFaceTrackingService | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -232,14 +242,21 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
         
         await trackingService.current.initialize();
         
-        // Set up camera
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-            facingMode: 'user'
-          } 
-        });
+        // Use provided cameraStream if enableOwnTracking is true, otherwise get camera
+        let stream: MediaStream;
+        if (enableOwnTracking && cameraStream) {
+          console.log('[UserAvatarPiP] Using provided cameraStream');
+          stream = cameraStream;
+        } else {
+          console.log('[UserAvatarPiP] Getting camera stream');
+          stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              facingMode: 'user'
+            } 
+          });
+        }
         
         streamRef.current = stream;
         
@@ -269,11 +286,12 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
 
     return () => {
       stopTracking();
-      if (streamRef.current) {
+      // Only stop tracks if we created our own stream
+      if (streamRef.current && (!enableOwnTracking || !cameraStream)) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [trackingData, enableOwnTracking, cameraStream]);
 
   const startTracking = async () => {
     // Don't start camera tracking if we're using parent trackingData
@@ -351,8 +369,92 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (!enableOwnTracking || !cameraStream) return;
+    
+    const initializeTracking = async () => {
+      try {
+        console.log('[UserAvatarPiP] Initializing face tracking...');
+        
+        // Create video element for tracking
+        if (!videoRef.current) {
+          const video = document.createElement('video');
+          video.autoplay = true;
+          video.playsInline = true;
+          video.muted = true;
+          video.style.display = 'none';
+          document.body.appendChild(video);
+          (videoRef as React.MutableRefObject<HTMLVideoElement>).current = video;
+        }
+        
+        // Set video source
+        if (videoRef.current) {
+          videoRef.current.srcObject = cameraStream;
+        }
+        streamRef.current = cameraStream;
+        
+        // Initialize tracking service
+        trackingService.current = new CombinedFaceTrackingService();
+        await trackingService.current.initialize();
+        if (videoRef.current) {
+          await trackingService.current.startTracking(videoRef.current);
+        }
+        console.log('[UserAvatarPiP] Tracking service initialized');
+        setIsTracking(true);
+        setTrackingSource('ML5');
+        
+        // Start tracking loop
+        const updateTracking = () => {
+          if (trackingService.current && videoRef.current) {
+            const expressions = trackingService.current.getExpressions();
+            if (expressions) {
+              setTrackingData({
+                facialExpressions: expressions,
+                posture: null,
+                hands: null,
+                headRotation: null,
+                landmarks: null
+              });
+            }
+          }
+        };
+        
+        intervalRef.current = setInterval(updateTracking, 50); // 20 FPS
+        
+      } catch (error) {
+        console.error('[UserAvatarPiP] Error initializing tracking:', error);
+        setError('Failed to initialize face tracking');
+      }
+    };
+    
+    initializeTracking();
+    
+    // Cleanup
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      if (trackingService.current) {
+        trackingService.current.stopTracking();
+      }
+      if (videoRef.current && videoRef.current.parentNode) {
+        videoRef.current.parentNode.removeChild(videoRef.current);
+      }
+    };
+  }, [enableOwnTracking, cameraStream]);
+
   return (
-    <div className={`user-avatar-pip ${position} ${getSizeClass()} ${isMinimized ? 'minimized' : ''}`}>
+    <div 
+      className={`user-avatar-pip ${position} ${getSizeClass()} ${isMinimized ? 'minimized' : ''}`}
+      style={{
+        width: '400px',
+        height: '400px',
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        zIndex: 9999
+      }}
+    >
       {/* Hidden video element for camera feed */}
       <video 
         ref={videoRef} 
@@ -373,29 +475,69 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
       )}
       
       {/* Avatar content takes full space */}
-      <div className="pip-content">
+      <div className="avatar-content" style={{ width: '100%', height: '100%' }}>
         {error ? (
-          <div className="pip-error">
+          <div style={{ color: 'white', padding: '10px', textAlign: 'center' }}>
+            <p>Error loading avatar:</p>
             <p>{error}</p>
-            <button onClick={() => {
-              setError(null);
-              setAttemptReload(prev => prev + 1);
-            }}>
+            <button onClick={() => setAttemptReload(prev => prev + 1)}>
               Retry
             </button>
           </div>
         ) : (
-          <div 
-            key={`avatar-canvas-container-${attemptReload}`} 
-            style={{ width: '100%', height: '100%' }}
-          >
-            <MemoizedAvatarCanvas 
-              avatarUrl={avatarUrl}
-              trackingData={trackingData || trackingDataState}
-              idleAnimationUrl="/animations/M_Standing_Idle_001.glb"
-              onContextLost={handleContextLost}
-            />
-          </div>
+          <Suspense fallback={
+            <div style={{ color: 'white', textAlign: 'center', padding: '20px' }}>
+              Loading avatar...
+            </div>
+          }>
+            <Canvas
+              key={`canvas-${attemptReload}`}
+              camera={{ 
+                position: [0, 1.2, 0.9], 
+                fov: 35,
+                near: 0.01,
+                far: 100
+              }}
+              gl={{ 
+                antialias: true, 
+                alpha: true,
+                preserveDrawingBuffer: true,
+                powerPreference: 'high-performance'
+              }}
+              onCreated={({ gl }) => {
+                console.log('[UserAvatarPiP] Canvas created, WebGL context:', gl);
+              }}
+              onError={(error: any) => {
+                console.error('[UserAvatarPiP] Canvas error:', error);
+                setError('WebGL Error: ' + (error?.message || String(error)));
+              }}
+            >
+              <ambientLight intensity={0.6} />
+              <directionalLight position={[0, 10, 5]} intensity={0.8} />
+              <directionalLight position={[0, 5, 10]} intensity={0.5} />
+              
+              <Suspense fallback={
+                <mesh position={[0, 0.6, 0]}>
+                  <sphereGeometry args={[0.2, 32, 32]} />
+                  <meshStandardMaterial color="yellow" />
+                </mesh>
+              }>
+                <PresenceAvatar
+                  avatarUrl={avatarUrl}
+                  trackingData={trackingData || trackingDataRef.current}
+                  position={[0, -0.6, 0]}
+                  scale={1}
+                />
+              </Suspense>
+              
+              <OrbitControls 
+                enablePan={false}
+                enableZoom={false}
+                enableRotate={false}
+                target={[0, 1.0, 0]}
+              />
+            </Canvas>
+          </Suspense>
         )}
         
         {(trackingData || trackingDataState)?.facialExpressions && !error && (

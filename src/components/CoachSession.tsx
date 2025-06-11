@@ -1,450 +1,461 @@
-import React, { useState, useRef, useEffect, Suspense, FC, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
-import { PerspectiveCamera } from '@react-three/drei';
+import { HybridVoiceService } from '../services/hybridVoiceService';
 import { PresenceAvatar } from './PresenceAvatar';
+import { getCoachById } from '../config/coachConfig';
+import { getHumeCoachConfig } from '../services/HumeCoachConfigurations';
+import { MediaDebug } from './MediaDebug';
 import { UserAvatarPiP } from './UserAvatarPiP';
-import humeVoiceService, { EmotionalState } from '../services/humeVoiceService';
+import { EmotionalState } from '../services/humeVoiceService';
 import { COACHES } from '../config/coachConfig';
+import { mapEmotionsToBlendshapes } from '../utils/emotionMappings';
 import './CoachSession.css';
 
+// Main component
 const CoachSession: React.FC = () => {
-  const { coachId } = useParams<{ coachId: string }>();
+  const { coachId = 'grace' } = useParams<{ coachId: string }>();
   const navigate = useNavigate();
   
+  // Get coach data
+  const coach = getCoachById(coachId);
+  const humeConfig = getHumeCoachConfig(coachId);
+  
   // State management
-  const [isConnected, setIsConnected] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [currentEmotion, setCurrentEmotion] = useState<EmotionalState>({});
-  const [audioData, setAudioData] = useState<Uint8Array>(new Uint8Array());
+  const [audioData, setAudioData] = useState<Uint8Array>(new Uint8Array(128));
   const [coachMessage, setCoachMessage] = useState('');
   const [userTranscript, setUserTranscript] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [faceTrackingData, setFaceTrackingData] = useState<any>({ facialExpressions: { jawOpen: 0 } });
+  const [faceTrackingData, setFaceTrackingData] = useState<any>(null);
   const [messageInput, setMessageInput] = useState('');
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [hasPermissions, setHasPermissions] = useState(false);
+  const [currentAnimation, setCurrentAnimation] = useState<string>('idle');
+  const [emotionalBlendshapes, setEmotionalBlendshapes] = useState<any>({});
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([]);
   
-  // Refs
+  // Service refs
+  const humeVoiceServiceRef = useRef<HybridVoiceService | null>(null);
+  
+  // Audio refs for lip sync
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  const coach = COACHES[coachId as keyof typeof COACHES];
+  const audioPlayerRef = useRef<HTMLAudioElement>(new Audio());
+  const audioQueueRef = useRef<Blob[]>([]);
+  const isPlayingRef = useRef(false);
+  const audioSourceCreatedRef = useRef(false);
   
+  // Initialize audio context
   useEffect(() => {
-    console.log('[CoachSession] Component mounted with coach:', coach);
-    console.log('[CoachSession] Environment check:', {
-      HUME_API_KEY: process.env.REACT_APP_HUME_API_KEY ? 'SET' : 'NOT SET',
-      HUME_SECRET_KEY: process.env.REACT_APP_HUME_SECRET_KEY ? 'SET' : 'NOT SET', 
-      HUME_CONFIG_ID: process.env.REACT_APP_HUME_CONFIG_ID,
-      HUME_CONFIG_ID_GRACE: process.env.REACT_APP_HUME_CONFIG_ID_GRACE,
-      HUME_CONFIG_ID_POSIE: process.env.REACT_APP_HUME_CONFIG_ID_POSIE,
-      HUME_CONFIG_ID_RIZZO: process.env.REACT_APP_HUME_CONFIG_ID_RIZZO,
-      NODE_ENV: process.env.NODE_ENV
-    });
-    
-    if (!coach) {
-      navigate('/training-hub');
-      return;
-    }
-
-    // Initialize audio context
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (AudioContext) {
-      audioContextRef.current = new AudioContext();
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 256;
-      analyserRef.current.smoothingTimeConstant = 0.8;
-    }
-
-    // Enhanced Hume initialization with debugging
-    console.log('[CoachSession] Initializing Hume Voice Service...', {
-      hasApiKey: !!process.env.REACT_APP_HUME_API_KEY,
-      hasSecretKey: !!process.env.REACT_APP_HUME_SECRET_KEY, 
-      hasConfigId: !!process.env.REACT_APP_HUME_CONFIG_ID,
-      configId: coach.humeConfigId || process.env.REACT_APP_HUME_CONFIG_ID
-    });
-
-    // Set up Hume callbacks
-    humeVoiceService.setOnAudioCallback((audioBlob: Blob) => {
-      playAudioWithAnalysis(audioBlob);
-    });
-
-    humeVoiceService.setOnEmotionCallback((emotions: EmotionalState) => {
-      console.log('[CoachSession] 🎭 HUME EMOTIONS RECEIVED:', emotions);
-      console.log('[CoachSession] Emotion type:', typeof emotions);
-      console.log('[CoachSession] Updating currentEmotion state');
-      setCurrentEmotion(emotions);
-    });
-
-    humeVoiceService.setOnMessageCallback((message: any) => {
-      console.log('[CoachSession] 💬 Hume message received:', message);
-      // Extract assistant message from Hume message format
-      if (message.type === 'assistant_message' && message.message?.content) {
-        console.log('[CoachSession] Setting coach message:', message.message.content);
-        setCoachMessage(message.message.content);
-      }
-    });
-
-    humeVoiceService.setOnUserMessageCallback((transcript: string) => {
-      console.log('[CoachSession] 🎤 User transcript:', transcript);
-      setUserTranscript(transcript);
-    });
-
-    humeVoiceService.setOnUserInterruptionCallback(() => {
-      console.log('[CoachSession] 🛑 User interruption detected');
+    // Audio element setup
+    audioPlayerRef.current.onended = () => {
+      console.log('[CoachSession] Audio ended, playing next');
       setIsSpeaking(false);
-      setIsListening(true);
-    });
-
-    humeVoiceService.setOnErrorCallback((error: Error) => {
-      console.error('[CoachSession] ❌ Hume error:', error);
-      setError(error.message);
-      setIsConnected(false);
-    });
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
-      }
-      if (audioContextRef.current?.state !== 'closed') {
-        audioContextRef.current?.close();
-      }
+      setCurrentAnimation('idle');
+      console.log('[CoachSession] Animation state set to: idle');
+      setTimeout(() => playNextAudioFromQueue(), 100);
     };
-  }, [coach, navigate]);
-
-  useEffect(() => {
+    
     return () => {
-      console.log('[CoachSession] Cleaning up on unmount');
-      if (isConnected) {
-        humeVoiceService.disconnect();
-      }
-      // Clean up audio analysis
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (audioContextRef.current) {
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close();
       }
     };
   }, []);
 
+  // Get media permissions
   useEffect(() => {
-    console.log('[CoachSession] PiP Debug:', { 
-      isConnected, 
-      coach: coach?.name,
-      hasUserAvatarPiP: !!UserAvatarPiP,
-      faceTrackingData
-    });
-  }, [isConnected, coach, faceTrackingData]);
+    const getMediaPermissions = async () => {
+      try {
+        console.log('[CoachSession] Requesting camera and microphone permissions...');
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: true 
+        });
+        
+        // Set up face tracking
+        stream.getVideoTracks().forEach(track => {
+          track.addEventListener('ended', () => {
+            console.log('[CoachSession] Video track ended');
+          });
+        });
+        setCameraStream(stream);
+        setHasPermissions(true);
+      } catch (error) {
+        console.error('[CoachSession] Error accessing media devices:', error);
+        setError('Please allow camera and microphone access for the coach session');
+      }
+    };
 
+    getMediaPermissions();
+
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  // Initialize HybridVoiceService
+  useEffect(() => {
+    const initHybridVoiceService = async () => {
+      if (!humeVoiceServiceRef.current) {
+        console.log('[CoachSession] Initializing HybridVoiceService...');
+        humeVoiceServiceRef.current = new HybridVoiceService();
+        
+        // Set up callbacks for audio and messages
+        humeVoiceServiceRef.current.onAudio((audioBlob: Blob) => {
+          console.log('[CoachSession] Audio received:', audioBlob.size);
+          setIsSpeaking(true);
+          setCurrentAnimation('talking');
+          console.log('[CoachSession] Animation state set to: talking');
+          audioQueueRef.current.push(audioBlob);
+          if (!isPlayingRef.current) {
+            playNextAudioFromQueue();
+          }
+        });
+        
+        humeVoiceServiceRef.current.onMessage((message: any) => {
+          console.log('[CoachSession] Message received:', message);
+          const messageText = typeof message === 'string' ? message : 
+                            (message?.message?.content || message?.content || 
+                             JSON.stringify(message));
+          
+          if (messageText && messageText.trim()) {
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: messageText
+            }]);
+            setCoachMessage(messageText);
+            
+            // Handle prosody for emotions
+            if (message?.models?.prosody?.scores) {
+              const scores = message.models.prosody.scores;
+              // Convert scores object to array format expected by mapEmotionsToBlendshapes
+              const emotionsArray = Object.entries(scores).map(([name, score]) => ({
+                name: name.charAt(0).toUpperCase() + name.slice(1), // Capitalize first letter
+                score: score as number
+              }));
+              const blendshapes = mapEmotionsToBlendshapes(emotionsArray);
+              setEmotionalBlendshapes(blendshapes);
+            }
+          }
+        });
+        
+        humeVoiceServiceRef.current.onAssistantEnd(() => {
+          console.log('[CoachSession] Assistant ended');
+          setIsSpeaking(false);
+          setCurrentAnimation('idle');
+          console.log('[CoachSession] Animation state set to: idle');
+        });
+        
+        humeVoiceServiceRef.current.onUserMessage((transcript: string) => {
+          console.log('[CoachSession] User message:', transcript);
+          setMessages(prev => [...prev, {
+            role: 'user',
+            content: transcript
+          }]);
+          setUserTranscript(transcript);
+        });
+        
+        humeVoiceServiceRef.current.onError((error: Error) => {
+          console.error('[CoachSession] Error:', error);
+          setError(error.message);
+        });
+        
+        console.log('[CoachSession] HybridVoiceService initialized successfully');
+      }
+    };
+    
+    initHybridVoiceService();
+  }, []);
+
+  // Handle connect
   const handleConnect = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Use coach-specific config ID if available, otherwise use default
-      const configId = coach.humeConfigId || process.env.REACT_APP_HUME_CONFIG_ID;
-      
-      console.log('[CoachSession] Connecting with:', {
-        coachName: coach.name,
-        configId: configId,
-        humeConfigIdFromCoach: coach.humeConfigId,
-        envGrace: process.env.REACT_APP_HUME_CONFIG_ID_GRACE,
-        envPosie: process.env.REACT_APP_HUME_CONFIG_ID_POSIE,
-        envRizzo: process.env.REACT_APP_HUME_CONFIG_ID_RIZZO,
-        hasApiKey: !!process.env.REACT_APP_HUME_API_KEY,
-        hasSecretKey: !!process.env.REACT_APP_HUME_SECRET_KEY
-      });
-      
-      await humeVoiceService.connect(configId);
-      
-      setIsConnected(true);
-      console.log('[CoachSession] Connected to Hume voice service with config:', configId);
-      
-      // The Hume config should automatically start with the greeting
-      // If you need to trigger it, you can send an empty message
-      // setTimeout(() => {
-      //   humeVoiceService.sendMessage("");
-      // }, 500);
-      
-    } catch (err: any) {
-      console.error('[CoachSession] Failed to connect:', {
-        error: err,
-        message: err?.message,
-        stack: err?.stack,
-        response: err?.response,
-        status: err?.status
-      });
-      setError(err.message || 'Failed to connect to voice service');
-      setIsConnected(false);
+      if (humeVoiceServiceRef.current) {
+        const configId = coach?.humeConfigId || process.env.REACT_APP_HUME_CONFIG_ID;
+        console.log('[CoachSession] Connecting to HybridVoiceService...');
+        humeVoiceServiceRef.current.connect(configId).then(() => {
+          console.log('[CoachSession] Connected to Hume');
+          setIsConnected(true);
+          setLoading(false);
+          
+          // TEMPORARY TEST: Force talking animation after 2 seconds to test lip sync
+          setTimeout(() => {
+            console.log('[CoachSession] TEST: Forcing talking animation state');
+            setCurrentAnimation('talking');
+            setIsSpeaking(true);
+            
+            // Reset after 5 seconds
+            setTimeout(() => {
+              console.log('[CoachSession] TEST: Resetting to idle animation state');
+              setCurrentAnimation('idle');
+              setIsSpeaking(false);
+            }, 5000);
+          }, 2000);
+        }).catch((error: any) => {
+          console.error('[CoachSession] Connection error:', error);
+          setError(error instanceof Error ? error.message : 'Failed to connect to coach');
+        });
+      }
+    } catch (err) {
+      console.error('[CoachSession] Connection error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to connect to coach');
     } finally {
       setLoading(false);
     }
   };
 
+  // Handle disconnect
   const handleDisconnect = async () => {
     try {
-      await humeVoiceService.disconnect();
-      setIsConnected(false);
-      setIsSpeaking(false);
-      setIsListening(false);
-    } catch (error) {
-      console.error('[CoachSession] Disconnect error:', error);
+      if (humeVoiceServiceRef.current) {
+        await humeVoiceServiceRef.current.disconnect();
+        setIsConnected(false);
+        setMessages([]);
+      }
+    } catch (err) {
+      console.error('[CoachSession] Disconnect error:', err);
     }
   };
 
-  const playAudioWithAnalysis = async (audioBlob: Blob) => {
-    try {
-      // Stop any currently playing audio
-      if (currentAudioRef.current) {
-        console.log('[CoachSession] Stopping previous audio');
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
+  // Play next audio from queue
+  const playNextAudioFromQueue = () => {
+    if (audioQueueRef.current.length === 0) {
+      isPlayingRef.current = false;
+      setIsSpeaking(false);
+      setCurrentAnimation('idle');
+      console.log('[CoachSession] Animation state set to: idle');
+      return;
+    }
+    
+    console.log('[CoachSession] Playing audio from queue, queue length:', audioQueueRef.current.length);
+    isPlayingRef.current = true;
+    const audioBlob = audioQueueRef.current.shift()!;
+    const audioUrl = URL.createObjectURL(audioBlob);
+    audioPlayerRef.current.src = audioUrl;
+    
+    // Setup audio analyzer for lip sync BEFORE playing
+    if (!audioSourceCreatedRef.current) {
+      try {
+        if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+          const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+          audioContextRef.current = new AudioContext({ sampleRate: 48000 });
+          console.log('[CoachSession] Created new AudioContext');
+        }
+        
+        if (audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume();
+          console.log('[CoachSession] Resumed AudioContext');
+        }
+        
+        const analyser = audioContextRef.current.createAnalyser();
+        analyser.fftSize = 256;
+        const source = audioContextRef.current.createMediaElementSource(audioPlayerRef.current);
+        source.connect(analyser);
+        analyser.connect(audioContextRef.current.destination);
+        
+        analyserRef.current = analyser;
+        audioSourceCreatedRef.current = true;
+        console.log('[CoachSession] Audio analyzer setup complete');
+      } catch (error) {
+        console.error('[CoachSession] Error setting up audio analyzer:', error);
       }
-      
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      currentAudioRef.current = audio;
-      
-      console.log('[CoachSession] Playing new audio blob, size:', audioBlob.size);
-      
-      audio.addEventListener('canplay', async () => {
+    }
+    
+    audioPlayerRef.current.play()
+      .then(() => {
+        console.log('[CoachSession] Audio playing successfully');
         setIsSpeaking(true);
-        await connectAudioToAnalyser(audio);
-      });
-      
-      audio.addEventListener('ended', () => {
-        console.log('[CoachSession] Audio ended');
+        setCurrentAnimation('talking');
+        console.log('[CoachSession] Animation state set to: talking');
+      })
+      .catch(e => {
+        console.error('[CoachSession] Error playing audio:', e);
+        isPlayingRef.current = false;
         setIsSpeaking(false);
-        setIsListening(true);
-        URL.revokeObjectURL(audioUrl);
-        if (currentAudioRef.current === audio) {
-          currentAudioRef.current = null;
-        }
+        setCurrentAnimation('idle');
+        console.log('[CoachSession] Animation state set to: idle');
+        setTimeout(() => playNextAudioFromQueue(), 100);
       });
-      
-      await audio.play();
-    } catch (error) {
-      console.error('[CoachSession] Error playing audio:', error);
+    
+    audioPlayerRef.current.onended = () => {
+      console.log('[CoachSession] Audio playback ended');
+      URL.revokeObjectURL(audioUrl);
+      isPlayingRef.current = false;
       setIsSpeaking(false);
-    }
-  };
-
-  const connectAudioToAnalyser = async (audio: HTMLAudioElement) => {
-    if (!audioContextRef.current || !analyserRef.current) return;
-    
-    // Resume audio context if suspended
-    if (audioContextRef.current.state === 'suspended') {
-      console.log('[CoachSession] Resuming audio context...');
-      await audioContextRef.current.resume();
-    }
-    
-    const source = audioContextRef.current.createMediaElementSource(audio);
-    source.connect(analyserRef.current);
-    analyserRef.current.connect(audioContextRef.current.destination);
-    
-    console.log('[CoachSession] Audio connected:', {
-      contextState: audioContextRef.current.state,
-      analyserConnected: !!analyserRef.current,
-      sourceConnected: !!source
-    });
-    
-    const updateAudioData = () => {
-      if (!analyserRef.current) return;
-      
-      const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-      analyserRef.current.getByteFrequencyData(dataArray);
-      
-      // Debug: Check if we're getting audio data
-      const avgVolume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-      if (avgVolume > 0) {
-        console.log('[CoachSession] Audio data:', { avgVolume, isSpeaking, dataLength: dataArray.length });
-      }
-      
-      setAudioData(dataArray);
-      
-      // Convert audio volume to mouth animation
-      const normalizedVolume = Math.min(avgVolume / 128, 1); // Normalize to 0-1
-      const jawOpen = normalizedVolume * 0.3; // Scale to reasonable jaw movement
-      setFaceTrackingData({
-        facialExpressions: {
-          jawOpen: jawOpen,
-          mouthOpen: jawOpen * 0.8
-        }
-      });
-      
-      if (isSpeaking) {
-        animationFrameRef.current = requestAnimationFrame(updateAudioData);
-      }
+      setCurrentAnimation('idle');
+      console.log('[CoachSession] Animation state set to: idle');
+      // Play next audio if available
+      setTimeout(() => playNextAudioFromQueue(), 100);
     };
-    
-    updateAudioData();
   };
 
-  const sendMessage = async (message: string) => {
-    if (!message.trim() || !isConnected) return;
+  // Audio analysis for lip sync
+  useEffect(() => {
+    if (!isSpeaking || !analyserRef.current) {
+      setAudioData(new Uint8Array());
+      return;
+    }
+
+    console.log('[CoachSession] Starting audio analysis for lip sync');
+    const analyser = analyserRef.current;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    let animationId: number;
+    let lastLogTime = 0;
+
+    const updateAudioData = () => {
+      analyser.getByteFrequencyData(dataArray);
+      setAudioData(new Uint8Array(dataArray)); // Create a copy to trigger re-render
+      
+      // Log audio levels periodically for debugging
+      const now = Date.now();
+      if (now - lastLogTime > 1000) {
+        const avgLevel = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length;
+        console.log('[CoachSession] Audio analysis - Avg level:', avgLevel.toFixed(2), 'Max:', Math.max(...dataArray));
+        lastLogTime = now;
+      }
+      
+      animationId = requestAnimationFrame(updateAudioData);
+    };
+
+    updateAudioData();
+
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+      console.log('[CoachSession] Stopping audio analysis for lip sync');
+      setAudioData(new Uint8Array()); // Clear audio data when not speaking
+    };
+  }, [isSpeaking]);
+
+  // Handle send message
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || !isConnected) return;
     
     try {
-      setUserTranscript(message);
-      humeVoiceService.sendMessage(message);
-    } catch (error) {
-      console.error('[CoachSession] Error sending message:', error);
+      if (humeVoiceServiceRef.current) {
+        await humeVoiceServiceRef.current.sendMessage(text);
+      }
+    } catch (err) {
+      console.error('Failed to send message:', err);
     }
   };
-
-  if (!coach) {
-    return null;
-  }
 
   return (
     <div className="coach-session">
+      <MediaDebug />
       <div className="coach-header">
-        <button className="back-button" onClick={() => navigate('/training-hub')}>
-          ← Back to Training Hub
+        <h1>Coach Session: {coach?.name || 'Unknown Coach'}</h1>
+        <button onClick={() => navigate('/coaches')} className="back-button">
+          Back to Coaches
         </button>
-        <h1>Session with {coach.name}</h1>
-        <div className="connection-status">
-          {isConnected ? (
-            <span className="status-connected">● Connected</span>
-          ) : (
-            <span className="status-disconnected">● Disconnected</span>
-          )}
-        </div>
       </div>
 
-      <div className="coach-content">
-        <div className="coach-avatar-scene" style={{
-          backgroundImage: coach.venue ? `url(/venues/${coach.venue})` : undefined,
+      <div className="session-container">
+        <div className="coach-avatar-scene" style={{ 
+          backgroundColor: '#1a1a1a',
+          backgroundImage: coach?.venue ? `url(/Venues/${coach.venue})` : 'none',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          position: 'relative',
-          zIndex: 1
+          backgroundRepeat: 'no-repeat'
         }}>
-          <Canvas shadows camera={{ position: [0, 0, 2.5], fov: 35 }}>
-            <ambientLight intensity={0.8} />
-            <directionalLight position={[0, 1, 2]} intensity={1.2} />
-            
-            <Suspense fallback={null}>
-              <PresenceAvatar
-                avatarUrl={coach.avatar}
-                animationName={isSpeaking ? 'talking' : 'idle'}
-                position={[0, -1.4, 0]}
-                scale={1.0}
-                audioData={isSpeaking ? audioData : undefined}
-              />
-            </Suspense>
-          </Canvas>
-        </div>
-
-        <div className="coach-interaction">
-          {!isConnected ? (
-            <div className="connection-panel">
-              <h2>Ready to start your session?</h2>
-              <p>{coach.description}</p>
-              <button 
-                className="connect-button"
-                onClick={handleConnect}
-                disabled={loading}
-              >
-                {loading ? 'Connecting...' : 'Start Session'}
-              </button>
-              {error && <div className="error-message">{error}</div>}
-            </div>
-          ) : (
-            <div className="conversation-panel">
-              <div className="coach-message">
-                <h3>{coach.name} says:</h3>
-                <p>{coachMessage || "..."}</p>
-              </div>
-              
-              <div className="emotion-display">
-                <h4>Emotional Analysis</h4>
-                <div className="emotion-bars">
-                  {Object.entries(currentEmotion).map(([emotion, value]) => (
-                    <div key={emotion} className="emotion-bar">
-                      <span className="emotion-label">{emotion}</span>
-                      <div className="emotion-progress">
-                        <div 
-                          className="emotion-fill"
-                          style={{ width: `${(value || 0) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="user-input">
-                <h4>Your response:</h4>
-                <p>{userTranscript || (isListening ? "Listening..." : "...")}</p>
-              </div>
-
-              <div className="manual-input" style={{ marginTop: '20px' }}>
-                <input
-                  type="text"
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      sendMessage(messageInput);
-                      setMessageInput('');
-                    }
-                  }}
-                  placeholder="Type a message and press Enter"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '5px',
-                    border: '1px solid #ccc',
-                    marginBottom: '10px'
-                  }}
+          {isConnected && (
+            <Canvas camera={{ position: [0, 0.8, 3], fov: 35 }}>
+              <ambientLight intensity={0.8} />
+              <directionalLight position={[0, 1, 2]} intensity={1.2} />
+              <Suspense fallback={null}>
+                <PresenceAvatar
+                  avatarUrl={coach?.avatar || '/avatars/coach_grace.glb'}
+                  position={[0, -1.8, 0]}
+                  scale={1.3}
+                  animationName={currentAnimation}
+                  emotionalBlendshapes={emotionalBlendshapes}
+                  audioData={audioData}
                 />
-                <button 
-                  onClick={() => {
-                    sendMessage(messageInput);
-                    setMessageInput('');
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#4CAF50',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '5px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Send Message
-                </button>
-              </div>
-
-              <div className="session-controls">
-                <button 
-                  className="end-session-button"
-                  onClick={handleDisconnect}
-                >
-                  End Session
-                </button>
-              </div>
+              </Suspense>
+            </Canvas>
+          )}
+          {!isConnected && coach && (
+            <div className="coach-preview" style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              color: 'white',
+              textAlign: 'center',
+              padding: '2rem'
+            }}>
+              <h2>{coach.name}</h2>
+              <p>{coach.description}</p>
+              <p style={{ marginTop: '2rem', opacity: 0.8 }}>
+                Click "Start Coach Session" to begin
+              </p>
             </div>
           )}
         </div>
+        
+        {/* Debug indicator for speaking state */}
+        {process.env.NODE_ENV === 'development' && (
+          <div style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            padding: '5px 10px',
+            backgroundColor: isSpeaking ? '#4CAF50' : '#666',
+            color: 'white',
+            borderRadius: '5px',
+            fontSize: '12px',
+            zIndex: 1000
+          }}>
+            {isSpeaking ? '🎤 Speaking' : '🔇 Silent'}
+          </div>
+        )}
+
+        <div className="session-controls">
+          {!isConnected ? (
+            <button 
+              onClick={handleConnect}
+              disabled={!hasPermissions || loading}
+              className="control-button start-button"
+            >
+              {loading ? 'Connecting...' : 'Start Coach Session'}
+            </button>
+          ) : (
+            <button 
+              onClick={handleDisconnect}
+              className="control-button end-button"
+            >
+              End Session (Stop Billing)
+            </button>
+          )}
+          <div className="connection-status">
+            Status: {isConnected ? '🟢 Connected (Using API Credits)' : '⚫ Disconnected'}
+          </div>
+        </div>
       </div>
-      
-      {/* User Avatar PiP - Render outside main content for proper z-index */}
-      {isConnected && (
+
+      {/* PiP Avatar with face tracking */}
+      {hasPermissions && cameraStream && (
         <UserAvatarPiP 
           avatarUrl="/avatars/user_avatar.glb"
           position="bottom-right"
           size="medium"
           trackingData={faceTrackingData}
+          enableOwnTracking={true}
+          cameraStream={cameraStream}
         />
       )}
     </div>

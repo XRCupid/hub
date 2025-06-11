@@ -129,7 +129,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
 }) => {
   // Determine if this is a coach avatar
   const isCoachAvatar = trackingData === undefined;
-  const avatarType = isCoachAvatar ? 'COACH' : 'USER';
+  const avatarType = isCoachAvatar ? 'coach' : 'user';
   
   // Debug: Add unique instance tracking
   const instanceIdRef = useRef(Math.random().toString(36).substr(2, 9));
@@ -615,19 +615,138 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
     const expressionLerpFactor = 0.7; // Increased for near 1:1 responsiveness
     const hasEmotionalBlendshapes = emotionalBlendshapes && Object.keys(emotionalBlendshapes).length > 0;
     
-    // Determine if this is a coach avatar
-    const avatarType = animationName === 'talking' ? 'coach' : 'user';
+    // Determine avatar type based on whether tracking data exists
+    const avatarType = trackingData === undefined ? 'coach' : 'user';
     const isCoachAvatar = avatarType === 'coach';
     
-    // Skip morph target processing for coach avatars
-    if (isCoachAvatar) {
-      // Only do subtle idle head movement for coach
-      if (headBone.current) {
-        const time = Date.now() * 0.001;
-        const idleNod = Math.sin(time * 0.5) * 0.02;
-        headBone.current.rotation.x = lerp(headBone.current.rotation.x, idleNod, 0.1);
+    // Lip Sync Override (if talking and audioData is present) - APPLY FIRST
+    if (frameCountRef.current % 30 === 0) {
+      console.log('[PresenceAvatar] Lip sync check:', {
+        animationName,
+        hasMorphTargetDictionary: !!mesh.morphTargetDictionary,
+        morphTargetKeys: mesh.morphTargetDictionary ? Object.keys(mesh.morphTargetDictionary).slice(0, 10) : [],
+        hasAudioData: !!audioData && audioData.length > 0,
+        isCoachAvatar,
+        meshType: mesh.type,
+        meshName: mesh.name
+      });
+    }
+    
+    if (animationName === 'talking' && audioData && audioData.length > 0 && mesh.morphTargetDictionary) {
+      // TEST MODE: Force lip sync movement when talking
+      const testMode = false; // Disable test mode now that we know it works!
+      
+      if (testMode && isCoachAvatar) {
+        // Generate a sine wave for testing mouth movement
+        const time = Date.now() / 1000;
+        const testValue = (Math.sin(time * 5) + 1) * 0.5; // 0 to 1 oscillating value
+        
+        console.log('[PresenceAvatar] TEST MODE - Forcing lip sync:', testValue);
+        
+        // Try to apply to ALL possible mouth/jaw targets
+        const allMouthTargets = [
+          'jawOpen', 'mouthOpen', 'viseme_aa', 'viseme_O', 'mouthSmileLeft', 'mouthSmileRight', 'mouthLeft', 'mouthRight', 
+          'mouthPucker', 'mouthFunnel', 'mouthDimpleLeft', 'mouthDimpleRight',
+          'mouthStretchLeft', 'mouthStretchRight', 'mouthRollLower', 'mouthRollUpper',
+          'mouthShrugLower', 'mouthShrugUpper', 'mouthPressLeft', 'mouthPressRight',
+          'mouthLowerDownLeft', 'mouthLowerDownRight', 'mouthUpperUpLeft', 'mouthUpperUpRight'
+        ];
+        
+        let foundAnyTarget = false;
+        allMouthTargets.forEach(target => {
+          if (mesh.morphTargetDictionary && mesh.morphTargetDictionary[target] !== undefined) {
+            const morphIndex = mesh.morphTargetDictionary[target];
+            if (mesh.morphTargetInfluences && morphIndex !== undefined) {
+              mesh.morphTargetInfluences[morphIndex] = testValue;
+              foundAnyTarget = true;
+              if (frameCountRef.current % 30 === 0) { // Log less frequently
+                console.log(`[PresenceAvatar] TEST MODE - Applied to ${target}:`, testValue);
+              }
+            }
+          }
+        });
+        
+        if (!foundAnyTarget && frameCountRef.current % 60 === 0) {
+          console.error('[PresenceAvatar] TEST MODE - No mouth morph targets found! Available targets:', 
+            Object.keys(mesh.morphTargetDictionary || {}));
+        }
+        
+        return; // Skip normal lip sync processing in test mode
       }
-      return; // Exit early - no morph target processing
+      
+      // Normal lip sync processing
+      let totalEnergy = 0;
+      const relevantBins = Math.min(64, audioData.length); // Increased to 64 for even wider range
+      let maxEnergy = 0;
+      
+      for (let i = 0; i < relevantBins; i++) {
+        // Weight speech frequencies more heavily (100-1000 Hz range typically bins 2-20)
+        let weight = 1.0;
+        if (i >= 2 && i <= 20) {
+          weight = 2.0; // Double weight for speech frequencies
+        }
+        const binEnergy = audioData[i] * weight;
+        totalEnergy += binEnergy;
+        maxEnergy = Math.max(maxEnergy, audioData[i]);
+      }
+      
+      // Use both average and peak energy for more responsive lip sync
+      const averageEnergy = relevantBins > 0 ? totalEnergy / relevantBins / 255 : 0;
+      const peakEnergy = maxEnergy / 255;
+      const combinedEnergy = Math.max(averageEnergy, peakEnergy * 0.7); // Use whichever is higher
+      
+      // Try multiple possible jaw/mouth morph targets
+      const possibleJawTargets = ['jawOpen', 'mouthOpen', 'viseme_aa', 'viseme_O'];
+      let jawTargetFound = false;
+      
+      for (const target of possibleJawTargets) {
+        if (mesh.morphTargetDictionary && mesh.morphTargetDictionary[target] !== undefined) {
+          // Reduced multiplier for more natural mouth movement
+          const lipSyncValue = MathUtils.clamp(combinedEnergy * 2.0, 0, 0.4); // Reduced from 10.0 to 2.0, max 0.4
+          
+          // Force set the value directly to ensure it's not overridden
+          const morphIndex = mesh.morphTargetDictionary[target];
+          if (mesh.morphTargetInfluences && morphIndex !== undefined) {
+            mesh.morphTargetInfluences[morphIndex] = lipSyncValue;
+          }
+          
+          // Also apply to related mouth shapes for more visible effect
+          if (target === 'jawOpen' || target === 'mouthOpen') {
+            // Apply to other mouth-related morph targets if they exist
+            const relatedTargets = ['mouthSmileLeft', 'mouthSmileRight', 'mouthLeft', 'mouthRight', 'mouthPucker', 'mouthFunnel', 'mouthDimpleLeft', 'mouthDimpleRight'];
+            relatedTargets.forEach(related => {
+              if (mesh.morphTargetDictionary && mesh.morphTargetDictionary[related] !== undefined) {
+                const relatedIndex = mesh.morphTargetDictionary[related];
+                if (mesh.morphTargetInfluences) {
+                  mesh.morphTargetInfluences[relatedIndex] = lipSyncValue * 0.3; // Reduced from 0.7 to 0.3
+                }
+              }
+            });
+          }
+          
+          // Debug lip sync every 30 frames - ALWAYS log when talking
+          if (frameCountRef.current % 30 === 0) {
+            console.log('[PresenceAvatar] Lip sync applied:', { 
+              target, 
+              averageEnergy, 
+              peakEnergy,
+              combinedEnergy,
+              lipSyncValue,
+              morphIndex,
+              totalEnergy,
+              maxEnergy,
+              audioDataLength: audioData.length,
+              audioDataSample: Array.from(audioData.slice(0, 10))
+            });
+          }
+          jawTargetFound = true;
+          break; // Use the first available target
+        }
+      }
+      
+      if (!jawTargetFound) {
+        console.warn('[PresenceAvatar] No jaw/mouth morph target found! Available targets:', Object.keys(mesh.morphTargetDictionary || {}));
+      }
     }
     
     // Determine the source of expressions: Hume EVI or ML5 tracking data
@@ -667,37 +786,20 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       }
     }
 
-    // Lip Sync Override (if talking and audioData is present)
-    if (animationName === 'talking' && audioData && audioData.length > 0 && mesh.morphTargetDictionary) {
-      // Debug: Log morph targets once
-      if (!morphTargetsLoggedRef.current) {
-        console.log('[PresenceAvatar] Available morph targets:', Object.keys(mesh.morphTargetDictionary));
-        morphTargetsLoggedRef.current = true;
-      }
-      
-      let totalEnergy = 0;
-      const relevantBins = Math.min(16, audioData.length); // Use first 16 bins
-      for (let i = 0; i < relevantBins; i++) {
-        totalEnergy += audioData[i];
-      }
-      const averageEnergy = relevantBins > 0 ? totalEnergy / relevantBins / 255 : 0; // Normalize 0-1
-      
-      const jawOpenTargetRpm = HUME_TO_RPM_MAPPING['jawOpen']?.target || 'jawOpen'; 
-      const lipSyncJawOpenValue = MathUtils.clamp(averageEnergy * 0.4, 0, 0.25); // Further reduced: 0.4x multiplier, max 0.25
-
-      // Debug lip sync
-      if (lipSyncJawOpenValue > 0) {
-        console.log('[PresenceAvatar] Lip sync:', { averageEnergy, lipSyncJawOpenValue, jawOpenTargetRpm });
-      }
-
-      frameMorphTargetValues[jawOpenTargetRpm] = lipSyncJawOpenValue;
-    }
-
     // Apply the final frameMorphTargetValues to the actual morph targets with smoothing
     if (mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
+      // Track which morph targets were set by lip sync to avoid overriding them
+      const lipSyncTargets = ['jawOpen', 'mouthOpen', 'viseme_aa', 'viseme_O', 'mouthSmileLeft', 'mouthSmileRight', 'mouthLeft', 'mouthRight', 'mouthPucker'];
+      
       Object.keys(mesh.morphTargetDictionary).forEach(rpmTargetName => {
         const morphIndex = mesh.morphTargetDictionary![rpmTargetName];
         if (morphIndex !== undefined) {
+          // Skip smoothing for lip sync targets when talking
+          if (animationName === 'talking' && lipSyncTargets.includes(rpmTargetName)) {
+            // Lip sync values are already set directly, don't override them
+            return;
+          }
+          
           const targetValue = frameMorphTargetValues[rpmTargetName] || 0;
           const currentValue = mesh.morphTargetInfluences![morphIndex] !== undefined ? mesh.morphTargetInfluences![morphIndex] : 0;
           
