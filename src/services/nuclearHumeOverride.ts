@@ -2,8 +2,6 @@
 // This file ensures YOUR Hume credentials are used EVERYWHERE
 // No environment variables, no URL params, no localStorage - JUST YOUR CREDENTIALS
 
-import { HARDCODED_HUME } from './simpleHumeOverride';
-
 interface NuclearCredentials {
   apiKey: string;
   secretKey: string;
@@ -14,7 +12,15 @@ interface NuclearCredentials {
   dougieConfigId: string;
 }
 
-const YOUR_CREDENTIALS: NuclearCredentials = HARDCODED_HUME;
+const YOUR_CREDENTIALS: NuclearCredentials = {
+  apiKey: 'm3KaINwHsH55rJNO6zr2kIEAWvOimYeLTon3OriOXWJeCxCl',
+  secretKey: 'IWtKuDbybQZLI0qWWPJn2M1iW3wrKGiQhmoQcTvIGJD2iBhDG3eRD35969FzcjNT',
+  configId: 'bfd6db39-f0ea-46c3-a64b-e902d8cec212', // Grace default
+  graceConfigId: 'bfd6db39-f0ea-46c3-a64b-e902d8cec212',
+  posieConfigId: 'dbf8debd-6835-489f-a7c3-a38fde6bb859',
+  rizzoConfigId: '0643bb10-61b5-43a8-ae1d-eb0051afc0a8',
+  dougieConfigId: '320d816a-8dac-44e6-b59b-1c3d2b6b24d9'
+};
 
 class NuclearHumeOverride {
   private static instance: NuclearHumeOverride;
