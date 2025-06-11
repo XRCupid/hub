@@ -7,8 +7,9 @@ import WebSocket from 'ws';
 dotenv.config({ path: '.env.local' });
 
 async function getAccessToken(): Promise<string> {
-  const apiKey = process.env.REACT_APP_HUME_API_KEY || process.env.REACT_APP_HUME_CLIENT_ID;
-  const secretKey = process.env.REACT_APP_HUME_SECRET_KEY || process.env.REACT_APP_HUME_CLIENT_SECRET;
+  // HARDCODED CREDENTIALS
+  const apiKey = 'm3KaINwHsH55rJNO6zr2kIEAWvOimYeLTon3OriOXWJeCxCl';
+  const secretKey = 'IWtKuDbybQZLI0qWWPJn2M1iW3wrKGiQhmoQcTvIGJD2iBhDG3eRD35969FzcjNT';
   
   console.log('API Key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND');
   console.log('Secret Key:', secretKey ? 'FOUND' : 'NOT FOUND');
@@ -43,13 +44,9 @@ async function getAccessToken(): Promise<string> {
 async function testWebSocketConnection() {
   try {
     const accessToken = await getAccessToken();
-    const configId = process.env.REACT_APP_HUME_CONFIG_ID;
-    
-    console.log('Config ID:', configId || 'NOT FOUND');
-    
-    if (!configId) {
-      throw new Error('Config ID not configured');
-    }
+    // Connect to Hume
+    const configId = 'bfd6db39-f0ea-46c3-a64b-e902d8cec212'; // HARDCODED Grace config
+    console.log('Using config ID:', configId);
     
     const wsUrl = `wss://api.hume.ai/v0/evi/chat?config_id=${configId}&access_token=${accessToken}`;
     console.log('Connecting to WebSocket...');

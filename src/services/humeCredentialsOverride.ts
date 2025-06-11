@@ -108,7 +108,63 @@ export const humeCredentialsManager = HumeCredentialsManager.getInstance();
 
 // Export helper function for easy access
 export function getHumeCredentials(): HumeCredentials {
-  return humeCredentialsManager.getCredentials();
+  // HARDCODED CREDENTIALS - ULTIMATE FALLBACK
+  const HARDCODED_CREDENTIALS = {
+    apiKey: 'm3KaINwHsH55rJNO6zr2kIEAWvOimYeLTon3OriOXWJeCxCl',
+    secretKey: 'IWtKuDbybQZLI0qWWPJn2M1iW3wrKGiQhmoQcTvIGJD2iBhDG3eRD35969FzcjNT',
+    configId: 'bfd6db39-f0ea-46c3-a64b-e902d8cec212'
+  };
+
+  // Check URL parameters first
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlApiKey = urlParams.get('hume_api');
+  const urlSecretKey = urlParams.get('hume_secret');
+  const urlConfigId = urlParams.get('hume_config');
+  
+  if (urlApiKey && urlSecretKey) {
+    console.log('[HumeCredentials] Using URL override credentials');
+    return {
+      apiKey: urlApiKey,
+      secretKey: urlSecretKey,
+      configId: urlConfigId || process.env.REACT_APP_HUME_CONFIG_ID || HARDCODED_CREDENTIALS.configId
+    };
+  }
+  
+  // Method 2: Check session storage (persists for browser session)
+  const sessionOverride = sessionStorage.getItem('hume_override');
+  if (sessionOverride) {
+    try {
+      const sessionCredentials = JSON.parse(sessionOverride);
+      console.log('[HumeCredentials] Using session override credentials');
+      return sessionCredentials;
+    } catch (e) {
+      console.error('[HumeCredentials] Failed to parse session override');
+    }
+  }
+  
+  // Method 3: Check local storage (persists across sessions)
+  const localOverride = localStorage.getItem('hume_credentials');
+  if (localOverride) {
+    try {
+      const localCredentials = JSON.parse(localOverride);
+      console.log('[HumeCredentials] Using local storage credentials');
+      return localCredentials;
+    } catch (e) {
+      console.error('[HumeCredentials] Failed to parse local storage');
+    }
+  }
+  
+  // If no override found, use environment variables
+  const apiKey = process.env.REACT_APP_HUME_API_KEY || HARDCODED_CREDENTIALS.apiKey;
+  const secretKey = process.env.REACT_APP_HUME_SECRET_KEY || HARDCODED_CREDENTIALS.secretKey;
+  const configId = process.env.REACT_APP_HUME_CONFIG_ID || HARDCODED_CREDENTIALS.configId;
+  
+  // ALWAYS return valid credentials
+  return {
+    apiKey: apiKey || HARDCODED_CREDENTIALS.apiKey,
+    secretKey: secretKey || HARDCODED_CREDENTIALS.secretKey,
+    configId: configId || HARDCODED_CREDENTIALS.configId
+  };
 }
 
 // Export function to set credentials at runtime

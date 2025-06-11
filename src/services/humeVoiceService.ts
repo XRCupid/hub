@@ -1,5 +1,6 @@
 import { HumeClient, convertBase64ToBlob, getAudioStream, ensureSingleValidAudioTrack, getBrowserSupportedMimeType, MimeType } from 'hume';
 import { getHumeCredentials } from './humeCredentialsOverride';
+import { getNuclearCredentials } from './nuclearHumeOverride';
 
 // Re-declare base64ToBlob utility if not available from 'hume'
 // (Originally from '@humeai/voice')
@@ -117,18 +118,31 @@ export class HumeVoiceService {
   }
 
   async connect(configId?: string): Promise<void> {
-    console.log('[HumeVoiceService] Connect called with configId:', configId);
-    
-    // CRITICAL: Prevent multiple connections
-    if (this.client) {
-      console.warn('[HumeVoiceService] Already connected! Disconnecting first to prevent connection leak.');
-      await this.disconnect();
-    }
-    
-    // Store the config ID
-    this.currentConfigId = configId;
+    console.log('[HumeVoiceService] 🔌 Starting connection...');
     
     try {
+      // NUCLEAR OVERRIDE - YOUR CREDENTIALS ONLY
+      let credentials;
+      try {
+        credentials = getNuclearCredentials();
+        console.log('[HumeVoiceService] 🚨 USING NUCLEAR OVERRIDE CREDENTIALS');
+      } catch (e) {
+        // Fallback to original override system
+        credentials = getHumeCredentials();
+        console.log('[HumeVoiceService] ⚠️ Nuclear override failed, using standard override');
+      }
+      
+      const { apiKey, secretKey, configId: overrideConfigId } = credentials;
+      
+      // CRITICAL: Prevent multiple connections
+      if (this.client) {
+        console.warn('[HumeVoiceService] Already connected! Disconnecting first to prevent connection leak.');
+        await this.disconnect();
+      }
+      
+      // Store the config ID
+      this.currentConfigId = configId || overrideConfigId;
+      
       console.log('[HumeVoiceService] Connect method called');
       
       // Safety check: Prevent multiple simultaneous connections
@@ -162,43 +176,33 @@ export class HumeVoiceService {
       HumeVoiceService.connectionCount++;
       console.log(`[HumeVoiceService] 📊 Connection attempt #${HumeVoiceService.connectionCount} (Session total)`);
       
-      const configToUse = configId || process.env.REACT_APP_HUME_CONFIG_ID || '';
+      const configToUse = this.currentConfigId || process.env.REACT_APP_HUME_CONFIG_ID || '';
       this.currentConfigId = configToUse; // Store for reconnect
       
       console.log('[HumeVoiceService] Using config ID:', configToUse);
       
-      // Get credentials from override system
-      const credentials = getHumeCredentials();
-      
       // Validate credentials
-      const apiKey = credentials.apiKey;
-      const secretKey = credentials.secretKey;
+      const apiKey = apiKey;
+      const secretKey = secretKey;
       
       // Check if API keys are available
       if (!apiKey || !secretKey) {
-        const error = new Error('Hume API credentials not configured. Please check console for override instructions.');
-        console.error('[HumeVoiceService]', error.message);
-        console.error('[HumeVoiceService] Use window.humeCredentials.set("api_key", "secret_key") to set credentials');
-        if (this.onErrorCallback) {
-          this.onErrorCallback(error);
-        }
-        throw error;
+        // HARDCODE AS FINAL FALLBACK
+        const HARDCODED_API_KEY = 'm3KaINwHsH55rJNO6zr2kIEAWvOimYeLTon3OriOXWJeCxCl';
+        const HARDCODED_SECRET_KEY = 'IWtKuDbybQZLI0qWWPJn2M1iW3wrKGiQhmoQcTvIGJD2iBhDG3eRD35969FzcjNT';
+        
+        console.error('[HumeVoiceService] ❌ No API keys found! Using hardcoded fallback');
+        this.client = new HumeClient({
+          apiKey: HARDCODED_API_KEY,
+          secretKey: HARDCODED_SECRET_KEY
+        });
+      } else {
+        // Create Hume client with credentials
+        this.client = new HumeClient({
+          apiKey: apiKey,
+          secretKey: secretKey
+        });
       }
-      
-      // Debug: Show partial credentials being used
-      console.log('[HumeVoiceService] Using credentials:', {
-        apiKeyPrefix: apiKey?.substring(0, 10) + '...',
-        apiKeyLength: apiKey?.length,
-        secretKeyPrefix: secretKey?.substring(0, 10) + '...',
-        secretKeyLength: secretKey?.length,
-        source: credentials.apiKey === process.env.REACT_APP_HUME_API_KEY ? 'environment' : 'override'
-      });
-      
-      // Initialize client with API key
-      this.client = new HumeClient({
-        apiKey,
-        secretKey
-      });
       
       console.log('[HumeVoiceService] Client initialized:', {
         hasClient: !!this.client,

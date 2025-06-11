@@ -73,19 +73,15 @@ export class CombinedFaceTrackingService {
     // CRITICAL: Reset jawOpen to prevent stuck mouth
     console.log('[CombinedFaceTracking] Initialized with jawOpen=0');
     
-    // Auto-load Hume API key from environment
-    const humeApiKey = process.env.REACT_APP_HUME_API_KEY;
-    // TEMPORARILY DISABLE HUME DUE TO API ERRORS
-    this.useHume = false;
-    /*
+    // Initialize Hume if API key is available
+    const humeApiKey = 'm3KaINwHsH55rJNO6zr2kIEAWvOimYeLTon3OriOXWJeCxCl'; // HARDCODED
     if (humeApiKey) {
       console.log('[CombinedFaceTracking] Found Hume API key in environment');
       this.setHumeApiKey(humeApiKey);
     } else {
       console.log('[CombinedFaceTracking] No Hume API key found, using ML5 only');
     }
-    */
-    console.log('[CombinedFaceTracking] Hume disabled, using ML5 only');
+    console.log('[CombinedFaceTracking] Hume enabled, using ML5 and Hume');
   }
   
   async initialize() {

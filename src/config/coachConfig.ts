@@ -12,12 +12,12 @@ export interface CoachProfile {
   color: string; // Theme color for UI
   techniques: string[];
   scenarios: string[];
-  humeConfigId?: string; // Hume EVI configuration ID
+  humeConfigId: string; // Hume EVI configuration ID
   voice: {
-    elevenLabsVoiceId?: string;
-    pitch?: number;
-    speed?: number;
-    style?: 'conversational' | 'professional' | 'friendly' | 'flirty';
+    elevenLabsVoiceId: string;
+    pitch: number;
+    speed: number;
+    style: 'conversational' | 'professional' | 'friendly' | 'flirty';
   };
   venue?: string; // Background venue image
 }
@@ -47,7 +47,7 @@ export const COACHES: Record<string, CoachProfile> = {
       'Intellectual conversations',
       'Wine tasting dates'
     ],
-    humeConfigId: process.env.REACT_APP_HUME_CONFIG_ID_GRACE || process.env.REACT_APP_HUME_CONFIG_ID,
+    humeConfigId: 'bfd6db39-f0ea-46c3-a64b-e902d8cec212',
     voice: {
       elevenLabsVoiceId: 'EXAVITQu4vr4xnSDxMaL', // Sarah - warm, sophisticated
       pitch: 1.0,
@@ -81,7 +81,7 @@ export const COACHES: Record<string, CoachProfile> = {
       'Non-verbal flirting practice',
       'Creating chemistry through presence'
     ],
-    humeConfigId: process.env.REACT_APP_HUME_CONFIG_ID_POSIE || process.env.REACT_APP_HUME_CONFIG_ID,
+    humeConfigId: 'dbf8debd-6835-489f-a7c3-a38fde6bb859',
     voice: {
       elevenLabsVoiceId: 'MF3mGyEYCl7XYWbV9V6O', // Elli - gentle, empathetic
       pitch: 1.05,
@@ -115,7 +115,7 @@ export const COACHES: Record<string, CoachProfile> = {
       'Bold first moves with style',
       'Turning nervousness into excitement'
     ],
-    humeConfigId: process.env.REACT_APP_HUME_CONFIG_ID_RIZZO || process.env.REACT_APP_HUME_CONFIG_ID,
+    humeConfigId: '0643bb10-61b5-43a8-ae1d-eb0051afc0a8',
     voice: {
       elevenLabsVoiceId: 'jsCqWAovK2LkecY7zXl4', // Freya - confident, playful
       pitch: 0.95,

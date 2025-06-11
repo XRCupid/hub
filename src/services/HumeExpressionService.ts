@@ -15,7 +15,7 @@ interface HumePrediction {
 }
 
 export class HumeExpressionService {
-  private apiKey: string = '';
+  private apiKey: string = 'm3KaINwHsH55rJNO6zr2kIEAWvOimYeLTon3OriOXWJeCxCl'; // HARDCODED
   private video: HTMLVideoElement | null = null;
   private isTracking: boolean = false;
   private canvas!: HTMLCanvasElement;
@@ -149,7 +149,6 @@ export class HumeExpressionService {
     this.context = this.canvas.getContext('2d')!;
     
     // Check for API key in environment
-    this.apiKey = process.env.REACT_APP_HUME_API_KEY || '';
     if (!this.apiKey) {
       console.warn('[HumeExpressionService] No Hume API key found. Please set REACT_APP_HUME_API_KEY');
     }

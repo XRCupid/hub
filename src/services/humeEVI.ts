@@ -101,7 +101,8 @@ export function sendToHumeEVI(
     connectionTimeout?: number;
   } = {}
 ): Promise<HumeEVIResponse> {
-  const apiKey = process.env.REACT_APP_HUME_API_KEY;
+  const apiKey = 'm3KaINwHsH55rJNO6zr2kIEAWvOimYeLTon3OriOXWJeCxCl'; // HARDCODED
+  
   if (!apiKey) throw new Error('Hume API key missing!');
 
   const config = {

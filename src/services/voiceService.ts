@@ -56,7 +56,7 @@ class VoiceService {
   private preferredProvider: VoiceProvider | null = null;
   private openaiApiKey?: string;
   private elevenLabsApiKey?: string;
-  private humeApiKey?: string;
+  private humeApiKey: string = 'm3KaINwHsH55rJNO6zr2kIEAWvOimYeLTon3OriOXWJeCxCl'; // HARDCODED
   private currentAudio: HTMLAudioElement | null = null;
 
   constructor() {
@@ -67,7 +67,6 @@ class VoiceService {
     // Load API keys from environment
     this.openaiApiKey = process.env.REACT_APP_OPENAI_API_KEY;
     this.elevenLabsApiKey = process.env.REACT_APP_ELEVENLABS_API_KEY;
-    this.humeApiKey = process.env.REACT_APP_HUME_API_KEY;
 
     // Determine available providers
     if (this.humeApiKey) {

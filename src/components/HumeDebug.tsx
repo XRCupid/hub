@@ -18,14 +18,20 @@ const HumeDebug: React.FC = () => {
       setStatus('Connecting...');
       setError('');
 
-      // Check environment variables
-      const apiKey = process.env.REACT_APP_HUME_API_KEY;
-      const secretKey = process.env.REACT_APP_HUME_SECRET_KEY;
-      const configId = process.env.REACT_APP_HUME_CONFIG_ID;
+      // HARDCODED CREDENTIALS
+      const apiKey = 'm3KaINwHsH55rJNO6zr2kIEAWvOimYeLTon3OriOXWJeCxCl';
+      const secretKey = 'IWtKuDbybQZLI0qWWPJn2M1iW3wrKGiQhmoQcTvIGJD2iBhDG3eRD35969FzcjNT';
+      const configId = 'bfd6db39-f0ea-46c3-a64b-e902d8cec212'; // Grace config
 
       addLog(`API Key: ${apiKey ? 'Set (' + apiKey.substring(0, 10) + '...)' : 'NOT SET'}`);
       addLog(`Secret Key: ${secretKey ? 'Set' : 'NOT SET'}`);
       addLog(`Config ID: ${configId || 'NOT SET'}`);
+
+      console.log('[HumeDebug] Using credentials:', {
+        apiKey: apiKey?.substring(0, 10) + '...',
+        secretKey: secretKey ? 'Set' : 'Missing',
+        configId
+      });
 
       if (!apiKey || !secretKey) {
         throw new Error('Missing API credentials. Please set REACT_APP_HUME_API_KEY and REACT_APP_HUME_SECRET_KEY in your .env file');
@@ -76,11 +82,11 @@ const HumeDebug: React.FC = () => {
       <h2>Hume Connection Debug</h2>
       
       <div style={{ marginBottom: '20px' }}>
-        <h3>Environment Check:</h3>
+        <h3>Environment Variables</h3>
         <ul>
-          <li>REACT_APP_HUME_API_KEY: {process.env.REACT_APP_HUME_API_KEY ? '✅ Set' : '❌ Missing'}</li>
-          <li>REACT_APP_HUME_SECRET_KEY: {process.env.REACT_APP_HUME_SECRET_KEY ? '✅ Set' : '❌ Missing'}</li>
-          <li>REACT_APP_HUME_CONFIG_ID: {process.env.REACT_APP_HUME_CONFIG_ID || '❌ Missing (will use default)'}</li>
+          <li>REACT_APP_HUME_API_KEY: ✅ Hardcoded</li>
+          <li>REACT_APP_HUME_SECRET_KEY: ✅ Hardcoded</li>
+          <li>REACT_APP_HUME_CONFIG_ID: ✅ Hardcoded (Grace)</li>
         </ul>
       </div>
 
