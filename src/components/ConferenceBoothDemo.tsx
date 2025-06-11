@@ -1202,29 +1202,45 @@ const ConferenceBoothDemo: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Dashboard Toggle Controls */}
-      <div style={{ 
-        position: 'absolute', 
-        top: '20px', 
-        right: '20px', 
-        zIndex: 1000,
+      {/* Toggle Button - Fixed positioning and improved visibility */}
+      <div style={{
+        position: 'fixed',
+        top: '120px',
+        right: '20px',
+        zIndex: 10000,
         display: 'flex',
-        gap: '10px'
+        gap: '10px',
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+        padding: '15px',
+        borderRadius: '12px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.8)',
+        border: '2px solid #FF6B35'
       }}>
         <button
           onClick={() => setShowExpressionDashboard(!showExpressionDashboard)}
           style={{
-            padding: '12px 20px',
-            backgroundColor: showExpressionDashboard ? '#FF6B35' : '#333',
+            padding: '15px 25px',
+            backgroundColor: showExpressionDashboard ? '#FF6B35' : '#4CAF50',
             color: 'white',
-            border: 'none',
+            border: '2px solid white',
             borderRadius: '8px',
             cursor: 'pointer',
             fontWeight: 'bold',
-            fontSize: '14px'
+            fontSize: '16px',
+            textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)',
+            transition: 'all 0.3s ease',
+            minWidth: '250px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)';
+            e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 107, 53, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = 'none';
           }}
         >
-          🎭 {showExpressionDashboard ? 'Hide' : 'Show'} Expression Analytics
+          🎭 {showExpressionDashboard ? 'Switch to Emotion Sliders' : 'Switch to Expression Analytics'}
         </button>
       </div>
 
