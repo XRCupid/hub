@@ -182,8 +182,6 @@ export class HumeVoiceService {
       console.log('[HumeVoiceService] Using config ID:', configToUse);
       
       // Validate credentials
-      const apiKey = apiKey;
-      const secretKey = secretKey;
       
       // Check if API keys are available
       if (!apiKey || !secretKey) {
