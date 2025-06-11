@@ -199,9 +199,14 @@ export class HumeVoiceService {
       console.log('[HumeVoiceService] Calling client.empathicVoice.chat.connect...');
       
       try {
-        this.socket = await this.client.empathicVoice.chat.connect({
+        // Try without version to see if that helps
+        const connectOptions: any = {
           configId: configToUse,
-        });
+        };
+        
+        console.log('[HumeVoiceService] Connect options:', connectOptions);
+        
+        this.socket = await this.client.empathicVoice.chat.connect(connectOptions);
       } catch (connectError: any) {
         console.error('[HumeVoiceService] Socket connection failed:', {
           error: connectError,
