@@ -35,10 +35,15 @@ jobs:
           # Copy production env file to .env
           cp .env.production .env
           # Debug: Show Node version
+          echo "Node version:"
           node --version
+          echo "NPM version:"
           npm --version
-          # Build with CI=false to ignore warnings
-          CI=false npm run build || (echo "Build failed with exit code $?"; exit 1)
+          # List files to ensure everything is present
+          echo "Files in src/services:"
+          ls -la src/services/
+          # Try to build with verbose output
+          npm run build --verbose
         env:
           CI: false
           NODE_OPTIONS: --max-old-space-size=4096
