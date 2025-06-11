@@ -338,69 +338,52 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
         muted
       />
       
-      <div className="pip-header">
-        <div className="pip-status">
-          <div className={`status-indicator ${isTracking ? 'active' : ''}`} />
-          <span className="status-text">
-            {isTracking ? `${trackingSource} Active` : 'Initializing...'}
-          </span>
-        </div>
-        <div className="pip-controls">
-          <button 
-            className="pip-button"
-            onClick={() => setIsMinimized(!isMinimized)}
-            title={isMinimized ? "Expand" : "Minimize"}
-          >
-            {isMinimized ? '⬜' : '➖'}
-          </button>
-          {onClose && (
-            <button 
-            className="pip-button"
-            onClick={onClose}
-            title="Close"
-          >
-            ✕
-          </button>
-        )}
-        </div>
-      </div>
-      
-      {!isMinimized && (
-        <div className="pip-content">
-          {error ? (
-            <div className="pip-error">
-              <p>{error}</p>
-              <button onClick={() => window.location.reload()}>
-                Retry
-              </button>
-            </div>
-          ) : (
-            <div key="avatar-canvas-container" style={{ width: '100%', height: '100%' }}>
-              <MemoizedAvatarCanvas 
-                avatarUrl={avatarUrl}
-                trackingData={trackingData || trackingDataState}
-                idleAnimationUrl="/animations/M_Standing_Idle_001.glb"
-              />
-            </div>
-          )}
-          
-          {(trackingData || trackingDataState)?.facialExpressions && !error && (
-            <div className="expression-debug">
-              <div className="expression-mini">
-                {isTracking && <div style={{color: 'lime', fontSize: '10px'}}>● TRACKING ACTIVE</div>}
-                {Object.entries((trackingData || trackingDataState).facialExpressions)
-                  .filter(([_, value]) => (value as number) > 0.2)
-                  .slice(0, 3)
-                  .map(([name, value]) => (
-                    <div key={name} style={{ fontSize: '10px', marginBottom: '2px' }}>
-                      {name}: {((value as number) * 100).toFixed(0)}%
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Minimal floating close button */}
+      {onClose && (
+        <button 
+          className="pip-close-button"
+          onClick={onClose}
+          title="Close"
+        >
+          ✕
+        </button>
       )}
+      
+      {/* Avatar content takes full space */}
+      <div className="pip-content">
+        {error ? (
+          <div className="pip-error">
+            <p>{error}</p>
+            <button onClick={() => window.location.reload()}>
+              Retry
+            </button>
+          </div>
+        ) : (
+          <div key="avatar-canvas-container" style={{ width: '100%', height: '100%' }}>
+            <MemoizedAvatarCanvas 
+              avatarUrl={avatarUrl}
+              trackingData={trackingData || trackingDataState}
+              idleAnimationUrl="/animations/M_Standing_Idle_001.glb"
+            />
+          </div>
+        )}
+        
+        {(trackingData || trackingDataState)?.facialExpressions && !error && (
+          <div className="expression-debug">
+            <div className="expression-mini">
+              {isTracking && <div style={{color: 'lime', fontSize: '10px'}}>● TRACKING ACTIVE</div>}
+              {Object.entries((trackingData || trackingDataState).facialExpressions)
+                .filter(([_, value]) => (value as number) > 0.2)
+                .slice(0, 3)
+                .map(([name, value]) => (
+                  <div key={name} style={{ fontSize: '10px', marginBottom: '2px' }}>
+                    {name}: {((value as number) * 100).toFixed(0)}%
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
