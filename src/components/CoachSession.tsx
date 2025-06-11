@@ -34,6 +34,17 @@ const CoachSession: React.FC = () => {
   const coach = COACHES[coachId as keyof typeof COACHES];
   
   useEffect(() => {
+    console.log('[CoachSession] Component mounted with coach:', coach);
+    console.log('[CoachSession] Environment check:', {
+      HUME_API_KEY: process.env.REACT_APP_HUME_API_KEY ? 'SET' : 'NOT SET',
+      HUME_SECRET_KEY: process.env.REACT_APP_HUME_SECRET_KEY ? 'SET' : 'NOT SET', 
+      HUME_CONFIG_ID: process.env.REACT_APP_HUME_CONFIG_ID,
+      HUME_CONFIG_ID_GRACE: process.env.REACT_APP_HUME_CONFIG_ID_GRACE,
+      HUME_CONFIG_ID_POSIE: process.env.REACT_APP_HUME_CONFIG_ID_POSIE,
+      HUME_CONFIG_ID_RIZZO: process.env.REACT_APP_HUME_CONFIG_ID_RIZZO,
+      NODE_ENV: process.env.NODE_ENV
+    });
+    
     if (!coach) {
       navigate('/training-hub');
       return;
@@ -147,7 +158,9 @@ const CoachSession: React.FC = () => {
         humeConfigIdFromCoach: coach.humeConfigId,
         envGrace: process.env.REACT_APP_HUME_CONFIG_ID_GRACE,
         envPosie: process.env.REACT_APP_HUME_CONFIG_ID_POSIE,
-        envRizzo: process.env.REACT_APP_HUME_CONFIG_ID_RIZZO
+        envRizzo: process.env.REACT_APP_HUME_CONFIG_ID_RIZZO,
+        hasApiKey: !!process.env.REACT_APP_HUME_API_KEY,
+        hasSecretKey: !!process.env.REACT_APP_HUME_SECRET_KEY
       });
       
       await humeVoiceService.connect(configId);
@@ -158,12 +171,19 @@ const CoachSession: React.FC = () => {
       // The Hume config should automatically start with the greeting
       // If you need to trigger it, you can send an empty message
       // setTimeout(() => {
-      //   humeVoiceService.sendMessage('');
-      // }, 1000);
+      //   humeVoiceService.sendMessage("");
+      // }, 500);
       
-    } catch (error) {
-      console.error('[CoachSession] Connection error:', error);
-      setError('Failed to connect to coach. Please try again.');
+    } catch (err: any) {
+      console.error('[CoachSession] Failed to connect:', {
+        error: err,
+        message: err?.message,
+        stack: err?.stack,
+        response: err?.response,
+        status: err?.status
+      });
+      setError(err.message || 'Failed to connect to voice service');
+      setIsConnected(false);
     } finally {
       setLoading(false);
     }
