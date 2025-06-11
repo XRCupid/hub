@@ -4,7 +4,7 @@ import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
 import { PostureTrackingService } from '../services/PostureTrackingService';
 import { HumeVoiceService } from '../services/humeVoiceService';
 import { HumeExpressionService } from '../services/HumeExpressionService';
-import { EmotionDisplay } from './EmotionDisplay';
+import RealTimeEmotionSliders from './RealTimeEmotionSliders';
 import PresenceAvatar from './PresenceAvatar';
 import { Canvas } from '@react-three/fiber';
 import './AudienceAnalyticsDashboard.css';
@@ -335,6 +335,20 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
                 className="participant-video"
               />
               
+              {/* Canvas overlay for face tracking visualization */}
+              <canvas 
+                ref={(canvas) => {
+                  if (canvas && participants[0]?.faceMeshService) {
+                    // Set canvas size to match video
+                    const video = canvas.previousElementSibling as HTMLVideoElement;
+                    if (video && video.videoWidth > 0) {
+                      canvas.width = video.videoWidth;
+                      canvas.height = video.videoHeight;
+                    }
+                  }
+                }}
+              />
+              
               {/* PiP Avatar Display */}
               {showPresenceAvatars && (
                 <div className="pip-avatar-container">
@@ -368,29 +382,11 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
                 <div className="emotion-source-indicator">
                   <span className="emotion-source-label">📹 Video Analysis</span>
                 </div>
-                <EmotionDisplay 
+                <RealTimeEmotionSliders 
                   emotions={participant1HumeExpressions} 
                   participantName={participant1Name}
+                  position="left"
                 />
-                {participant1HumeExpressions.length > 0 && (
-                  <div className="emotion-bars">
-                    {participant1HumeExpressions.slice(0, 3).map((emotion, idx) => (
-                      <div key={idx} className="emotion-bar-item">
-                        <span className="emotion-label">{emotion.emotion}</span>
-                        <div className="emotion-bar-bg">
-                          <div 
-                            className="emotion-bar-fill"
-                            style={{
-                              width: `${emotion.score * 100}%`,
-                              backgroundColor: getEmotionColor(emotion.emotion)
-                            }}
-                          />
-                        </div>
-                        <span className="emotion-score">{(emotion.score * 100).toFixed(0)}%</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
 
@@ -502,6 +498,20 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
                 className="participant-video"
               />
               
+              {/* Canvas overlay for face tracking visualization */}
+              <canvas 
+                ref={(canvas) => {
+                  if (canvas && participants[1]?.faceMeshService) {
+                    // Set canvas size to match video
+                    const video = canvas.previousElementSibling as HTMLVideoElement;
+                    if (video && video.videoWidth > 0) {
+                      canvas.width = video.videoWidth;
+                      canvas.height = video.videoHeight;
+                    }
+                  }
+                }}
+              />
+              
               {/* PiP Avatar Display */}
               {showPresenceAvatars && (
                 <div className="pip-avatar-container">
@@ -535,29 +545,11 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
                 <div className="emotion-source-indicator">
                   <span className="emotion-source-label">📹 Video Analysis</span>
                 </div>
-                <EmotionDisplay 
+                <RealTimeEmotionSliders 
                   emotions={participant2HumeExpressions} 
                   participantName={participant2Name}
+                  position="right"
                 />
-                {participant2HumeExpressions.length > 0 && (
-                  <div className="emotion-bars">
-                    {participant2HumeExpressions.slice(0, 3).map((emotion, idx) => (
-                      <div key={idx} className="emotion-bar-item">
-                        <span className="emotion-label">{emotion.emotion}</span>
-                        <div className="emotion-bar-bg">
-                          <div 
-                            className="emotion-bar-fill"
-                            style={{
-                              width: `${emotion.score * 100}%`,
-                              backgroundColor: getEmotionColor(emotion.emotion)
-                            }}
-                          />
-                        </div>
-                        <span className="emotion-score">{(emotion.score * 100).toFixed(0)}%</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
 

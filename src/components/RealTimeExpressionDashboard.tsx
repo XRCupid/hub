@@ -122,8 +122,8 @@ const RealTimeExpressionDashboard: React.FC<RealTimeExpressionDashboardProps> = 
               key={index}
               className="emotion-wave"
               style={{
-                height: `${emotion.score * 100}%`,
-                backgroundColor: getEmotionColor(emotion.emotion),
+                height: `${(emotion?.score || 0) * 100}%`,
+                backgroundColor: getEmotionColor(emotion?.emotion),
                 animationDelay: `${index * 0.1}s`
               }}
             />
@@ -132,13 +132,21 @@ const RealTimeExpressionDashboard: React.FC<RealTimeExpressionDashboardProps> = 
 
         {/* Emotion bars */}
         <div className="emotion-bars">
-          {emotions.slice(0, 6).map((emotion, index) => 
-            renderEmotionBar(
-              emotion.emotion, 
-              emotion.score, 
-              getEmotionColor(emotion.emotion)
-            )
-          )}
+          {emotions.map((emotion, index) => (
+            <div key={index} className="emotion-bar-item">
+              <span className="emotion-label">{emotion?.emotion || 'unknown'}</span>
+              <div className="emotion-bar-container">
+                <div 
+                  className="emotion-bar"
+                  style={{
+                    width: `${(emotion?.score || 0) * 100}%`,
+                    backgroundColor: getEmotionColor(emotion?.emotion)
+                  }}
+                />
+              </div>
+              <span className="emotion-score">{((emotion?.score || 0) * 100).toFixed(0)}%</span>
+            </div>
+          ))}
         </div>
 
         {/* Face expression data */}
@@ -154,7 +162,9 @@ const RealTimeExpressionDashboard: React.FC<RealTimeExpressionDashboardProps> = 
     );
   };
 
-  const getEmotionColor = (emotion: string): string => {
+  const getEmotionColor = (emotion: string | undefined): string => {
+    if (!emotion) return '#808080'; // Return default color if emotion is undefined
+    
     const colors: Record<string, string> = {
       joy: '#FFD700',
       excitement: '#FF6B35',
