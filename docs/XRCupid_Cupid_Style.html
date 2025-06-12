@@ -1,3 +1,579 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:ec6e85ae1dcdcc0ce67a2edb6f78ed10351e33bea70e5183fd83216fb62cc5c8
-size 18960
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XRCupid - Teaching Love Since 2025</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,700&family=Space+Mono&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --cupid-coral: #FF9B9B;
+            --cupid-peach: #FFD4B8;
+            --cupid-blue: #8AA8E8;
+            --cupid-purple: #B8A8E8;
+            --cupid-orange: #FFB366;
+            --cupid-cream: #FFF5ED;
+            --cupid-navy: #4A5A8A;
+        }
+        
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--cupid-cream);
+            color: var(--cupid-navy);
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        /* Heavy risograph grain overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 100;
+            background-image: 
+                radial-gradient(circle at 20% 80%, transparent 0%, var(--cupid-coral) 1px, transparent 1.5px),
+                radial-gradient(circle at 60% 20%, transparent 0%, var(--cupid-blue) 1px, transparent 1.5px),
+                radial-gradient(circle at 80% 60%, transparent 0%, var(--cupid-peach) 1px, transparent 1.5px);
+            background-size: 25px 25px, 35px 35px, 30px 30px;
+            mix-blend-mode: multiply;
+        }
+        
+        /* Noise texture */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.08;
+            pointer-events: none;
+            z-index: 101;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" /></filter><rect width="100%" height="100%" filter="url(%23noise)" /></svg>');
+        }
+        
+        /* Cloud shapes */
+        .cloud {
+            position: absolute;
+            width: 200px;
+            height: 100px;
+            background: var(--cupid-coral);
+            opacity: 0.3;
+            border-radius: 100px;
+            filter: blur(40px);
+            mix-blend-mode: multiply;
+        }
+        
+        .cloud::before {
+            content: '';
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            background: var(--cupid-peach);
+            border-radius: 50%;
+            top: -50px;
+            left: 30px;
+        }
+        
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(180deg, var(--cupid-blue) 0%, var(--cupid-purple) 50%, var(--cupid-coral) 100%);
+        }
+        
+        .hero-content {
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(4rem, 12vw, 10rem);
+            font-style: italic;
+            font-weight: 700;
+            color: var(--cupid-orange);
+            text-shadow: 
+                2px 2px 0 var(--cupid-cream),
+                4px 4px 0 var(--cupid-coral),
+                6px 6px 20px rgba(0,0,0,0.1);
+            letter-spacing: -0.02em;
+            margin-bottom: 20px;
+            transform: rotate(-3deg);
+        }
+        
+        .hero-subtitle {
+            background: var(--cupid-cream);
+            color: var(--cupid-navy);
+            padding: 15px 40px;
+            display: inline-block;
+            border: 3px solid var(--cupid-navy);
+            transform: rotate(1deg);
+            font-size: 1.2rem;
+            letter-spacing: 0.1em;
+            box-shadow: 4px 4px 0 var(--cupid-coral);
+        }
+        
+        /* Arrow decoration */
+        .arrow-decoration {
+            position: absolute;
+            width: 300px;
+            height: 2px;
+            background: var(--cupid-navy);
+            top: 50%;
+            left: -100px;
+            transform: rotate(-45deg);
+        }
+        
+        .arrow-decoration::after {
+            content: '';
+            position: absolute;
+            right: -20px;
+            top: -10px;
+            width: 0;
+            height: 0;
+            border-left: 30px solid var(--cupid-navy);
+            border-top: 15px solid transparent;
+            border-bottom: 15px solid transparent;
+        }
+        
+        /* Story Section */
+        .story {
+            padding: 100px 20px;
+            background: var(--cupid-cream);
+            position: relative;
+        }
+        
+        .story-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            color: var(--cupid-navy);
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+        }
+        
+        /* Hand-drawn underline */
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 3px;
+            background: var(--cupid-coral);
+            border-radius: 50% 20% 30% 10%;
+        }
+        
+        /* Timeline cards with hand-drawn borders */
+        .timeline-card {
+            background: var(--cupid-cream);
+            padding: 40px;
+            margin: 40px 0;
+            position: relative;
+            border: 3px solid var(--cupid-navy);
+            border-radius: 20% 5% 15% 10% / 5% 20% 10% 15%;
+        }
+        
+        /* Offset color registration effect */
+        .timeline-card::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: -5px;
+            bottom: -5px;
+            background: var(--cupid-coral);
+            opacity: 0.3;
+            border-radius: 15% 10% 20% 5% / 10% 15% 5% 20%;
+            z-index: -1;
+        }
+        
+        .timeline-card::after {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: 3px;
+            bottom: 3px;
+            background: var(--cupid-blue);
+            opacity: 0.2;
+            border-radius: 10% 20% 5% 15% / 20% 5% 15% 10%;
+            z-index: -2;
+        }
+        
+        .timeline-card h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            color: var(--cupid-orange);
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        
+        .timeline-card p {
+            line-height: 1.8;
+            color: var(--cupid-navy);
+        }
+        
+        /* Heart bullets */
+        .heart-bullet {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            color: var(--cupid-coral);
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 100px 20px;
+            background: linear-gradient(180deg, var(--cupid-purple) 0%, var(--cupid-blue) 100%);
+            position: relative;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            max-width: 1000px;
+            margin: 60px auto 0;
+        }
+        
+        .feature-card {
+            background: var(--cupid-cream);
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            border: 3px solid var(--cupid-navy);
+            border-radius: 50% 50% 40% 60% / 60% 40% 60% 40%;
+            transition: all 0.3s ease;
+        }
+        
+        /* Wing decoration for features */
+        .feature-card::before,
+        .feature-card::after {
+            content: '';
+            position: absolute;
+            width: 60px;
+            height: 80px;
+            background: var(--cupid-peach);
+            opacity: 0.3;
+            top: -20px;
+            border-radius: 50% 10% 50% 10%;
+        }
+        
+        .feature-card::before {
+            left: -30px;
+            transform: rotate(-45deg);
+        }
+        
+        .feature-card::after {
+            right: -30px;
+            transform: rotate(45deg);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .feature-card h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            color: var(--cupid-orange);
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        
+        /* Tech Section */
+        .tech {
+            padding: 100px 20px;
+            background: var(--cupid-cream);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Floating heart particles */
+        .heart-particle {
+            position: absolute;
+            font-size: 2rem;
+            color: var(--cupid-coral);
+            opacity: 0.2;
+            animation: float-up 15s infinite;
+        }
+        
+        @keyframes float-up {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.2;
+            }
+            90% {
+                opacity: 0.2;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        /* Tech stamps */
+        .tech-stamps {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 60px;
+        }
+        
+        .stamp {
+            width: 140px;
+            height: 140px;
+            background: var(--cupid-cream);
+            border: 3px solid var(--cupid-navy);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            font-weight: 700;
+            color: var(--cupid-navy);
+            position: relative;
+            transform: rotate(-5deg);
+            transition: all 0.3s;
+            box-shadow: 
+                3px 3px 0 var(--cupid-coral),
+                6px 6px 0 var(--cupid-blue);
+        }
+        
+        .stamp:nth-child(even) {
+            transform: rotate(5deg);
+        }
+        
+        .stamp:hover {
+            transform: rotate(0deg) scale(1.1);
+        }
+        
+        /* Perforated edge effect */
+        .stamp::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 10px;
+            right: 10px;
+            height: 10px;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 5px,
+                var(--cupid-cream) 5px,
+                var(--cupid-cream) 10px
+            );
+        }
+        
+        /* CTA Section */
+        .cta {
+            padding: 100px 20px;
+            background: linear-gradient(135deg, var(--cupid-coral) 0%, var(--cupid-purple) 50%, var(--cupid-orange) 100%);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta::before {
+            content: '♡';
+            position: absolute;
+            font-size: 400px;
+            opacity: 0.05;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+        }
+        
+        .cta-content {
+            background: rgba(255, 245, 237, 0.95);
+            padding: 60px;
+            border-radius: 50% 20% 50% 20% / 20% 50% 20% 50%;
+            max-width: 600px;
+            margin: 0 auto;
+            border: 4px solid var(--cupid-navy);
+            position: relative;
+            box-shadow: 
+                5px 5px 0 var(--cupid-coral),
+                10px 10px 0 var(--cupid-blue),
+                15px 15px 30px rgba(0,0,0,0.1);
+        }
+        
+        .cta-amount {
+            font-family: 'Playfair Display', serif;
+            font-size: 4rem;
+            color: var(--cupid-orange);
+            margin: 20px 0;
+            font-style: italic;
+            text-shadow: 2px 2px 0 var(--cupid-coral);
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: var(--cupid-coral);
+            color: white;
+            padding: 20px 60px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            text-decoration: none;
+            border: 3px solid var(--cupid-navy);
+            border-radius: 50px;
+            margin-top: 30px;
+            transform: scale(1);
+            transition: all 0.3s;
+            box-shadow: 4px 4px 0 var(--cupid-navy);
+            letter-spacing: 0.1em;
+        }
+        
+        .cta-button:hover {
+            transform: scale(1.05) rotate(-2deg);
+            background: var(--cupid-orange);
+            box-shadow: 6px 6px 0 var(--cupid-navy);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 4rem;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tech-stamps {
+                gap: 20px;
+            }
+            
+            .stamp {
+                width: 120px;
+                height: 120px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div class="hero-content">
+            <h1>XRCupid</h1>
+            <div class="hero-subtitle">Teaching Love Since 2025</div>
+        </div>
+        <div class="cloud" style="top: 20%; left: 30%;"></div>
+        <div class="cloud" style="top: 50%; left: 60%;"></div>
+        <div class="arrow-decoration"></div>
+    </div>
+    <div class="story">
+        <div class="story-container">
+            <h2>Our Story</h2>
+            <div class="timeline-card">
+                <h3><span class="heart-bullet">♡</span>January 2025: The Spark</h3>
+                <p>MIT Reality Hack. 48 hours to solve loneliness. We asked: What if AI could teach you how to love? With face tracking, voice analysis, and four distinct AI coaches, we built the future of dating confidence. The judges saw magic. We won.</p>
+            </div>
+            <div class="timeline-card">
+                <h3><span class="heart-bullet">♡</span>Today: The Revolution</h3>
+                <p>Six months later, it's not just a hackathon project. It's a full platform with 98% tracking accuracy, real-time chemistry scores, and avatar mirroring. We're ready to teach a generation how to connect authentically.</p>
+            </div>
+            <div class="timeline-card">
+                <h3><span class="heart-bullet">♡</span>Tomorrow: Your Love Story</h3>
+                <p>Mobile apps. XR dating lounges. Live coaching. Enterprise training. We're building the platform that brings humanity back to human connection. Join us.</p>
+            </div>
+        </div>
+    </div>
+    <div class="features">
+        <h2 style="color: var(--cupid-cream);">What We're Building</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <span class="feature-icon">📱</span>
+                <h3>Mobile Magic</h3>
+                <p>AI dating coaches in your pocket. Practice conversations, master body language, build confidence daily.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🥽</span>
+                <h3>XR Romance</h3>
+                <p>Step into virtual dating lounges. Practice with avatars before real dates. Safe space to be vulnerable.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">💬</span>
+                <h3>Live Wingman</h3>
+                <p>Real-time coaching during actual dates. Gentle whispers. Chemistry tracking. Your AI guardian angel.</p>
+            </div>
+            <div class="feature-card">
+                <span class="feature-icon">🏢</span>
+                <h3>Beyond Dating</h3>
+                <p>Corporate training. Therapy tools. Social skills for everyone. Teaching connection everywhere.</p>
+            </div>
+        </div>
+    </div>
+    <div class="tech">
+        <h2>The Magic is Real</h2>
+        <div class="tech-stamps">
+            <div class="stamp">98% Accuracy</div>
+            <div class="stamp">67 Expressions</div>
+            <div class="stamp">Voice Prosody</div>
+            <div class="stamp">Posture Analysis</div>
+            <div class="stamp">Chemistry Score</div>
+            <div class="stamp">4 AI Coaches</div>
+            <div class="stamp">WebRTC Live</div>
+            <div class="stamp">Avatar Mirror</div>
+        </div>
+        <div class="heart-particle" style="left: 10%; animation-delay: 0s;">💕</div>
+        <div class="heart-particle" style="left: 30%; animation-delay: 3s;">💘</div>
+        <div class="heart-particle" style="left: 50%; animation-delay: 6s;">💖</div>
+        <div class="heart-particle" style="left: 70%; animation-delay: 9s;">💗</div>
+        <div class="heart-particle" style="left: 90%; animation-delay: 12s;">💝</div>
+    </div>
+    <div class="cta">
+        <div class="cta-content">
+            <h2>Join the Love Revolution</h2>
+            <p style="font-size: 1.2rem; margin-bottom: 20px;">We're teaching humanity how to connect again.</p>
+            <div class="cta-amount">$3M Seed Round</div>
+            <p>Be part of the platform that brings love back to dating.</p>
+            <a href="mailto:invest@xrcupid.ai" class="cta-button">LET'S TALK</a>
+            <p style="margin-top: 40px; font-weight: 700; color: var(--cupid-navy);">
+                Live Demo • AWE 2025 • Booth #1247
+            </p>
+        </div>
+    </div>
+</body>
+</html>

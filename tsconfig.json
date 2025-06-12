@@ -1,3 +1,31 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:0cc3362d9fe264dff4733aaee48a1cf9b6a1901ecad8447a1b8deb7da4965dcc
-size 815
+{
+  "compilerOptions": {
+    "target": "es2015",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "types": ["@types/dom-speech-recognition", "node", "simple-peer"],
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "downlevelIteration": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}

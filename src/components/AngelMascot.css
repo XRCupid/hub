@@ -1,3 +1,249 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:41de13c88e6bd2fb99f66fce1912e6673bd9da841b676fda2597d6ccbf29826b
-size 4180
+/* Angel Mascot Component Styles */
+.angel-mascot {
+  position: relative;
+  display: inline-block;
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 0 20px rgba(255, 107, 157, 0.5))
+          drop-shadow(0 0 40px rgba(156, 136, 255, 0.3));
+}
+
+/* Size variations */
+.angel-small {
+  width: 80px;
+  height: 80px;
+}
+
+.angel-medium {
+  width: 150px;
+  height: 150px;
+}
+
+.angel-large {
+  width: 300px;
+  height: 400px;
+}
+
+.angel-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 20px rgba(255, 107, 157, 0.5))
+          drop-shadow(0 0 40px rgba(156, 136, 255, 0.3));
+  image-rendering: crisp-edges;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.angel-image svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Animation states */
+.angel-animate {
+  animation: floatBob 3s ease-in-out infinite;
+}
+
+.angel-animate .angel-image {
+  animation: wingFlap 4s ease-in-out infinite;
+}
+
+/* Variant styles */
+.angel-mascot.cupid {
+  filter: drop-shadow(0 0 30px rgba(255, 107, 157, 0.6))
+          drop-shadow(0 0 60px rgba(255, 140, 105, 0.4))
+          drop-shadow(0 0 20px rgba(255, 215, 61, 0.3));
+}
+
+.angel-mascot.cupid .angel-image {
+  animation: cupidFloat 6s ease-in-out infinite;
+}
+
+.angel-wink {
+  transform: rotate(-10deg);
+}
+
+.angel-flying {
+  animation: fly 8s ease-in-out infinite;
+}
+
+/* Effects */
+.angel-effects {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.sparkle, .heart-trail {
+  position: absolute;
+  font-size: 1.5em;
+  animation: sparkleFloat 2s ease-in-out infinite;
+}
+
+.sparkle-1 {
+  top: -10%;
+  left: 20%;
+  animation-delay: 0s;
+}
+
+.sparkle-2 {
+  top: 50%;
+  right: -10%;
+  animation-delay: 0.7s;
+}
+
+.sparkle-3 {
+  bottom: 10%;
+  left: -5%;
+  animation-delay: 1.4s;
+}
+
+.heart-trail {
+  opacity: 0;
+  animation: heartTrail 3s ease-out infinite;
+}
+
+.heart-1 {
+  top: 30%;
+  left: 50%;
+  animation-delay: 0s;
+}
+
+.heart-2 {
+  top: 60%;
+  left: 40%;
+  animation-delay: 1.5s;
+}
+
+/* Glow animation */
+.angel-mascot::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  left: -20%;
+  right: -20%;
+  bottom: -20%;
+  background: radial-gradient(circle, rgba(255, 215, 61, 0.3) 0%, transparent 70%);
+  opacity: 0;
+  animation: glowPulse 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes cupidFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.05);
+  }
+}
+
+/* Animations */
+@keyframes floatBob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes wingFlap {
+  0%, 100% {
+    transform: scaleX(1);
+  }
+  25% {
+    transform: scaleX(0.95);
+  }
+  75% {
+    transform: scaleX(1.05);
+  }
+}
+
+@keyframes fly {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(50px, -30px) rotate(5deg);
+  }
+  50% {
+    transform: translate(100px, 0) rotate(0deg);
+  }
+  75% {
+    transform: translate(50px, 30px) rotate(-5deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+@keyframes sparkleFloat {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0) rotate(360deg);
+  }
+}
+
+@keyframes heartTrail {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-10px, -20px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-30px, -60px) scale(0.3);
+  }
+}
+
+/* Interactive hover effects */
+.angel-mascot:hover .angel-image {
+  filter: drop-shadow(0 0 30px rgba(253, 226, 134, 0.6));
+  transform: scale(1.05);
+  transition: all 0.3s ease;
+}
+
+.angel-mascot:hover .sparkle {
+  animation-duration: 1s;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .angel-animate,
+  .angel-animate .angel-image,
+  .angel-flying,
+  .sparkle,
+  .heart-trail {
+    animation: none;
+  }
+  
+  .angel-mascot:hover .angel-image {
+    transform: none;
+  }
+}

@@ -1,3 +1,44 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:322f93314b2df483d49450e107b3bf38895bf4c74a1155c5b186afbbf76c2ed8
-size 735
+.rpm-avatar-container {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.avatar-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 10;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.avatar-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #e53e3e;
+  z-index: 10;
+}
+
+.avatar-error svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 10px;
+}

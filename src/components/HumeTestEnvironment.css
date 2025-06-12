@@ -1,3 +1,346 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:8e5c0eb96f33f4ce7be47cffc180cc1b3bad5afd6e879364d20247e143ef25d0
-size 5896
+.hume-test-environment {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: white;
+}
+
+.test-header {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.test-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(to right, #7c3aed, #ec4899);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.back-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-2px);
+}
+
+.test-mode-selector {
+  display: flex;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 5px;
+  border-radius: 10px;
+}
+
+.mode-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.mode-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mode-btn.active {
+  background: #7c3aed;
+  color: white;
+}
+
+.test-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+/* PiP Test Section */
+.pip-test-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 30px;
+  margin-bottom: 40px;
+}
+
+.pip-test-section h2 {
+  margin-bottom: 30px;
+  font-size: 24px;
+  color: #a855f7;
+}
+
+.pip-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.control-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.toggle-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.toggle-btn.active {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.position-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: fit-content;
+}
+
+.pos-btn {
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 20px;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pos-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.pos-btn.active {
+  background: #7c3aed;
+  border-color: #7c3aed;
+}
+
+.size-options {
+  display: flex;
+  gap: 10px;
+}
+
+.size-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.size-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.size-btn.active {
+  background: #7c3aed;
+  border-color: #7c3aed;
+}
+
+.pip-info {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.pip-info h3 {
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #a855f7;
+}
+
+.pip-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pip-info li {
+  padding: 8px 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}
+
+/* Coach Test Section */
+.coach-test-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 30px;
+}
+
+.coach-test-section h2 {
+  margin-bottom: 30px;
+  font-size: 24px;
+  color: #ec4899;
+}
+
+.coach-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+.coach-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid transparent;
+  border-radius: 16px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.coach-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.coach-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.avatar-placeholder {
+  font-size: 36px;
+  font-weight: 700;
+  color: white;
+}
+
+.coach-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.coach-personality {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.7;
+  margin-bottom: 12px;
+}
+
+.coach-description {
+  font-size: 14px;
+  line-height: 1.6;
+  opacity: 0.8;
+  margin-bottom: 16px;
+}
+
+.coach-voice-info {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.voice-label {
+  opacity: 0.6;
+}
+
+.voice-style {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 12px;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+
+.test-coach-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+  border: none;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.test-coach-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.3);
+}
+
+.coach-features {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.coach-features h3 {
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #ec4899;
+}
+
+.coach-features ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.coach-features li {
+  padding: 8px 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}

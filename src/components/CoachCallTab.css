@@ -1,3 +1,160 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:37e05745786ffc9b70a288efda8ede764de8f87c47c91695883c4c6eda2c0d15
-size 3470
+.coach-call-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 100px); /* Adjust based on nav bar height in App.css */
+  padding: 20px;
+  box-sizing: border-box;
+  background-color: #f4f7f6;
+}
+
+.main-panel {
+  display: flex;
+  flex-grow: 1;
+  gap: 20px;
+  margin-bottom: 20px;
+  min-height: 0; /* Allows children to shrink properly in flex container */
+}
+
+.npc-panel, .user-panel {
+  flex: 1;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; 
+}
+
+.npc-panel h2, .user-panel h3 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.avatar-container {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: #e9ecef;
+  position: relative; /* For canvas positioning */
+  min-height: 200px; /* Minimum height */
+}
+
+/* Ensure AvatarView's canvas takes up available space */
+.avatar-container > div { /* Targets the immediate child div of AvatarView if it wraps the canvas */
+  width: 100% !important;
+  height: 100% !important;
+  display: flex; /* Helps center canvas if it's smaller */
+  justify-content: center;
+  align-items: center;
+}
+.avatar-container canvas {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto !important; /* Override R3F default inline style if necessary */
+  height: auto !important; /* Override R3F default inline style if necessary */
+  object-fit: contain; /* Ensures aspect ratio is maintained */
+  display: block;
+}
+
+
+.user-video-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.user-video-controls button {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.user-video-controls button:hover {
+  background-color: #0056b3;
+}
+
+.user-video-container {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #000;
+  border-radius: 4px;
+  overflow: hidden;
+  min-height: 150px; /* Minimum height */
+}
+
+.user-video-container video {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+}
+
+.user-video-placeholder {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #e9ecef;
+  color: #6c757d;
+  border-radius: 4px;
+  min-height: 150px; /* Minimum height */
+}
+
+.communication-panel {
+  display: flex;
+  gap: 10px;
+  padding: 15px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.communication-panel input[type="text"] {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.communication-panel button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  background-color: #28a745;
+  color: white;
+  cursor: pointer;
+}
+.communication-panel button:hover {
+  background-color: #1e7e34;
+}
+
+.chat-history-panel {
+  height: 150px; /* Fixed height for chat history */
+  overflow-y: auto;
+  padding: 15px;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.chat-history-panel p {
+  margin: 0 0 10px 0;
+  font-size: 0.9em;
+  color: #495057;
+}

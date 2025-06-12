@@ -1,3 +1,405 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:46fdc1504d1393459fd282722cf6129030f6db06c3cbbb2b4e3be6567d9967cf
-size 6481
+.dating-app-container {
+  height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.app-header h1 {
+  margin: 0;
+  color: white;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.menu-btn, .matches-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.menu-btn:hover, .matches-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.matches-btn {
+  position: relative;
+  font-size: 18px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 25px;
+}
+
+.swipe-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+}
+
+.profile-card {
+  width: 90%;
+  max-width: 400px;
+  height: 70vh;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  transform-origin: center bottom;
+}
+
+.profile-card:active {
+  cursor: grabbing;
+}
+
+.like-label, .pass-label {
+  position: absolute;
+  top: 50px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 24px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+}
+
+.like-label {
+  right: 20px;
+  color: #4ade80;
+  border: 3px solid #4ade80;
+  transform: rotate(20deg);
+}
+
+.pass-label {
+  left: 20px;
+  color: #ef4444;
+  border: 3px solid #ef4444;
+  transform: rotate(-20deg);
+}
+
+.profile-images {
+  position: relative;
+  height: 60%;
+  overflow: hidden;
+}
+
+.profile-images img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-dots {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+}
+
+.image-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transition: background 0.3s ease;
+}
+
+.image-dots span.active {
+  background: white;
+}
+
+.profile-info {
+  padding: 20px;
+  height: 40%;
+  overflow-y: auto;
+}
+
+.profile-info h2 {
+  margin: 0 0 5px 0;
+  font-size: 24px;
+  color: #1a1a2e;
+}
+
+.occupation {
+  margin: 0 0 5px 0;
+  color: #666;
+  font-size: 16px;
+}
+
+.distance {
+  margin: 0 0 15px 0;
+  color: #999;
+  font-size: 14px;
+}
+
+.bio {
+  margin-bottom: 15px;
+}
+
+.bio p {
+  margin: 0;
+  color: #333;
+  line-height: 1.5;
+}
+
+.interests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.interest-tag {
+  padding: 5px 12px;
+  background: #f3f4f6;
+  border-radius: 15px;
+  font-size: 14px;
+  color: #666;
+}
+
+.shared-interests {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.shared-interests h4 {
+  margin: 0 0 10px 0;
+  color: #667eea;
+  font-size: 16px;
+}
+
+.shared-tag {
+  padding: 5px 12px;
+  background: #e0e7ff;
+  color: #667eea;
+  border-radius: 15px;
+  font-size: 14px;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.action-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+.action-btn:active {
+  transform: scale(0.95);
+}
+
+.action-btn.pass {
+  background: white;
+  color: #ef4444;
+}
+
+.action-btn.superlike {
+  background: white;
+  color: #3b82f6;
+}
+
+.action-btn.like {
+  background: white;
+  color: #4ade80;
+}
+
+.no-more-profiles {
+  text-align: center;
+  color: white;
+  padding: 40px;
+}
+
+.no-more-profiles h2 {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.no-more-profiles button {
+  margin-top: 20px;
+  padding: 15px 30px;
+  background: white;
+  color: #667eea;
+  border: none;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.no-more-profiles button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(255, 255, 255, 0.3);
+}
+
+/* Matches View */
+.matches-view {
+  height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow-y: auto;
+}
+
+.matches-header {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.matches-header button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  margin-right: 20px;
+}
+
+.matches-header h2 {
+  margin: 0;
+  color: white;
+  font-size: 24px;
+}
+
+.matches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.match-card {
+  background: white;
+  border-radius: 15px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.match-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.match-card img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+
+.match-card h3 {
+  margin: 10px;
+  font-size: 18px;
+  color: #1a1a2e;
+}
+
+.match-card .last-message {
+  margin: 0 10px 10px;
+  font-size: 14px;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.match-card .start-conversation {
+  margin: 0 10px 10px;
+  font-size: 14px;
+  color: #667eea;
+  font-weight: 600;
+}
+
+.back-to-matches {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 16px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.back-to-matches:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Animations */
+@keyframes swipeRight {
+  to {
+    transform: translateX(150%) rotate(30deg);
+    opacity: 0;
+  }
+}
+
+@keyframes swipeLeft {
+  to {
+    transform: translateX(-150%) rotate(-30deg);
+    opacity: 0;
+  }
+}
+
+@keyframes match {
+  0% {
+    transform: scale(0) rotate(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}

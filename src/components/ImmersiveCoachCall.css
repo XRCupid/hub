@@ -1,3 +1,478 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:e2abe28eef453b31f8d29e966b0c206b7e1db6b5e35bb5b413db32877462096d
-size 8697
+/* Immersive Coach Call Styles */
+.immersive-coach-call {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1e0022 0%, #2d1135 100%);
+}
+
+/* Main coach canvas - full screen */
+.coach-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* User PIP video window */
+.user-pip {
+  position: absolute;
+  bottom: 40px;
+  right: 40px;
+  width: 240px;
+  height: 180px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 20px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+}
+
+.user-pip:hover {
+  border-color: rgba(255, 105, 180, 0.5);
+  box-shadow: 0 0 30px rgba(255, 105, 180, 0.4);
+}
+
+.user-pip.active {
+  box-shadow: 0 0 30px rgba(255, 105, 180, 0.6);
+}
+
+.user-pip.avatar-mode {
+  background: #1e1e1e;
+}
+
+.user-pip video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pip-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pip-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff69b4 0%, #ff1493 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.user-avatar-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.pip-controls {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.pip-controls button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pip-controls button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: scale(1.1);
+}
+
+.pip-mode-toggle {
+  font-size: 20px !important;
+}
+
+/* Coach info bar - integrated into canvas */
+.coach-info-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 5;
+}
+
+.coach-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent);
+  z-index: 10;
+}
+
+.coach-info h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+  color: white;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.coach-info p {
+  font-size: 18px;
+  margin: 4px 0 0 0;
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
+}
+
+.connection-status span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pip-toggle {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.pip-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 30px;
+  backdrop-filter: blur(10px);
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #4ade80;
+  animation: pulse 2s infinite;
+}
+
+.status-dot.speaking {
+  background: #ff69b4;
+}
+
+.status-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: white;
+}
+
+/* Conversation panel - bottom left overlay */
+.conversation-panel {
+  position: absolute;
+  bottom: 40px;
+  left: 40px;
+  width: 500px;
+  max-height: 300px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 5;
+  transition: all 0.3s;
+}
+
+.conversation-panel:hover {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.conversation-header {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.conversation-content {
+  max-height: 220px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.conversation-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.conversation-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.conversation-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.message {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  line-height: 1.5;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.message.coach {
+  background: rgba(255, 105, 180, 0.2);
+  border-left: 3px solid #ff69b4;
+  color: white;
+}
+
+.message.user {
+  background: rgba(255, 255, 255, 0.1);
+  border-left: 3px solid #4ade80;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.message-label {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  opacity: 0.7;
+  text-transform: uppercase;
+}
+
+/* Session notes - right side overlay */
+.session-notes {
+  position: absolute;
+  top: 120px;
+  right: 40px;
+  width: 320px;
+  max-height: 400px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 5;
+  transition: all 0.3s;
+}
+
+.session-notes:hover {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.notes-header {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notes-content {
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.note-item {
+  padding: 12px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
+  border-left: 3px solid #fbbf24;
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Call controls - centered bottom */
+.call-controls {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 16px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(20px);
+  padding: 16px 24px;
+  border-radius: 60px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+}
+
+.call-controls.hidden {
+  transform: translateX(-50%) translateY(100px);
+  opacity: 0;
+}
+
+.control-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.control-btn.mic-btn.active {
+  background: #4ade80;
+  border-color: #4ade80;
+  animation: pulse 2s infinite;
+}
+
+.control-btn.end-btn {
+  background: #ef4444;
+  border-color: #ef4444;
+  transform: rotate(135deg);
+}
+
+.control-btn.end-btn:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+/* Animations */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 20px rgba(74, 222, 128, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .user-pip {
+    bottom: 20px;
+    right: 20px;
+    width: 160px;
+    height: 120px;
+  }
+  
+  .coach-info-bar {
+    padding: 16px 20px;
+    height: 70px;
+  }
+  
+  .coach-info h2 {
+    font-size: 22px;
+  }
+  
+  .coach-info p {
+    font-size: 14px;
+  }
+  
+  .conversation-panel {
+    bottom: 20px;
+    left: 20px;
+    width: calc(100vw - 220px);
+    max-width: 400px;
+  }
+  
+  .session-notes {
+    display: none;
+  }
+  
+  .call-controls {
+    bottom: 20px;
+    padding: 12px 20px;
+  }
+  
+  .control-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+}

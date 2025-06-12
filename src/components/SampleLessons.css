@@ -1,3 +1,397 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:2daf6b7ef67a9214a86581900f0de34c5462fde01aed0820b49779e56198820c
-size 6795
+.sample-lessons-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d1a2d 100%);
+  color: white;
+}
+
+.lessons-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.lessons-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #ff006e, #ff4081);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.lessons-header p {
+  color: #999;
+  font-size: 1.1rem;
+}
+
+.coach-selector {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 3rem;
+}
+
+.coach-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  border: 2px solid #333;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+  font-size: 1rem;
+}
+
+.coach-button:hover {
+  border-color: #ff006e;
+  background: rgba(255, 0, 110, 0.1);
+  transform: translateY(-2px);
+}
+
+.coach-button.active {
+  border-color: #ff006e;
+  background: rgba(255, 0, 110, 0.2);
+  box-shadow: 0 4px 20px rgba(255, 0, 110, 0.3);
+}
+
+.coach-avatar {
+  font-size: 1.5rem;
+}
+
+.coach-name {
+  font-weight: 600;
+}
+
+.lesson-content {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lesson-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 2rem;
+}
+
+.lesson-header h2 {
+  font-size: 1.8rem;
+  margin: 0;
+  color: #ff4081;
+}
+
+.lesson-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: #999;
+}
+
+.lesson-objectives {
+  background: rgba(255, 0, 110, 0.1);
+  padding: 1.5rem;
+  border-radius: 15px;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 0, 110, 0.3);
+}
+
+.lesson-objectives h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #ff4081;
+}
+
+.lesson-objectives ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.lesson-objectives li {
+  margin-bottom: 0.5rem;
+  color: #ddd;
+}
+
+.segment-container {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.segment-type {
+  display: inline-block;
+  background: #ff006e;
+  color: white;
+  padding: 0.3rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.segment-content h3 {
+  font-size: 1.4rem;
+  margin-bottom: 1.5rem;
+  color: white;
+}
+
+.coach-dialogue {
+  display: flex;
+  gap: 1.5rem;
+  align-items: start;
+  margin-bottom: 2rem;
+}
+
+.coach-avatar-large {
+  font-size: 3rem;
+  background: rgba(255, 255, 255, 0.1);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dialogue-bubble {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-grow: 1;
+}
+
+.dialogue-bubble p {
+  margin: 0 0 1rem 0;
+  line-height: 1.6;
+  font-size: 1.05rem;
+}
+
+.play-audio-btn {
+  background: linear-gradient(135deg, #ff006e, #ff4081);
+  border: none;
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.play-audio-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 0, 110, 0.4);
+}
+
+.exercise-box {
+  background: rgba(255, 0, 110, 0.1);
+  border: 1px solid rgba(255, 0, 110, 0.3);
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.exercise-box h4 {
+  margin: 0 0 1rem 0;
+  color: #ff4081;
+  font-size: 1.2rem;
+}
+
+.exercise-box p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.user-prompt {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.practice-btn {
+  background: #ff006e;
+  border: none;
+  color: white;
+  padding: 0.8rem 2rem;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.practice-btn:hover {
+  background: #ff4081;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 0, 110, 0.4);
+}
+
+.lesson-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+}
+
+.nav-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: rgba(255, 0, 110, 0.2);
+  border-color: #ff006e;
+}
+
+.nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.segment-dots {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dot.active {
+  background: #ff006e;
+  transform: scale(1.3);
+}
+
+.voice-options {
+  margin-top: 3rem;
+  text-align: center;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.voice-options h3 {
+  margin-bottom: 1.5rem;
+  color: #ff4081;
+}
+
+.voice-providers {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.provider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.provider-icon {
+  font-size: 1.2rem;
+}
+
+.ai-toggle {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.toggle-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  width: 50px;
+  height: 26px;
+  background-color: #ccc;
+  border-radius: 26px;
+  margin-right: 12px;
+  transition: background-color 0.3s;
+  position: relative;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 3px;
+  top: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.toggle-checkbox:checked + .toggle-slider {
+  background-color: #7c3aed;
+}
+
+.toggle-checkbox:checked + .toggle-slider::before {
+  transform: translateX(24px);
+}
+
+.toggle-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.hume-redirect {
+  text-align: center;
+  padding: 2rem;
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.hume-redirect p {
+  color: #7c3aed;
+  font-size: 18px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}

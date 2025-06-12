@@ -1,3 +1,8 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:3dff109fca7d2af47846f35a755ba5d16b4a16231b87801f1a531b90d6fc37f4
-size 377
+// WebGazer.js v2.1.0 - Stub file
+// This is a placeholder. You need to download the actual WebGazer 2.1.0 from:
+// https://unpkg.com/webgazer@2.1.0/dist/webgazer.min.js
+// 
+// Or use the CDN directly in your HTML:
+// <script src="https://unpkg.com/webgazer@2.1.0/dist/webgazer.min.js"></script>
+
+console.log("WebGazer 2.1.0 stub loaded - please replace with actual library");

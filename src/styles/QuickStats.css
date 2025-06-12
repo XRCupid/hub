@@ -1,3 +1,153 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:e338d5ad9a73dd42b68a85c52f5f6c6d2cdc7d4f04ef80f956513cb01e636f02
-size 2291
+.quick-stats {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 30px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.quick-stats h2 {
+  text-align: center;
+  color: #1a1a1a;
+  margin-bottom: 30px;
+  font-size: 28px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  background: #f9fafb;
+  padding: 25px;
+  border-radius: 12px;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+}
+
+.stat-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+.stat-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.skills-overview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.skills-section h3 {
+  font-size: 18px;
+  color: #1a1a1a;
+  margin-bottom: 15px;
+}
+
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.skill-tag {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.skill-tag.strength {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.skill-tag.improvement {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.motivational-message {
+  background: #f0f9ff;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.motivational-message p {
+  color: #1e40af;
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.action-button {
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-button.primary {
+  background: #667eea;
+  color: white;
+}
+
+.action-button.primary:hover {
+  background: #5a67d8;
+  transform: translateY(-2px);
+}
+
+.action-button.secondary {
+  background: #e0e7ff;
+  color: #667eea;
+}
+
+.action-button.secondary:hover {
+  background: #c7d2fe;
+}
+
+@media (max-width: 768px) {
+  .skills-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .quick-actions {
+    flex-direction: column;
+  }
+  
+  .action-button {
+    width: 100%;
+  }
+}

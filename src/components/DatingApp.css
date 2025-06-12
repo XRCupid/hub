@@ -1,3 +1,173 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:6521f6017c267a669b9b10f86ac87771d78a25ac74bfc4299bf9cad80d692a5f
-size 3373
+.dating-app-bg {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f7cac9 0%, #92a8d1 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0 100px 0;
+  font-family: 'Inter', 'Roboto', Arial, sans-serif;
+}
+
+.dating-app-card-stack {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.dating-app-card {
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(60, 60, 120, 0.18);
+  padding: 32px 28px 20px 28px;
+  width: 340px;
+  text-align: center;
+  position: relative;
+  transition: box-shadow 0.2s;
+  z-index: 2;
+}
+
+.dating-app-photo {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-bottom: 18px;
+  border: 4px solid #f7cac9;
+  box-shadow: 0 2px 8px rgba(60,60,120,0.10);
+}
+
+.dating-app-bio {
+  color: #444;
+  font-size: 1.1em;
+  margin-bottom: 12px;
+}
+
+.dating-app-interests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.dating-app-interest {
+  background: #92a8d1;
+  color: #fff;
+  border-radius: 12px;
+  padding: 4px 12px;
+  font-size: 0.95em;
+}
+
+.dating-app-actions {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 12px;
+}
+
+.dating-app-swipe-left, .dating-app-swipe-right {
+  font-size: 2em;
+  background: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.dating-app-swipe-left:hover {
+  color: #e57373;
+  transform: scale(1.2) rotate(-10deg);
+}
+.dating-app-swipe-right:hover {
+  color: #81c784;
+  transform: scale(1.2) rotate(10deg);
+}
+
+.dating-app-more-btn {
+  background: #92a8d1;
+  color: #fff;
+  border: none;
+  border-radius: 18px;
+  padding: 6px 18px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background 0.2s;
+}
+.dating-app-more-btn:hover {
+  background: #f7cac9;
+  color: #444;
+}
+
+.dating-app-modal-bg {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(60, 60, 120, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.dating-app-modal {
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(60, 60, 120, 0.20);
+  padding: 32px 32px 24px 32px;
+  min-width: 320px;
+  max-width: 95vw;
+  text-align: center;
+  position: relative;
+}
+.dating-app-modal-photo {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-bottom: 14px;
+  border: 3px solid #92a8d1;
+}
+.dating-app-modal-close, .dating-app-modal-date {
+  background: #92a8d1;
+  color: #fff;
+  border: none;
+  border-radius: 18px;
+  padding: 6px 18px;
+  margin: 8px 6px 0 6px;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background 0.2s;
+}
+.dating-app-modal-close:hover {
+  background: #e57373;
+}
+.dating-app-modal-date:hover {
+  background: #81c784;
+}
+
+.dating-app-matches {
+  margin-top: 32px;
+  width: 340px;
+  background: rgba(255,255,255,0.93);
+  border-radius: 18px;
+  box-shadow: 0 2px 8px rgba(60,60,120,0.08);
+  padding: 12px 18px 18px 18px;
+}
+.dating-app-match-list {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.dating-app-match {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.dating-app-match-photo {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #f7cac9;
+  margin-bottom: 4px;
+}

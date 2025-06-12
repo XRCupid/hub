@@ -1,3 +1,60 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:d17be56aa79e14ddeccabfbe9702fb1b0bf86c684defa9ad1e337db751db9812
-size 1043
+:root {
+  --avatar-primary-color: #F5D4A0;
+  --avatar-secondary-color: #4A4A4A;
+  --transition-speed: 0.3s;
+}
+
+.emotional-avatar {
+  position: relative;
+  width: 300px;
+  height: 400px;
+  transition: all var(--transition-speed) ease-in-out;
+}
+
+/* Emotion-based Transformations */
+.emotional-avatar.happy {
+  transform: scale(1.05);
+}
+
+.emotional-avatar.sad {
+  opacity: 0.8;
+}
+
+.emotional-avatar.excited {
+  animation: bounce 0.5s infinite alternate;
+}
+
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-10px); }
+}
+
+/* Micro-Expression Animations */
+.avatar-eyes {
+  transition: transform var(--transition-speed);
+}
+
+.avatar-eyes.blink {
+  animation: blink 0.2s;
+}
+
+@keyframes blink {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.1); }
+}
+
+.avatar-mouth {
+  transition: all var(--transition-speed);
+}
+
+.avatar-mouth.speaking {
+  transform: scaleY(1.2);
+}
+
+/* Responsive and Adaptive Styling */
+@media (max-width: 600px) {
+  .emotional-avatar {
+    width: 200px;
+    height: 266px;
+  }
+}

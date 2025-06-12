@@ -1,3 +1,246 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:5bb488cdfc1cc7f72396a17926a3315994f20238daa3e8d4bc34eb89efb6b124
-size 3738
+.tracking-dashboard {
+  background: #0a0a0a;
+  border-radius: 15px;
+  padding: 1.5rem;
+  border: 1px solid #222;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.dashboard-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.3rem;
+}
+
+.session-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #1a1a1a;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.session-indicator.active {
+  color: #4CAF50;
+}
+
+.indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.metric-card {
+  background: #1a1a1a;
+  border-radius: 10px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.metric-card.excellent {
+  border-color: #4CAF50;
+}
+
+.metric-card.good {
+  border-color: #FFC107;
+}
+
+.metric-card.needs-work {
+  border-color: #F44336;
+}
+
+.metric-card.expanded {
+  grid-column: span 2;
+}
+
+.metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.metric-header h4 {
+  margin: 0;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+
+.metric-body {
+  margin-bottom: 0.75rem;
+}
+
+.metric-description {
+  color: #999;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin: 0 0 0.75rem 0;
+}
+
+.ideal-range {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.range-label {
+  color: #666;
+}
+
+.range-value {
+  color: #aaa;
+  font-family: 'Courier New', monospace;
+}
+
+.metric-progress {
+  margin-bottom: 0.75rem;
+}
+
+.progress-track {
+  height: 6px;
+  background: #333;
+  border-radius: 3px;
+  position: relative;
+}
+
+.progress-indicator {
+  position: absolute;
+  top: -3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  transition: left 0.3s ease;
+}
+
+.metric-weight {
+  position: relative;
+  height: 20px;
+  background: #222;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.weight-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  opacity: 0.3;
+  transition: width 0.3s ease;
+}
+
+.weight-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.7rem;
+  color: #999;
+  font-weight: 600;
+}
+
+.metric-history {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #333;
+}
+
+.metric-history h5 {
+  margin: 0 0 0.5rem 0;
+  color: #aaa;
+  font-size: 0.85rem;
+}
+
+.history-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+}
+
+.history-time {
+  color: #666;
+}
+
+.history-value {
+  color: #999;
+  font-family: 'Courier New', monospace;
+}
+
+.dashboard-footer {
+  border-top: 1px solid #333;
+  padding-top: 1rem;
+}
+
+.overall-score {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+}
+
+.score-label {
+  color: #aaa;
+  font-weight: 600;
+}
+
+.score-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .metric-card.expanded {
+    grid-column: span 1;
+  }
+}

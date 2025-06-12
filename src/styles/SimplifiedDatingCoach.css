@@ -1,3 +1,227 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:7df261a6b55ef8bc20d115eb57ad7df6d8116ec1dda1643263bf9a271375e2eb
-size 3547
+.simplified-coach {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 2rem;
+}
+
+/* Session Selector */
+.session-selector {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.session-selector h1 {
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.sessions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.session-card {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
+}
+
+.session-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.session-card h3 {
+  color: #667eea;
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.duration {
+  color: #999;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.skill-tag {
+  background: #f0f0f0;
+  padding: 0.3rem 0.8rem;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.start-button {
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.8rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.start-button:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.quick-tips {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.quick-tips h3 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.quick-tips ul {
+  list-style: none;
+  padding: 0;
+}
+
+.quick-tips li {
+  padding: 0.5rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+  color: #666;
+}
+
+.quick-tips li:before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #667eea;
+  font-weight: bold;
+}
+
+/* Active Session */
+.active-session {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.session-header h2 {
+  color: #333;
+  font-size: 2rem;
+}
+
+.end-button {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.end-button:hover {
+  background: #ff5252;
+}
+
+.session-content {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 2rem;
+  height: 600px;
+}
+
+.avatar-view {
+  background: white;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.feedback-panel {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.feedback-panel h3 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.feedback-messages {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 1.5rem;
+}
+
+.feedback-message {
+  padding: 0.8rem;
+  margin-bottom: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #555;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.practice-prompts {
+  background: #f0f4ff;
+  padding: 1rem;
+  border-radius: 10px;
+  border-left: 4px solid #667eea;
+}
+
+.practice-prompts h4 {
+  color: #667eea;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.practice-prompts p {
+  color: #555;
+  font-style: italic;
+  margin: 0;
+}

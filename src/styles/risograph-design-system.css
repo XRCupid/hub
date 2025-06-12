@@ -1,3 +1,460 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:04790cc038b823ac8570f65f736b2a79ad6736542f60cd2d278c6df1ae1e3363
-size 11284
+/* XRCupid Ethereal Risograph Design System */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Work+Sans:wght@400;600;700;900&display=swap');
+
+:root {
+  /* Ethereal Heavenly Color Palette */
+  --paper: #FFF5F0;        /* Soft peachy cream */
+  --pink: #FF6B9D;         /* Coral Pink */
+  --rose: #FFC4E1;         /* Light Rose */
+  --purple: #9C88FF;       /* Dreamy Purple */
+  --lavender: #C7CEEA;     /* Soft Lavender */
+  --blue: #5F7ADB;         /* Heaven Blue */
+  --orange: #FF8C69;       /* Sunset Orange */
+  --gold: #FFD93D;         /* Divine Gold */
+  --deep-purple: #2D1B69;  /* Deep Night Purple */
+  
+  /* Ethereal Overlays */
+  --pink-glow: rgba(255, 107, 157, 0.3);
+  --purple-glow: rgba(156, 136, 255, 0.3);
+  --orange-glow: rgba(255, 140, 105, 0.3);
+  --gold-glow: rgba(255, 217, 61, 0.2);
+  
+  /* Typography */
+  --font-display: 'Bebas Neue', impact, sans-serif;
+  --font-body: 'Work Sans', -apple-system, sans-serif;
+  
+  /* Spacing */
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6rem;
+  
+  /* Font Sizes */
+  --font-size-xs: 0.875rem;
+  --font-size-sm: 1rem;
+  --font-size-base: 1.125rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  --font-size-3xl: 2.5rem;
+  --font-size-4xl: 3.5rem;
+  --font-size-5xl: 5rem;
+  --font-size-6xl: 7rem;
+  
+  /* Ethereal Borders */
+  --border-width: 3px;
+  --border-width-thick: 5px;
+  --border-radius: 30px;
+  --border-radius-lg: 50px;
+  --border-radius-full: 999px;
+  
+  /* Dreamy Shadows */
+  --shadow-sm: 0 4px 20px rgba(255, 107, 157, 0.3);
+  --shadow-md: 0 8px 30px rgba(156, 136, 255, 0.3);
+  --shadow-lg: 0 16px 40px rgba(255, 140, 105, 0.3);
+  --shadow-glow: 0 0 80px rgba(255, 107, 157, 0.5);
+  
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Base */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-body);
+  font-weight: 600;
+  color: var(--deep-purple);
+  background: linear-gradient(180deg, var(--lavender) 0%, var(--paper) 50%, var(--rose) 100%);
+  min-height: 100vh;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Ethereal Grain Overlay */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.6'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+/* Ethereal Glow Background */
+body::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 20% 30%, var(--pink-glow) 0%, transparent 40%),
+              radial-gradient(circle at 80% 70%, var(--purple-glow) 0%, transparent 40%),
+              radial-gradient(circle at 50% 50%, var(--orange-glow) 0%, transparent 60%);
+  animation: etherealGlow 20s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes etherealGlow {
+  0%, 100% { transform: rotate(0deg) scale(1); opacity: 0.8; }
+  33% { transform: rotate(120deg) scale(1.1); opacity: 1; }
+  66% { transform: rotate(240deg) scale(0.9); opacity: 0.9; }
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-md);
+  color: var(--deep-purple);
+  text-shadow: 2px 2px 0 var(--pink), 4px 4px 0 var(--orange);
+}
+
+h1 {
+  font-size: var(--font-size-6xl);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: var(--font-size-5xl);
+}
+
+h3 {
+  font-size: var(--font-size-4xl);
+}
+
+p {
+  margin-bottom: var(--space-md);
+  font-weight: 500;
+  color: var(--deep-purple);
+}
+
+/* Links */
+a {
+  color: var(--pink);
+  text-decoration: none;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+a:hover {
+  color: var(--purple);
+  text-shadow: 0 0 20px var(--pink-glow);
+}
+
+/* Ethereal Buttons */
+.button,
+.risograph-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md) var(--space-xl);
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: white;
+  background: linear-gradient(135deg, var(--pink) 0%, var(--orange) 100%);
+  border: var(--border-width) solid var(--deep-purple);
+  border-radius: var(--border-radius-full);
+  box-shadow: var(--shadow-md), inset 0 2px 20px rgba(255,255,255,0.3);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  min-width: 200px;
+}
+
+.button::before,
+.risograph-btn::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, var(--pink), var(--purple), var(--orange), var(--pink));
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity var(--transition-slow);
+  filter: blur(10px);
+}
+
+.button:hover::before,
+.risograph-btn:hover::before {
+  opacity: 1;
+}
+
+.button:hover,
+.risograph-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: var(--shadow-lg), var(--shadow-glow), inset 0 2px 30px rgba(255,255,255,0.5);
+}
+
+.button:active,
+.risograph-btn:active {
+  transform: translateY(0) scale(1);
+}
+
+.button-secondary {
+  background: linear-gradient(135deg, var(--purple) 0%, var(--blue) 100%);
+}
+
+.button-ghost {
+  background: transparent;
+  color: var(--purple);
+  border-width: var(--border-width-thick);
+}
+
+/* Ethereal Cards */
+.card,
+.riso-card {
+  background: rgba(255, 255, 255, 0.95); /* Increased opacity for better contrast */
+  backdrop-filter: blur(20px);
+  border: var(--border-width) solid var(--purple);
+  border-radius: var(--border-radius-lg);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  transition: all var(--transition-base);
+  overflow: hidden;
+}
+
+.card h1, .card h2, .card h3,
+.riso-card h1, .riso-card h2, .riso-card h3,
+.feature-card h3 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--deep-purple);
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.8); /* Subtle shadow for legibility */
+}
+
+.card p, .riso-card p, .feature-card p {
+  font-family: var(--font-body);
+  font-weight: 500; /* Reduced from 600 for better readability */
+  font-size: 1rem;
+  line-height: 1.6;
+  letter-spacing: 0.01em; /* Reduced letter spacing */
+  color: var(--deep-purple);
+  opacity: 0.9; /* Slightly softer for better contrast */
+}
+
+.feature-card {
+  font-size: 0.95rem; /* Slightly larger base font */
+}
+
+.feature-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.feature-card p {
+  font-size: 0.95rem;
+}
+
+.card::before,
+.riso-card::before {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  width: 300%;
+  height: 300%;
+  background: radial-gradient(circle, var(--pink-glow) 0%, transparent 40%);
+  animation: cardFloat 15s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes cardFloat {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(50%, 50%) rotate(120deg); }
+  66% { transform: translate(-50%, 50%) rotate(240deg); }
+}
+
+.card:hover,
+.riso-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  border-color: var(--pink);
+}
+
+/* Floating Clouds */
+.clouds {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cloud {
+  position: absolute;
+  background: radial-gradient(ellipse at center, var(--rose) 0%, transparent 70%);
+  border-radius: 100%;
+  opacity: 0.6;
+  filter: blur(40px);
+  animation: floatCloud 20s ease-in-out infinite;
+}
+
+.cloud:nth-child(1) {
+  width: 600px;
+  height: 200px;
+  top: 20%;
+  left: -300px;
+  animation-duration: 25s;
+}
+
+.cloud:nth-child(2) {
+  width: 400px;
+  height: 150px;
+  top: 60%;
+  right: -200px;
+  animation-duration: 30s;
+  background: radial-gradient(ellipse at center, var(--purple-glow) 0%, transparent 70%);
+}
+
+.cloud:nth-child(3) {
+  width: 500px;
+  height: 180px;
+  bottom: 10%;
+  left: 50%;
+  animation-duration: 35s;
+  background: radial-gradient(ellipse at center, var(--orange-glow) 0%, transparent 70%);
+}
+
+@keyframes floatCloud {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  25% { transform: translateX(100px) translateY(-30px); }
+  50% { transform: translateX(-50px) translateY(20px); }
+  75% { transform: translateX(80px) translateY(-10px); }
+}
+
+/* Sparkles */
+.sparkle {
+  position: absolute;
+  color: var(--gold);
+  font-size: 24px;
+  animation: sparkleFloat 3s ease-in-out infinite;
+  text-shadow: 0 0 20px var(--gold-glow);
+}
+
+@keyframes sparkleFloat {
+  0%, 100% { 
+    transform: translateY(0) rotate(0deg) scale(1); 
+    opacity: 0;
+  }
+  50% { 
+    transform: translateY(-30px) rotate(180deg) scale(1.2); 
+    opacity: 1;
+  }
+}
+
+/* Forms */
+input,
+textarea,
+select,
+.form-control {
+  width: 100%;
+  padding: var(--space-md);
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--deep-purple);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: var(--border-width) solid var(--purple);
+  border-radius: var(--border-radius);
+  transition: all var(--transition-fast);
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+.form-control:focus {
+  outline: none;
+  border-color: var(--pink);
+  box-shadow: 0 0 0 4px var(--pink-glow), var(--shadow-glow);
+  transform: scale(1.02);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+/* Animations */
+@keyframes wobble {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px var(--pink-glow); }
+  50% { box-shadow: 0 0 40px var(--purple-glow), 0 0 60px var(--pink-glow); }
+}
+
+.animate-wobble { animation: wobble 3s ease-in-out infinite; }
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-pulse { animation: pulse 2s ease-in-out infinite; }
+.animate-glow { animation: glow 3s ease-in-out infinite; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  h1 { font-size: var(--font-size-5xl); }
+  h2 { font-size: var(--font-size-4xl); }
+  h3 { font-size: var(--font-size-3xl); }
+  
+  .button,
+  .risograph-btn {
+    font-size: var(--font-size-lg);
+    padding: var(--space-sm) var(--space-lg);
+    min-width: 160px;
+  }
+  
+  .card,
+  .riso-card {
+    padding: var(--space-lg);
+  }
+}

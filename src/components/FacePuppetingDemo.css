@@ -1,3 +1,485 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:c50216f1667e6c92746bc4a6e2d97d7b5bb400a7f6934cb5690a4bb660cedba8
-size 7400
+.face-puppeting-demo {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+  overflow: hidden;
+}
+
+.controls {
+  background: white;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.controls h2 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.controls p {
+  margin: 5px 0;
+  color: #666;
+}
+
+.controls button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-right: 10px;
+}
+
+.controls button:hover {
+  background: #0056b3;
+}
+
+.controls button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #dc3545;
+  margin: 10px 0;
+  font-weight: bold;
+}
+
+.status {
+  margin: 10px 0;
+  font-weight: bold;
+}
+
+.demo-container {
+  flex: 1;
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  min-height: 0;
+}
+
+.video-section,
+.avatar-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  min-width: 0;
+  min-height: 0;
+}
+
+.video-section h3,
+.avatar-section h3 {
+  margin: 0;
+  padding: 15px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  flex-shrink: 0;
+}
+
+.video-section video {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+  min-height: 400px;
+}
+
+.avatar-canvas {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  min-height: 400px;
+}
+
+.avatar-canvas canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.expression-debug {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 12px;
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.expression-item {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.expression-name {
+  width: 120px;
+  text-align: right;
+  margin-right: 10px;
+}
+
+.expression-bar {
+  flex: 1;
+  height: 10px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-right: 10px;
+}
+
+.expression-fill {
+  height: 100%;
+  background: #4CAF50;
+  transition: width 0.3s ease;
+}
+
+.expression-value {
+  width: 40px;
+  text-align: right;
+}
+
+.tracking-source {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  z-index: 100;
+}
+
+.face-puppeting-demo h1 {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.face-puppeting-demo > p {
+  text-align: center;
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.webcam-section, .avatar-section {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.webcam-section h2, .avatar-section h2 {
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.webcam-wrapper, .avatar-wrapper {
+  position: relative;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.webcam-wrapper {
+  aspect-ratio: 4/3;
+}
+
+.avatar-wrapper {
+  height: 500px;
+}
+
+.webcam-video {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.webcam-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.start-button, .stop-button {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  background: #ff4081;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.start-button:hover, .stop-button:hover {
+  background: #e91e63;
+  transform: scale(1.05);
+}
+
+.stop-button {
+  display: block;
+  margin: 0 auto;
+  background: #666;
+}
+
+.stop-button:hover {
+  background: #555;
+}
+
+.error-message {
+  color: #d32f2f;
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 14px;
+}
+
+.expression-readout {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.expression-readout h3 {
+  margin-bottom: 0.5rem;
+  font-size: 14px;
+  color: #666;
+}
+
+.expression-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.expression-item {
+  display: grid;
+  grid-template-columns: 100px 1fr 40px;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 12px;
+}
+
+.expression-name {
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.expression-bar {
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.expression-fill {
+  height: 100%;
+  background: #ff4081;
+  transition: width 0.2s ease;
+}
+
+.expression-value {
+  text-align: right;
+  color: #666;
+  font-size: 11px;
+}
+
+.instructions {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.instructions h3 {
+  color: #e91e63;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+}
+
+.instructions ul {
+  list-style: none;
+  padding: 0;
+}
+
+.instructions li {
+  padding: 8px 0;
+  color: #ccc;
+  font-size: 1.1rem;
+}
+
+.api-key-form {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 25px;
+  margin: 20px 0;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.api-key-form p {
+  color: #ddd;
+  margin-bottom: 15px;
+}
+
+.api-key-form input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  color: white;
+  font-size: 16px;
+}
+
+.api-key-form input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.api-key-form button {
+  width: 100%;
+  padding: 12px 20px;
+  background: #e91e63;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.api-key-form button:hover {
+  background: #c2185b;
+}
+
+.api-key-form .hint {
+  font-size: 14px;
+  color: #999;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.api-key-form .hint a {
+  color: #e91e63;
+  text-decoration: none;
+}
+
+.api-key-form .hint a:hover {
+  text-decoration: underline;
+}
+
+.tracking-options {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 20px;
+  margin: 20px 0;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.tracking-options > p {
+  color: #ddd;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.status {
+  margin: 10px 0;
+  font-size: 16px;
+  color: #ddd;
+}
+
+.avatar-section > div:last-child {
+  flex: 1;
+  position: relative;
+}
+
+.avatar-section canvas {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.expression-debug {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.expression-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.expression-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.expression-name {
+  flex: 0 0 100px;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.expression-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.expression-fill {
+  height: 100%;
+  background: #e91e63;
+  transition: width 0.3s ease;
+}
+
+.expression-value {
+  flex: 0 0 40px;
+  text-align: right;
+  font-size: 12px;
+  color: #999;
+}
+
+@media (max-width: 768px) {
+  .demo-container {
+    flex-direction: column;
+  }
+}

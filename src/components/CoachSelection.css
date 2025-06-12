@@ -1,3 +1,308 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:06162b6059b7799db3b89d8ee5fc1f980ba975f8d3860673aef9469b5454d5d8
-size 5989
+.coach-selection-container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.coach-selection-title {
+  text-align: center;
+  font-size: 2.5rem;
+  color: #fff;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.coach-selection-subtitle {
+  text-align: center;
+  color: #aaa;
+  font-size: 1.1rem;
+  margin-bottom: 3rem;
+}
+
+.coach-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+}
+
+.coach-card {
+  background: #1a1a1a;
+  border-radius: 15px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.coach-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.coach-card.selected {
+  border-width: 3px;
+  transform: scale(1.02);
+}
+
+.coach-card-header {
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.coach-card-header h3 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.coach-card-body {
+  padding: 1.5rem;
+}
+
+.coach-description {
+  color: #ccc;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.coach-specialties {
+  margin-bottom: 1.5rem;
+}
+
+.coach-specialties h4 {
+  color: #fff;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.specialty-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.specialty-tag {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.coach-personality {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.personality-badge {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.coach-card-footer {
+  padding: 0 1.5rem 1.5rem;
+}
+
+.select-coach-btn {
+  width: 100%;
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: 2px solid;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.select-coach-btn:hover {
+  transform: scale(1.05);
+}
+
+/* Risograph Container */
+.risograph-container {
+  background-color: var(--bg-cream);
+  min-height: 100vh;
+  padding: var(--space-2xl);
+}
+
+/* Selection Hero Section */
+.selection-hero {
+  text-align: center;
+  margin-bottom: var(--space-3xl);
+  position: relative;
+}
+
+.hero-angel-small {
+  display: inline-block;
+  margin-bottom: var(--space-lg);
+  filter: drop-shadow(3px 3px 0 var(--overlay-pink));
+  animation: float 6s ease-in-out infinite;
+}
+
+.coach-selection-title {
+  margin-bottom: var(--space-md);
+}
+
+.coach-selection-title .title-main {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 900;
+  color: var(--text-dark);
+  text-shadow: 
+    2px 2px 0 var(--riso-pink),
+    4px 4px 0 var(--riso-teal);
+  letter-spacing: -0.02em;
+}
+
+.title-heart {
+  display: inline-block;
+  margin-left: var(--space-sm);
+  vertical-align: middle;
+}
+
+/* Coach Cards with Risograph Style */
+.coach-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-xl);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.coach-card.riso-card {
+  background: var(--bg-light);
+  border: 3px solid var(--text-dark);
+  border-radius: var(--radius-lg);
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all var(--transition-medium);
+  box-shadow: 5px 5px 0 var(--riso-indigo);
+  position: relative;
+}
+
+.coach-card-decoration {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  opacity: 0.5;
+  z-index: 2;
+  animation: float 4s ease-in-out infinite;
+}
+
+.coach-card:nth-child(1) .coach-card-decoration { animation-delay: 0s; }
+.coach-card:nth-child(2) .coach-card-decoration { animation-delay: 0.5s; }
+.coach-card:nth-child(3) .coach-card-decoration { animation-delay: 1s; }
+
+.coach-card.riso-card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 8px 8px 0 var(--riso-indigo);
+}
+
+.coach-card.riso-card.selected {
+  background: linear-gradient(135deg, var(--bg-light) 0%, var(--overlay-pink) 100%);
+  transform: translate(-3px, -3px);
+  box-shadow: 8px 8px 0 var(--riso-pink);
+}
+
+.coach-card-header {
+  background: var(--riso-pink);
+  padding: var(--space-lg);
+  margin: 0;
+  border-bottom: 3px solid var(--text-dark);
+  position: relative;
+  overflow: hidden;
+}
+
+.coach-card-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(255, 255, 255, 0.1) 10px,
+      rgba(255, 255, 255, 0.1) 20px
+    );
+}
+
+.coach-card-header h3 {
+  color: var(--bg-light);
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  font-weight: 900;
+  margin: 0;
+  position: relative;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.coach-card-body {
+  padding: var(--space-xl);
+}
+
+/* Specialty tags with Risograph style */
+.coach-specialties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+}
+
+.specialty-tag {
+  background-color: var(--overlay-goldenrod);
+  color: var(--text-dark);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--text-dark);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.coach-card:hover .specialty-tag {
+  background-color: var(--riso-goldenrod);
+  transform: translateY(-1px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .coach-cards {
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
+  }
+  
+  .hero-angel-small {
+    width: 80px;
+  }
+  
+  .coach-selection-title .title-main {
+    font-size: clamp(1.75rem, 6vw, 2.5rem);
+    text-shadow: 
+      1px 1px 0 var(--riso-pink),
+      2px 2px 0 var(--riso-teal);
+  }
+}
+
+@media (max-width: 768px) {
+  .coach-selection-title {
+    font-size: 2rem;
+  }
+  
+  .coach-cards {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,3 +1,270 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:ae9426ba66f65c337c5aa2298d5fa6ecb3de3ffd188e4d1d717d4fbb9d941887
-size 4723
+.interactive-coach-session {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #ff1d8e 0%, #ff6db3 100%);
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.coach-header {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, #ff1d8e 0%, #ff6db3 100%);
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.coach-avatar-container {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.coach-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.coach-info h3 {
+  margin: 0;
+  font-size: 1.5em;
+  font-weight: 600;
+  color: #ff4081;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.status.speaking {
+  color: #ff4081;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+.conversation-container {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 15px;
+}
+
+.message {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message.user {
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  display: none;
+}
+
+.message-content {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 15px;
+  max-width: 70%;
+}
+
+.message.user .message-content {
+  background: rgba(255, 0, 110, 0.2);
+}
+
+.message-content p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.input-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.text-input-form {
+  flex: 1;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.text-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.8rem 1rem;
+  border-radius: 25px;
+  font-size: 1rem;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: #ff006e;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.text-input-form button {
+  background: #ff006e;
+  border: none;
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.text-input-form button:hover:not(:disabled) {
+  background: #ff4081;
+  transform: translateY(-2px);
+}
+
+.text-input-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.voice-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.voice-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.voice-btn:hover:not(:disabled) {
+  background: rgba(255, 0, 110, 0.2);
+  border-color: #ff006e;
+}
+
+.voice-btn.listening {
+  background: rgba(255, 0, 110, 0.3);
+  border-color: #ff006e;
+  animation: pulse 1.5s infinite;
+}
+
+.voice-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background: rgba(255, 0, 0, 0.2);
+  border: 1px solid rgba(255, 0, 0, 0.4);
+  padding: 1rem;
+  border-radius: 10px;
+  margin-top: 1rem;
+  color: #ff6b6b;
+}
+
+.session-tips {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.api-key-setup {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 500px;
+  margin: 2rem auto;
+  text-align: center;
+}
+
+.api-key-setup h3 {
+  color: #ff4081;
+  margin-bottom: 1rem;
+}
+
+.api-key-setup p {
+  color: #ccc;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.api-key-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  font-family: monospace;
+}
+
+.submit-btn {
+  background: #ff006e;
+  border: none;
+  color: white;
+  padding: 0.8rem 2rem;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.submit-btn:hover {
+  background: #ff4081;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 0, 110, 0.4);
+}
+
+.privacy-note {
+  font-size: 0.85rem;
+  color: #777;
+  margin-top: 1rem;
+  font-style: italic;
+}

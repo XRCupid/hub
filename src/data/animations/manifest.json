@@ -1,3 +1,66 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:c8a502c6ac88df73224eb66418c5e8bb263c3739c0308690494a48611dbdd865
-size 1903
+{
+  "version": "1.0.0",
+  "animations": {
+    "core": {
+      "greeting_wave": {
+        "description": "Friendly wave for initial greetings",
+        "duration": 2.0,
+        "tags": ["greeting", "friendly", "opener"]
+      },
+      "flirty_hair_flip": {
+        "description": "Playful hair flip showing interest",
+        "duration": 2.5,
+        "tags": ["flirty", "playful", "interest"]
+      },
+      "confident_stance": {
+        "description": "Power pose showing confidence",
+        "duration": 3.0,
+        "tags": ["confident", "strong", "assured"]
+      },
+      "nervous_fidget": {
+        "description": "Subtle fidgeting showing nervousness",
+        "duration": 2.0,
+        "tags": ["nervous", "anxious", "uncertain"]
+      },
+      "interested_lean": {
+        "description": "Leaning forward showing engagement",
+        "duration": 3.0,
+        "tags": ["interested", "engaged", "attentive"]
+      },
+      "genuine_laugh": {
+        "description": "Natural laughter response",
+        "duration": 2.5,
+        "tags": ["happy", "joyful", "responsive"]
+      }
+    },
+    "subtle": {
+      "subtle_smile": {
+        "description": "Gentle smile reaction",
+        "duration": 1.5,
+        "tags": ["happy", "pleased", "subtle"]
+      },
+      "thoughtful_nod": {
+        "description": "Understanding nod",
+        "duration": 1.0,
+        "tags": ["understanding", "agreement", "listening"]
+      },
+      "playful_wink": {
+        "description": "Quick playful wink",
+        "duration": 0.8,
+        "tags": ["flirty", "playful", "quick"]
+      }
+    },
+    "idle": {
+      "idle_relaxed": {
+        "description": "Relaxed idle state",
+        "duration": 4.0,
+        "tags": ["idle", "relaxed", "neutral"]
+      },
+      "idle_engaged": {
+        "description": "Engaged idle state",
+        "duration": 4.0,
+        "tags": ["idle", "attentive", "ready"]
+      }
+    }
+  }
+}

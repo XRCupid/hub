@@ -1,3 +1,301 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:473e23798e26b443920b26e7b939f4f9b14d888e9552fde6e436779b6b4263ee
-size 4365
+.dating-flow-container {
+  min-height: 100vh;
+  background: #1a1a1a;
+  color: white;
+}
+
+.dating-flow-header {
+  background: #2a2a2a;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #444;
+}
+
+.dating-flow-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.dating-flow-nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.dating-flow-nav button {
+  background: transparent;
+  border: 1px solid #666;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.dating-flow-nav button.active,
+.dating-flow-nav button:hover {
+  background: #ff6b6b;
+  border-color: #ff6b6b;
+}
+
+.dating-flow-content {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Browse View */
+.browse-view h2 {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.browse-view p {
+  text-align: center;
+  color: #999;
+  margin-bottom: 2rem;
+}
+
+.npc-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.npc-card {
+  background: #2a2a2a;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.3s;
+}
+
+.npc-card:hover {
+  transform: translateY(-5px);
+}
+
+.npc-card img {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+}
+
+.npc-card h3 {
+  padding: 1rem;
+  margin: 0;
+}
+
+.npc-card p {
+  padding: 0 1rem;
+  color: #ccc;
+}
+
+.npc-card button {
+  width: calc(100% - 2rem);
+  margin: 1rem;
+  padding: 0.75rem;
+  background: #ff6b6b;
+  border: none;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s;
+}
+
+.npc-card button:hover {
+  background: #ff5252;
+}
+
+/* Matches View */
+.matches-view h2 {
+  margin-bottom: 2rem;
+}
+
+.match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.match-card {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.match-card img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.match-info {
+  flex: 1;
+}
+
+.match-info h3 {
+  margin: 0 0 0.5rem 0;
+}
+
+.match-info p {
+  color: #ccc;
+  margin: 0 0 1rem 0;
+}
+
+.match-status {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.status-badge {
+  background: #333;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+}
+
+.match-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.chat-button,
+.video-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.3s;
+}
+
+.chat-button {
+  background: #4a90e2;
+  color: white;
+}
+
+.chat-button:hover {
+  background: #357abd;
+}
+
+.video-button {
+  background: #ff6b6b;
+  color: white;
+}
+
+.video-button:hover {
+  background: #ff5252;
+}
+
+/* Chat View */
+.chat-view {
+  background: #2a2a2a;
+  border-radius: 12px;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #444;
+}
+
+.chat-header button {
+  background: transparent;
+  border: 1px solid #666;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.chat-header h2 {
+  margin: 0;
+  flex: 1;
+}
+
+/* Video Prep View */
+.video-prep-view {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.video-prep-view h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.video-prep-view > p {
+  font-size: 1.25rem;
+  color: #ccc;
+  margin-bottom: 2rem;
+}
+
+.video-prep-tips {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.video-prep-tips h3 {
+  margin-top: 0;
+}
+
+.video-prep-tips ul {
+  list-style: none;
+  padding: 0;
+}
+
+.video-prep-tips li {
+  padding: 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.video-prep-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.start-video-button {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.start-video-button:hover {
+  background: #ff5252;
+  transform: scale(1.05);
+}
+
+.back-button {
+  background: transparent;
+  color: white;
+  border: 1px solid #666;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.back-button:hover {
+  border-color: #999;
+  background: rgba(255, 255, 255, 0.1);
+}

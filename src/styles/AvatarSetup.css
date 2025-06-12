@@ -1,3 +1,287 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:ca23fb3ba7760acb9522063f0dd1b7505873f9cf4ad9f2ae366b154264ea9cec
-size 4240
+.avatar-setup {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  min-height: calc(100vh - 100px);
+}
+
+/* Welcome Step */
+.setup-welcome {
+  text-align: center;
+  animation: fadeIn 0.5s ease;
+}
+
+.setup-welcome h1 {
+  font-size: 48px;
+  color: #1a1a1a;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  font-size: 20px;
+  color: #6b7280;
+  margin-bottom: 40px;
+}
+
+.feature-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 25px;
+  margin: 40px 0;
+}
+
+.feature-card {
+  background: white;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+}
+
+.feature-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+}
+
+.feature-card h3 {
+  color: #1a1a1a;
+  margin-bottom: 10px;
+}
+
+.feature-card p {
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+/* Create Step */
+.setup-create {
+  animation: fadeIn 0.5s ease;
+}
+
+.setup-create h2 {
+  text-align: center;
+  color: #1a1a1a;
+  margin-bottom: 20px;
+}
+
+.instructions {
+  background: #f0f9ff;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  text-align: center;
+  color: #1e40af;
+}
+
+.iframe-container {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  background: #f9fafb;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+}
+
+.rpm-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f4f6;
+  border-top: 5px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Preview Step */
+.setup-preview {
+  animation: fadeIn 0.5s ease;
+}
+
+.setup-preview h2 {
+  text-align: center;
+  color: #1a1a1a;
+  margin-bottom: 30px;
+}
+
+.avatar-preview {
+  text-align: center;
+  margin: 30px 0;
+}
+
+.avatar-display {
+  display: inline-block;
+}
+
+.avatar-image {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.avatar-status {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.default-avatar {
+  text-align: center;
+}
+
+.placeholder-avatar {
+  font-size: 100px;
+  margin-bottom: 10px;
+  filter: grayscale(100%);
+}
+
+.avatar-tips {
+  background: #f9fafb;
+  padding: 30px;
+  border-radius: 16px;
+  margin: 30px 0;
+}
+
+.avatar-tips h3 {
+  color: #1a1a1a;
+  margin-bottom: 15px;
+}
+
+.avatar-tips ul {
+  list-style: none;
+  padding: 0;
+}
+
+.avatar-tips li {
+  padding: 10px 0;
+  color: #4b5563;
+  font-size: 16px;
+}
+
+/* Buttons */
+.action-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.primary-button,
+.secondary-button {
+  padding: 15px 40px;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.primary-button {
+  background: #667eea;
+  color: white;
+}
+
+.primary-button:hover {
+  background: #5a67d8;
+  transform: translateY(-2px);
+}
+
+.secondary-button {
+  background: #e0e7ff;
+  color: #667eea;
+}
+
+.secondary-button:hover {
+  background: #c7d2fe;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 10px;
+  margin-top: 20px;
+  transition: color 0.2s ease;
+}
+
+.back-button:hover {
+  color: #1a1a1a;
+}
+
+/* Human Touch */
+.human-touch {
+  background: #fef3c7;
+  padding: 25px;
+  border-radius: 12px;
+  margin-top: 40px;
+  text-align: center;
+}
+
+.human-touch p {
+  color: #92400e;
+  line-height: 1.8;
+  margin: 0;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .setup-welcome h1 {
+    font-size: 36px;
+  }
+  
+  .iframe-container {
+    height: 500px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .primary-button,
+  .secondary-button {
+    width: 100%;
+  }
+}

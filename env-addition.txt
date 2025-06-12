@@ -1,3 +1,6 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:bfe910f7a49de80307f369fc1ab8588d037e407c98e57490f7a7aa255ee45eb0
-size 243
+# Add this line to your .env.local file:
+
+REACT_APP_HUME_SECRET_KEY=PdOY1hurhhDVnaG2cidhhxUJzbtE4RarlOqzB1QQ0Bqg5CEm5dl53YkR6kMDBAQp
+
+# This is the same value as your REACT_APP_HUME_CLIENT_SECRET
+# The code expects this specific variable name

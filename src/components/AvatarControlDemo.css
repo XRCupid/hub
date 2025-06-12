@@ -1,3 +1,96 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:85648d6911b2ed38997c37cf576c85bb3c2ade5bc11f5ebedb0edb1469a884b5
-size 1372
+.avatar-control-demo {
+  width: 100%;
+  height: 100vh;
+  background: #0a0a0a;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+.demo-container {
+  display: flex;
+  height: 100%;
+}
+
+.avatar-view {
+  flex: 1;
+  position: relative;
+}
+
+.control-panel {
+  width: 400px;
+  background: #1a1a1a;
+  padding: 20px;
+  overflow-y: auto;
+  border-left: 1px solid #333;
+}
+
+.control-panel h2 {
+  margin: 0 0 20px 0;
+  color: #ff6b6b;
+}
+
+.control-section {
+  margin-bottom: 30px;
+  padding: 15px;
+  background: #222;
+  border-radius: 8px;
+}
+
+.control-section h3 {
+  margin: 0 0 15px 0;
+  color: #4ecdc4;
+  font-size: 16px;
+}
+
+.control-section label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.control-section input[type="range"] {
+  width: 100%;
+  margin-top: 5px;
+}
+
+.control-section input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.control-section select {
+  width: 100%;
+  padding: 8px;
+  background: #333;
+  color: white;
+  border: 1px solid #555;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.info-section {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.info-section h3 {
+  margin: 0 0 10px 0;
+  color: #ffd93d;
+  font-size: 16px;
+}
+
+.info-section ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.info-section li {
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.info-section strong {
+  color: #4ecdc4;
+}

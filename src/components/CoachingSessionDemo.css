@@ -1,3 +1,397 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:a8cef6074fcf8030b4b78898643b827fdaa8e1a90b78ae4dcd3844aa7992e8ea
-size 6449
+.coaching-session-demo {
+  padding: 2rem;
+  background: #0a0a0a;
+  color: #fff;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.demo-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.demo-header h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(45deg, #ff69b4, #ff1493);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.teaching-philosophy {
+  font-size: 1.2rem;
+  color: #888;
+  font-style: italic;
+}
+
+/* Session Controls */
+.session-controls {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.session-type-selector {
+  display: flex;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.5rem;
+  border-radius: 30px;
+}
+
+.session-type-selector button {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  border-radius: 25px;
+  transition: all 0.3s ease;
+}
+
+.session-type-selector button.active {
+  background: #ff69b4;
+  color: #fff;
+}
+
+/* Session Content */
+.session-content {
+  display: grid;
+  gap: 2rem;
+}
+
+/* Flow Visualization */
+.flow-visualization {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  padding: 2rem;
+}
+
+.flow-visualization h3 {
+  color: #ff69b4;
+  margin-bottom: 1.5rem;
+}
+
+.phases-timeline {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.phases-timeline::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 40px;
+  right: 40px;
+  height: 2px;
+  background: rgba(255, 105, 180, 0.3);
+}
+
+.phase-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+
+.phase-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 105, 180, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.phase-block.active .phase-number {
+  background: #ff69b4;
+  border-color: #ff69b4;
+  color: #000;
+}
+
+.phase-name {
+  font-size: 0.85rem;
+  color: #888;
+  text-align: center;
+  max-width: 100px;
+}
+
+.phase-block.active .phase-name {
+  color: #fff;
+}
+
+.session-phase {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+
+.phase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.phase-header h3 {
+  margin: 0;
+  color: #fff;
+}
+
+.phase-duration {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.phase-activities {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #ccc;
+}
+
+.activity-bullet {
+  color: #ff69b4;
+}
+
+/* Coaching Style */
+.coaching-style {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  padding: 2rem;
+}
+
+.coaching-style h3 {
+  color: #ff69b4;
+  margin-bottom: 1rem;
+}
+
+.style-tags {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.style-tag {
+  background: rgba(255, 105, 180, 0.2);
+  border: 1px solid rgba(255, 105, 180, 0.5);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  color: #ff69b4;
+}
+
+.example-toggle {
+  background: #ff69b4;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
+}
+
+.example-toggle:hover {
+  background: #ff1493;
+  transform: translateY(-1px);
+}
+
+/* Coaching Example */
+.coaching-example {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.coach-avatar {
+  flex-shrink: 0;
+}
+
+.coach-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.coach-icon.grace {
+  background: rgba(255, 192, 203, 0.2);
+  border: 2px solid #ffc0cb;
+}
+
+.coach-icon.posie {
+  background: rgba(255, 182, 193, 0.2);
+  border: 2px solid #ffb6c1;
+}
+
+.coach-icon.rizzo {
+  background: rgba(255, 0, 0, 0.2);
+  border: 2px solid #ff0000;
+}
+
+.dialogue-flow {
+  flex: 1;
+}
+
+.coach-message {
+  background: rgba(255, 105, 180, 0.1);
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 105, 180, 0.3);
+}
+
+.coach-message strong {
+  color: #ff69b4;
+}
+
+.session-component {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.component-label {
+  font-weight: bold;
+  color: #ff69b4;
+  margin-bottom: 0.5rem;
+}
+
+.component-approach {
+  color: #ccc;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.component-example {
+  color: #fff;
+  font-style: italic;
+  padding-left: 1rem;
+  border-left: 3px solid rgba(255, 105, 180, 0.5);
+}
+
+/* Interaction Examples */
+.interaction-examples {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  padding: 2rem;
+}
+
+.interaction-examples h4 {
+  color: #ff69b4;
+  margin-bottom: 1.5rem;
+}
+
+.interaction-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.user-situation {
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+.coach-response {
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 105, 180, 0.3);
+}
+
+.coach-response.grace {
+  background: rgba(255, 192, 203, 0.1);
+}
+
+.coach-response.posie {
+  background: rgba(255, 182, 193, 0.1);
+}
+
+.coach-response.rizzo {
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.coach-response strong {
+  color: #ff69b4;
+}
+
+/* Implementation Notes */
+.implementation-notes {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  padding: 2rem;
+  margin-top: 2rem;
+}
+
+.implementation-notes h3 {
+  color: #ff69b4;
+  margin-bottom: 1.5rem;
+}
+
+.implementation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.implementation-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+
+.implementation-item h4 {
+  color: #fff;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.implementation-item p {
+  color: #ccc;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .phases-timeline {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .phases-timeline::before {
+    display: none;
+  }
+  
+  .coaching-example {
+    flex-direction: column;
+  }
+  
+  .implementation-grid {
+    grid-template-columns: 1fr;
+  }
+}

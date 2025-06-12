@@ -1,3 +1,322 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:ca18877200373788ed1ae8e728808bff7e2cf2c0591bd9141e6db86b5335e92b
-size 5136
+.dating-coach-integration {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f7;
+}
+
+.integration-nav {
+  display: flex;
+  background: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  overflow-x: auto;
+}
+
+.integration-nav button {
+  flex: 1;
+  padding: 15px 20px;
+  border: none;
+  background: none;
+  color: #666;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+}
+
+.integration-nav button:hover {
+  color: #333;
+  background: #f9f9f9;
+}
+
+.integration-nav button.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  background: #f9f9f9;
+}
+
+.integration-nav button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.integration-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Schedule View */
+.schedule-view {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.schedule-view h2 {
+  margin: 0 0 20px 0;
+  color: #1a1a2e;
+  font-size: 28px;
+}
+
+.empty-state {
+  text-align: center;
+  color: #999;
+  padding: 60px 20px;
+  font-size: 18px;
+}
+
+.date-list {
+  display: grid;
+  gap: 20px;
+}
+
+.date-card {
+  background: white;
+  border-radius: 15px;
+  padding: 25px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.date-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.date-card h3 {
+  margin: 0 0 10px 0;
+  color: #1a1a2e;
+  font-size: 22px;
+}
+
+.date-card p {
+  margin: 5px 0;
+  color: #666;
+}
+
+.date-time {
+  color: #667eea !important;
+  font-weight: 500;
+  margin: 15px 0 !important;
+}
+
+.date-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.date-actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.date-actions button:first-child {
+  background: #667eea;
+  color: white;
+}
+
+.date-actions button:first-child:hover:not(:disabled) {
+  background: #5a67d8;
+  transform: translateY(-1px);
+}
+
+.date-actions button:last-child {
+  background: #e5e7eb;
+  color: #666;
+}
+
+.date-actions button:last-child:hover {
+  background: #d1d5db;
+}
+
+.date-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Progress View */
+.progress-view {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.progress-view h2 {
+  margin: 0 0 20px 0;
+  color: #1a1a2e;
+  font-size: 28px;
+}
+
+.progress-summary {
+  background: white;
+  border-radius: 15px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.progress-summary p {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.progress-section {
+  background: white;
+  border-radius: 15px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.progress-section h3 {
+  margin: 0 0 15px 0;
+  color: #667eea;
+  font-size: 20px;
+}
+
+.progress-section ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.progress-section li {
+  margin: 10px 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* Lesson View */
+.lesson-view {
+  padding: 40px 20px;
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.lesson-view h2 {
+  margin: 0 0 20px 0;
+  color: #1a1a2e;
+  font-size: 32px;
+}
+
+.lesson-view p {
+  margin: 0 0 30px 0;
+  color: #666;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.lesson-view button {
+  padding: 15px 40px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 30px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.lesson-view button:hover {
+  background: #5a67d8;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* Notification Styles */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: white;
+  padding: 20px 30px;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  z-index: 1000;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.coach-tip {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #667eea;
+  color: white;
+  padding: 15px 25px;
+  border-radius: 25px;
+  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+  max-width: 500px;
+  z-index: 1000;
+  animation: bounceIn 0.5s ease;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(-50%) translateY(-10px);
+  }
+  100% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .integration-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .integration-nav button {
+    min-width: 120px;
+  }
+  
+  .schedule-view,
+  .progress-view {
+    padding: 15px;
+  }
+  
+  .date-card,
+  .progress-summary,
+  .progress-section {
+    padding: 20px;
+  }
+  
+  .date-actions {
+    flex-direction: column;
+  }
+  
+  .date-actions button {
+    width: 100%;
+  }
+}

@@ -1,3 +1,58 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:3618c43b104202cb02111c6fdbd7f9e692a078879a9044bead214ec2bd902605
-size 1588
+[
+  {
+    "id": "6729f9b9f1b7ba7b1e0f6b2a",
+    "name": "male_1",
+    "type": "male",
+    "path": "/avatars/male_1.glb",
+    "originalUrl": "https://models.readyplayer.me/6729f9b9f1b7ba7b1e0f6b2a.glb"
+  },
+  {
+    "id": "6729fa1cf1b7ba7b1e0f6b2b",
+    "name": "female_1",
+    "type": "female",
+    "path": "/avatars/female_1.glb",
+    "originalUrl": "https://models.readyplayer.me/6729fa1cf1b7ba7b1e0f6b2b.glb"
+  },
+  {
+    "id": "6729fa3ef1b7ba7b1e0f6b2c",
+    "name": "male_2",
+    "type": "male",
+    "path": "/avatars/male_2.glb",
+    "originalUrl": "https://models.readyplayer.me/6729fa3ef1b7ba7b1e0f6b2c.glb"
+  },
+  {
+    "id": "6729fa5df1b7ba7b1e0f6b2d",
+    "name": "female_2",
+    "type": "female",
+    "path": "/avatars/female_2.glb",
+    "originalUrl": "https://models.readyplayer.me/6729fa5df1b7ba7b1e0f6b2d.glb"
+  },
+  {
+    "id": "6729fa7cf1b7ba7b1e0f6b2e",
+    "name": "neutral_1",
+    "type": "neutral",
+    "path": "/avatars/neutral_1.glb",
+    "originalUrl": "https://models.readyplayer.me/6729fa7cf1b7ba7b1e0f6b2e.glb"
+  },
+  {
+    "id": "angelchick",
+    "name": "AngelChick",
+    "type": "female",
+    "path": "/avatars/AngelChick.glb",
+    "originalUrl": "https://models.readyplayer.me/67593c2d5e6a3e97d9f5b2e3.glb"
+  },
+  {
+    "id": "felix-2056",
+    "name": "Felix",
+    "type": "male",
+    "path": "/avatars/fool.glb",
+    "originalUrl": "https://models.readyplayer.me/felix-2056.glb"
+  },
+  {
+    "id": "bebe-3851",
+    "name": "Bebe",
+    "type": "female",
+    "path": "/avatars/babe.glb",
+    "originalUrl": "https://models.readyplayer.me/bebe-3851.glb"
+  }
+]

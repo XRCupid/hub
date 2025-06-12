@@ -1,3 +1,294 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:bfcbf5198797efecd3f900a477510fd6e57e7fe094af255d3ad5096b8d590d77
-size 5733
+/* Main Dashboard Container */
+.audience-analytics-dashboard {
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+  color: white;
+  font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header Styles */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  height: 80px;
+}
+
+.title-section h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
+.subtitle {
+  margin: 5px 0 0 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+.session-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.session-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.duration {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #4FC3F7;
+  font-family: 'Courier New', monospace;
+}
+
+.phase-indicator {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.start-button, .stop-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.start-button {
+  background: linear-gradient(45deg, #4CAF50, #45a049);
+  color: white;
+}
+
+.start-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.start-button:disabled {
+  background: #666;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.stop-button {
+  background: linear-gradient(45deg, #f44336, #d32f2f);
+  color: white;
+}
+
+.stop-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+}
+
+/* Main Content Area */
+.dashboard-content {
+  flex: 1;
+  display: flex;
+  padding: 20px;
+  gap: 20px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Participants Section - Side by Side Layout */
+.participants-section {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Individual Participant Card */
+.participant-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  overflow: visible;
+  min-height: 800px;
+}
+
+.participant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-shrink: 0;
+}
+
+.participant-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.compatibility-score {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #4FC3F7;
+}
+
+/* Video Container - Fixed aspect ratio */
+.participant-video-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 600px;
+}
+
+.participant-video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+  background: #000;
+}
+
+/* Canvas overlay for face tracking */
+.participant-video-container canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* PiP Avatar Container */
+.pip-avatar-container {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 120px;
+  height: 120px;
+  background: rgba(20, 20, 30, 0.9);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+
+.emotion-overlay {
+  width: 100%;
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(20, 20, 30, 0.95);
+  border-radius: 15px;
+  border: 2px solid rgba(255, 107, 53, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  min-height: 400px;
+}
+
+.emotion-source-indicator {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  justify-content: center;
+}
+
+.emotion-source-label {
+  font-size: 1.1rem;
+  color: #FF6B35;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 107, 53, 0.1);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 107, 53, 0.3);
+}
+
+/* Remove duplicate styles */
+.participant-feed,
+.video-section {
+  display: none;
+}
+
+/* Analytics Section */
+.analytics-section {
+  display: none; /* Hide for now to focus on main content */
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .dashboard-content {
+    padding: 15px;
+  }
+  
+  .participants-section {
+    flex-direction: column;
+  }
+  
+  .participant-card {
+    max-height: none;
+  }
+}
+
+/* Animations */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Scrollbar styling */
+.emotion-overlay::-webkit-scrollbar {
+  width: 8px;
+}
+
+.emotion-overlay::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.emotion-overlay::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.emotion-overlay::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

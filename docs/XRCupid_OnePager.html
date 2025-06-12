@@ -1,3 +1,449 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:ce457179329eed0fddf06218e1deb552be711a426f914c09fee1e0912f7c65a8
-size 14297
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XRCupid - Investment Vision 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 50px rgba(0,0,0,0.3);
+        }
+        
+        header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            font-weight: 800;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .tagline {
+            font-size: 1.5em;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .stat-box:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        section {
+            padding: 60px 40px;
+        }
+        
+        h2 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            color: #333;
+            text-align: center;
+        }
+        
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        .product-card {
+            padding: 30px;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .product-card:hover {
+            border-color: #667eea;
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+        }
+        
+        .product-card h3 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        
+        .features {
+            list-style: none;
+            margin-top: 15px;
+        }
+        
+        .features li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .features li:before {
+            content: "✨";
+            position: absolute;
+            left: 0;
+        }
+        
+        .timeline {
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px 0;
+        }
+        
+        .timeline-item {
+            display: flex;
+            margin-bottom: 30px;
+            align-items: center;
+        }
+        
+        .timeline-date {
+            font-weight: 700;
+            color: #667eea;
+            min-width: 100px;
+            font-size: 1.2em;
+        }
+        
+        .timeline-content {
+            margin-left: 30px;
+            padding-left: 30px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .revenue-model {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin: 40px 0;
+        }
+        
+        .revenue-stream {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .revenue-stream h4 {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+        
+        .investment-ask {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 60px;
+            text-align: center;
+            margin-top: 60px;
+        }
+        
+        .investment-ask h2 {
+            color: white;
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        
+        .ask-amount {
+            font-size: 4em;
+            font-weight: 800;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .use-of-funds {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-top: 40px;
+        }
+        
+        .fund-item {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .cta {
+            background: white;
+            color: #667eea;
+            padding: 20px 50px;
+            font-size: 1.3em;
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 40px;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .cta:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .tech-stack {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin: 40px 0;
+        }
+        
+        .tech-item {
+            background: #667eea;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            margin: 10px;
+            font-weight: 600;
+        }
+        
+        footer {
+            background: #333;
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .contact-info {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+        
+        .emoji {
+            font-size: 1.5em;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💘 XRCupid</h1>
+            <p class="tagline">The Future of Love in the Age of AI</p>
+        </header>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number">$8.5B</div>
+                <div class="stat-label">Dating App Market</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">$15.7B</div>
+                <div class="stat-label">AI Coaching Market</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">$209B</div>
+                <div class="stat-label">Metaverse by 2030</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">67%</div>
+                <div class="stat-label">Singles Want Better Skills</div>
+            </div>
+        </div>
+        
+        <section>
+            <h2>🚀 Product Ecosystem</h2>
+            <div class="product-grid">
+                <div class="product-card">
+                    <h3>📱 Mobile Dating Training</h3>
+                    <p>AI-powered coaches guide users through personalized dating skill development</p>
+                    <ul class="features">
+                        <li>Real-time body language analysis</li>
+                        <li>Practice dates with AI NPCs</li>
+                        <li>Eye contact & gesture training</li>
+                        <li>Personalized learning paths</li>
+                    </ul>
+                </div>
+                <div class="product-card">
+                    <h3>🥽 XR Metaverse Dating</h3>
+                    <p>Immersive virtual environments for safe practice before real-world dates</p>
+                    <ul class="features">
+                        <li>VR dating lounges</li>
+                        <li>Avatar expression mirroring</li>
+                        <li>Spatial audio rooms</li>
+                        <li>Cross-platform support</li>
+                    </ul>
+                </div>
+                <div class="product-card">
+                    <h3>💬 Live Coaching Platform</h3>
+                    <p>Real-time AI assistance during actual video dates</p>
+                    <ul class="features">
+                        <li>Chemistry scoring algorithms</li>
+                        <li>Whispered coaching tips</li>
+                        <li>Post-date performance review</li>
+                        <li>Conference audience mode</li>
+                    </ul>
+                </div>
+                <div class="product-card">
+                    <h3>🏢 Enterprise Solutions</h3>
+                    <p>B2B applications for professional and therapeutic contexts</p>
+                    <ul class="features">
+                        <li>Corporate communication training</li>
+                        <li>Therapy integration tools</li>
+                        <li>Academic research platform</li>
+                        <li>White-label solutions</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        
+        <section>
+            <h2>💎 Competitive Advantages</h2>
+            <div class="tech-stack">
+                <span class="tech-item">ML5 + MediaPipe Fusion</span>
+                <span class="tech-item">67 Facial Expressions</span>
+                <span class="tech-item">Voice Prosody Analysis</span>
+                <span class="tech-item">Patent-Pending Gestures</span>
+                <span class="tech-item">Real-time Chemistry Scoring</span>
+            </div>
+        </section>
+        
+        <section>
+            <h2>📈 Path to Unicorn Status</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-date">Q3 2025</div>
+                    <div class="timeline-content">
+                        <strong>MVP Launch</strong><br>
+                        10K beta users • Core features live • $500K ARR
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-date">Q4 2025</div>
+                    <div class="timeline-content">
+                        <strong>Mobile Launch</strong><br>
+                        iOS/Android • 100K downloads • Series A: $15M
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-date">Q2 2026</div>
+                    <div class="timeline-content">
+                        <strong>Metaverse Expansion</strong><br>
+                        VR lounges live • Meta partnership • $5M ARR
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-date">2027</div>
+                    <div class="timeline-content">
+                        <strong>Market Leader</strong><br>
+                        1M+ users • Global expansion • IPO prep
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <section>
+            <h2>💰 Revenue Model</h2>
+            <div class="revenue-model">
+                <div class="revenue-stream">
+                    <h4>Subscriptions</h4>
+                    <p>$19.99/month<br>Premium tier</p>
+                </div>
+                <div class="revenue-stream">
+                    <h4>Session Credits</h4>
+                    <p>$4.99/session<br>Advanced coaching</p>
+                </div>
+                <div class="revenue-stream">
+                    <h4>Enterprise</h4>
+                    <p>$10K+/year<br>B2B licenses</p>
+                </div>
+                <div class="revenue-stream">
+                    <h4>Data Insights</h4>
+                    <p>$50K+/report<br>Behavior analytics</p>
+                </div>
+            </div>
+        </section>
+        
+        <div class="investment-ask">
+            <h2>Investment Opportunity</h2>
+            <div class="ask-amount">$3M SEED ROUND</div>
+            <div class="use-of-funds">
+                <div class="fund-item">
+                    <strong>40%</strong><br>
+                    Engineering
+                </div>
+                <div class="fund-item">
+                    <strong>30%</strong><br>
+                    Growth Marketing
+                </div>
+                <div class="fund-item">
+                    <strong>20%</strong><br>
+                    Content & Coaches
+                </div>
+                <div class="fund-item">
+                    <strong>10%</strong><br>
+                    Operations
+                </div>
+            </div>
+            <a href="mailto:invest@xrcupid.ai" class="cta">Let's Build the Future of Love</a>
+        </div>
+        
+        <footer>
+            <div class="contact-info">
+                <span class="emoji">📧</span> invest@xrcupid.ai
+                <span class="emoji">🎪</span> AWE Booth #1247
+                <span class="emoji">🌐</span> xrcupid.ai
+            </div>
+            <p style="margin-top: 20px; font-style: italic;">
+                "In a world where 50% of relationships start online,<br>
+                we're teaching people how to thrive when they meet offline."
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

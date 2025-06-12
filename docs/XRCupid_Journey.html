@@ -1,3 +1,579 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:0c8eda4531377dc6ae35e09b6851d4fad75d7c186c439b6c93e473024a43a1b1
-size 18762
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XRCupid: From Hackathon to Revolution</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Space+Mono&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow-x: hidden;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="%23ff006e" opacity="0.8"/></svg>'), auto;
+        }
+        
+        /* Risograph grain texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.01) 35px, rgba(255,255,255,.01) 70px),
+                repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(255,255,255,.02) 35px, rgba(255,255,255,.02) 70px);
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            z-index: 2;
+            pointer-events: none;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="1"/></svg>');
+        }
+        
+        section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 60px 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            z-index: 10;
+            position: relative;
+        }
+        
+        /* SECTION 1: The Beginning */
+        .hero {
+            background: #ff006e;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, transparent 20%, #ff006e 20.5%, #ff006e 30%, transparent 30.5%);
+            background-size: 50px 50px;
+            animation: float 20s linear infinite;
+            opacity: 0.3;
+        }
+        
+        @keyframes float {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(100px, 100px) rotate(360deg); }
+        }
+        
+        h1 {
+            font-size: clamp(3rem, 10vw, 8rem);
+            font-weight: 700;
+            line-height: 0.9;
+            margin-bottom: 30px;
+            mix-blend-mode: multiply;
+            text-transform: uppercase;
+        }
+        
+        .subtitle {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 50px;
+        }
+        
+        /* SECTION 2: The Hack */
+        .hackathon {
+            background: #3a86ff;
+            color: #fff;
+        }
+        
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            margin: 40px 0;
+            position: relative;
+        }
+        
+        .timeline-date {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-right: 40px;
+            color: #ffbe0b;
+            text-shadow: 3px 3px 0 #fb5607;
+            min-width: 200px;
+        }
+        
+        .timeline-content {
+            flex: 1;
+            background: rgba(0,0,0,0.2);
+            padding: 30px;
+            border-radius: 0;
+            border: 3px solid #ffbe0b;
+            position: relative;
+        }
+        
+        .timeline-content::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: -5px;
+            bottom: -5px;
+            background: #fb5607;
+            z-index: -1;
+        }
+        
+        /* SECTION 3: The Vision */
+        .vision {
+            background: #8338ec;
+        }
+        
+        .vision-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            margin-top: 60px;
+        }
+        
+        .vision-card {
+            background: #ffbe0b;
+            color: #000;
+            padding: 40px;
+            position: relative;
+            transform: rotate(-2deg);
+            transition: transform 0.3s;
+        }
+        
+        .vision-card:nth-child(even) {
+            transform: rotate(2deg);
+            background: #fb5607;
+            color: #fff;
+        }
+        
+        .vision-card:hover {
+            transform: rotate(0deg) scale(1.05);
+            z-index: 10;
+        }
+        
+        .vision-card h3 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        
+        /* SECTION 4: The Tech */
+        .tech {
+            background: #06ffa5;
+            color: #000;
+        }
+        
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 60px;
+        }
+        
+        .tech-item {
+            background: #000;
+            color: #06ffa5;
+            padding: 20px 40px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            position: relative;
+            transform: skew(-10deg);
+            transition: all 0.3s;
+        }
+        
+        .tech-item:hover {
+            transform: skew(-10deg) translateY(-5px);
+            box-shadow: 5px 5px 0 #ff006e;
+        }
+        
+        /* SECTION 5: The Now */
+        .current {
+            background: #ffbe0b;
+            color: #000;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 60px;
+            margin-top: 60px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 6rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #ff006e;
+            text-shadow: 4px 4px 0 #3a86ff;
+        }
+        
+        .stat-label {
+            font-size: 1.5rem;
+            margin-top: 20px;
+            text-transform: uppercase;
+        }
+        
+        /* SECTION 6: The Future */
+        .future {
+            background: linear-gradient(45deg, #ff006e 0%, #8338ec 50%, #3a86ff 100%);
+            min-height: 100vh;
+        }
+        
+        .future-content {
+            text-align: center;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: #fff;
+            color: #000;
+            padding: 30px 60px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-decoration: none;
+            text-transform: uppercase;
+            margin-top: 60px;
+            position: relative;
+            transition: all 0.3s;
+        }
+        
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: -10px;
+            bottom: -10px;
+            background: #06ffa5;
+            z-index: -1;
+        }
+        
+        .cta-button:hover {
+            transform: translate(-5px, -5px);
+        }
+        
+        /* Floating elements */
+        .float-element {
+            position: absolute;
+            font-size: 4rem;
+            opacity: 0.3;
+            animation: float-around 15s infinite ease-in-out;
+        }
+        
+        @keyframes float-around {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(120deg); }
+            66% { transform: translate(-20px, 20px) rotate(240deg); }
+        }
+        
+        /* Parallax scrolling effect */
+        .parallax-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 120%;
+            opacity: 0.1;
+            font-size: 20rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translateY(0);
+            transition: transform 0.5s ease-out;
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .timeline-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .timeline-date {
+                margin-right: 0;
+                margin-bottom: 20px;
+            }
+            
+            .vision-grid,
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: clamp(2rem, 8vw, 4rem);
+            }
+        }
+        
+        /* Scroll reveal animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 1s ease-out;
+        }
+        
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .badge {
+            display: inline-block;
+            background: #000;
+            color: #06ffa5;
+            padding: 10px 20px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+            transform: rotate(-3deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="noise"></div>
+    
+    <!-- SECTION 1: The Beginning -->
+    <section class="hero">
+        <div class="parallax-bg">LOVE</div>
+        <div class="container">
+            <div class="badge">MIT HACKATHON 2024</div>
+            <h1>XR<br>CUPID</h1>
+            <p class="subtitle">48 HOURS TO HACK LONELINESS</p>
+            <div class="float-element" style="top: 20%; right: 10%;">💘</div>
+            <div class="float-element" style="bottom: 20%; left: 10%;">🤖</div>
+        </div>
+    </section>
+    
+    <!-- SECTION 2: The Hack -->
+    <section class="hackathon">
+        <div class="container reveal">
+            <h2 style="font-size: 4rem; margin-bottom: 60px;">THE BIRTH OF AN IDEA</h2>
+            
+            <div class="timeline-item">
+                <div class="timeline-date">0h</div>
+                <div class="timeline-content">
+                    <h3>The Problem</h3>
+                    <p>67% of young adults struggle with dating anxiety. Traditional apps make it worse.</p>
+                </div>
+            </div>
+            
+            <div class="timeline-item">
+                <div class="timeline-date">12h</div>
+                <div class="timeline-content">
+                    <h3>The Insight</h3>
+                    <p>What if AI could be your dating coach? Not match you, but teach you how to connect.</p>
+                </div>
+            </div>
+            
+            <div class="timeline-item">
+                <div class="timeline-date">36h</div>
+                <div class="timeline-content">
+                    <h3>The Demo</h3>
+                    <p>Live face tracking. Real-time coaching. Judges' minds = blown. 🏆 Winner.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- SECTION 3: The Vision -->
+    <section class="vision">
+        <div class="container reveal">
+            <h2 style="font-size: 4rem; text-align: center; margin-bottom: 60px;">THE VISION EXPANDS</h2>
+            
+            <div class="vision-grid">
+                <div class="vision-card">
+                    <h3>Mobile First</h3>
+                    <p>AI coaches in your pocket. Practice dates anytime. Build confidence daily.</p>
+                </div>
+                
+                <div class="vision-card">
+                    <h3>XR Ready</h3>
+                    <p>Vision Pro. Quest 3. Full immersion. Practice in virtual worlds before real dates.</p>
+                </div>
+                
+                <div class="vision-card">
+                    <h3>Live Assist</h3>
+                    <p>Real-time whispers during actual dates. Your AI wingman, always there.</p>
+                </div>
+                
+                <div class="vision-card">
+                    <h3>Enterprise Scale</h3>
+                    <p>Corporate training. Therapy tools. Academic research. B2B goldmine.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- SECTION 4: The Tech -->
+    <section class="tech">
+        <div class="container reveal">
+            <h2 style="font-size: 4rem; text-align: center;">WHAT WE BUILT</h2>
+            <p style="text-align: center; font-size: 1.5rem; margin-top: 20px;">6 MONTHS LATER...</p>
+            
+            <div class="tech-stack">
+                <div class="tech-item">ML5 + MediaPipe Fusion</div>
+                <div class="tech-item">67 Facial Expressions</div>
+                <div class="tech-item">Real-time Posture Analysis</div>
+                <div class="tech-item">Voice Prosody Detection</div>
+                <div class="tech-item">Chemistry Algorithms</div>
+                <div class="tech-item">Avatar Mirroring</div>
+                <div class="tech-item">Hume AI Integration</div>
+                <div class="tech-item">WebRTC Multiplayer</div>
+            </div>
+            
+            <p style="text-align: center; margin-top: 60px; font-size: 1.5rem;">
+                NOT A POWERPOINT.<br>
+                <strong>IT'S ALL WORKING. RIGHT NOW.</strong>
+            </p>
+        </div>
+    </section>
+    
+    <!-- SECTION 5: The Now -->
+    <section class="current">
+        <div class="container reveal">
+            <h2 style="font-size: 4rem; text-align: center;">WHERE WE ARE TODAY</h2>
+            
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-number">98%</div>
+                    <div class="stat-label">Face Tracking Accuracy</div>
+                </div>
+                
+                <div class="stat">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">AI Coach Personalities</div>
+                </div>
+                
+                <div class="stat">
+                    <div class="stat-number">12</div>
+                    <div class="stat-label">Real-time Metrics</div>
+                </div>
+                
+                <div class="stat">
+                    <div class="stat-number">∞</div>
+                    <div class="stat-label">Practice Scenarios</div>
+                </div>
+            </div>
+            
+            <p style="text-align: center; margin-top: 80px; font-size: 2rem; font-weight: 700;">
+                READY TO DEMO AT AWE.<br>
+                READY TO SCALE.<br>
+                READY TO CHANGE DATING FOREVER.
+            </p>
+        </div>
+    </section>
+    
+    <!-- SECTION 6: The Future -->
+    <section class="future">
+        <div class="container reveal">
+            <div class="future-content">
+                <h2 style="font-size: 5rem; margin-bottom: 40px;">THE FUTURE OF LOVE</h2>
+                
+                <p style="font-size: 1.8rem; margin-bottom: 30px;">
+                    Imagine a world where no one has to feel<br>
+                    anxious about dating ever again.
+                </p>
+                
+                <p style="font-size: 1.5rem; margin-bottom: 30px; opacity: 0.9;">
+                    Where AI teaches empathy.<br>
+                    Where practice makes perfect.<br>
+                    Where everyone gets a second chance at first impressions.
+                </p>
+                
+                <p style="font-size: 2.5rem; font-weight: 700; margin-top: 60px;">
+                    JOIN US IN BUILDING IT.
+                </p>
+                
+                <p style="font-size: 3rem; font-weight: 700; color: #06ffa5; margin-top: 30px;">
+                    $3M SEED ROUND
+                </p>
+                
+                <a href="mailto:invest@xrcupid.ai" class="cta-button">
+                    LET'S TALK
+                </a>
+                
+                <p style="margin-top: 80px; font-family: 'Space Mono', monospace; opacity: 0.7;">
+                    AWE 2025 • BOOTH #1247 • LIVE DEMO TUESDAY
+                </p>
+            </div>
+        </div>
+    </section>
+    
+    <script>
+        // Reveal animations on scroll
+        function reveal() {
+            const reveals = document.querySelectorAll('.reveal');
+            
+            reveals.forEach(element => {
+                const windowHeight = window.innerHeight;
+                const elementTop = element.getBoundingClientRect().top;
+                const elementVisible = 150;
+                
+                if (elementTop < windowHeight - elementVisible) {
+                    element.classList.add('active');
+                }
+            });
+        }
+        
+        window.addEventListener('scroll', reveal);
+        reveal(); // Check on load
+        
+        // Parallax effect
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const parallaxElements = document.querySelectorAll('.parallax-bg');
+            
+            parallaxElements.forEach(element => {
+                const speed = 0.5;
+                element.style.transform = `translateY(${scrolled * speed}px)`;
+            });
+        });
+        
+        // Add some interactive cursor effects
+        document.addEventListener('mousemove', (e) => {
+            const floatElements = document.querySelectorAll('.float-element');
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            
+            floatElements.forEach((element, index) => {
+                const speed = (index + 1) * 50;
+                element.style.transform = `translate(${x * speed}px, ${y * speed}px)`;
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,3 +1,425 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:9a55953b9024b0a070b54e545259da6e0af0d0986fa5e7eace911e9f5b67c8b2
-size 13352
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XRCupid - Love in Electric Colors</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Righteous&family=Poppins:wght@400;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #FFE5F1;
+            color: #2D1B69;
+            overflow-x: hidden;
+        }
+        
+        /* Risograph grain */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="turbulence" baseFrequency="0.9" numOctaves="4" /></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)" opacity="0.15"/></svg>');
+            pointer-events: none;
+            z-index: 1;
+            mix-blend-mode: multiply;
+        }
+        
+        section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 60px 20px;
+            z-index: 10;
+        }
+        
+        /* HERO */
+        .hero {
+            background: linear-gradient(135deg, #FF006E 0%, #8338EC 50%, #3A86FF 100%);
+            color: white;
+            text-align: center;
+        }
+        
+        h1 {
+            font-family: 'Righteous', cursive;
+            font-size: clamp(5rem, 15vw, 12rem);
+            line-height: 0.8;
+            margin-bottom: 20px;
+            text-shadow: 
+                0 0 30px rgba(255,255,255,0.5),
+                5px 5px 0 #FFB700,
+                10px 10px 0 #FF006E,
+                15px 15px 30px rgba(0,0,0,0.3);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        .hero-subtitle {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: #FFB700;
+            color: #2D1B69;
+            padding: 15px 40px;
+            display: inline-block;
+            transform: rotate(-2deg);
+            margin-top: 20px;
+            box-shadow: 5px 5px 0 #FF006E;
+        }
+        
+        /* STORY */
+        .story {
+            background: #FFB700;
+        }
+        
+        .story-grid {
+            display: grid;
+            gap: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .story-card {
+            background: white;
+            padding: 40px;
+            border: 4px solid #2D1B69;
+            box-shadow: 8px 8px 0 #FF006E;
+            transform: rotate(-1deg);
+            transition: all 0.3s;
+        }
+        
+        .story-card:nth-child(even) {
+            transform: rotate(1deg);
+            box-shadow: 8px 8px 0 #3A86FF;
+        }
+        
+        .story-card:hover {
+            transform: rotate(0) scale(1.05);
+        }
+        
+        .story-card h3 {
+            font-family: 'Righteous', cursive;
+            font-size: 2.5rem;
+            color: #FF006E;
+            margin-bottom: 15px;
+        }
+        
+        /* FEATURES */
+        .features {
+            background: #3A86FF;
+            color: white;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            max-width: 1000px;
+            margin: 60px auto 0;
+        }
+        
+        .feature-card {
+            background: #FFE5F1;
+            color: #2D1B69;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            transform: translateY(0);
+            transition: all 0.3s;
+            border: 3px solid #FF006E;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            background: #FFB700;
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        /* TECH */
+        .tech {
+            background: #FF006E;
+            color: white;
+        }
+        
+        .tech-pills {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 40px;
+        }
+        
+        .pill {
+            background: white;
+            color: #FF006E;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            border: 3px solid #2D1B69;
+            transform: scale(1);
+            transition: all 0.3s;
+        }
+        
+        .pill:hover {
+            transform: scale(1.1) rotate(-5deg);
+            background: #FFB700;
+            color: #2D1B69;
+        }
+        
+        /* STATS */
+        .stats {
+            background: #8338EC;
+            color: white;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-family: 'Righteous', cursive;
+            font-size: 5rem;
+            color: #FFB700;
+            text-shadow: 3px 3px 0 #FF006E;
+            display: block;
+            line-height: 1;
+        }
+        
+        .stat-label {
+            font-size: 1.2rem;
+            margin-top: 10px;
+            text-transform: uppercase;
+        }
+        
+        /* CTA */
+        .cta {
+            background: linear-gradient(45deg, #FFB700, #FF006E, #8338EC, #3A86FF);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            text-align: center;
+            color: white;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .cta-box {
+            background: rgba(255,255,255,0.95);
+            color: #2D1B69;
+            padding: 60px;
+            border-radius: 30px;
+            max-width: 600px;
+            margin: 0 auto;
+            border: 5px solid #2D1B69;
+            box-shadow: 0 0 50px rgba(0,0,0,0.3);
+        }
+        
+        .cta-amount {
+            font-family: 'Righteous', cursive;
+            font-size: 4rem;
+            color: #FF006E;
+            margin: 20px 0;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: #FF006E;
+            color: white;
+            padding: 20px 60px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-decoration: none;
+            border-radius: 50px;
+            margin-top: 30px;
+            border: 4px solid #2D1B69;
+            transform: scale(1);
+            transition: all 0.3s;
+            box-shadow: 5px 5px 0 #2D1B69;
+        }
+        
+        .cta-button:hover {
+            transform: scale(1.1);
+            background: #FFB700;
+            box-shadow: 10px 10px 0 #2D1B69;
+        }
+        
+        h2 {
+            font-family: 'Righteous', cursive;
+            font-size: 3.5rem;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        /* Floating elements */
+        .float-heart {
+            position: absolute;
+            font-size: 3rem;
+            color: #FF006E;
+            animation: float 20s infinite ease-in-out;
+            opacity: 0.5;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(100px, -100px) rotate(45deg); }
+            50% { transform: translate(-100px, -200px) rotate(90deg); }
+            75% { transform: translate(-50px, -100px) rotate(180deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- HERO -->
+    <section class="hero">
+        <div style="position: relative;">
+            <div class="float-heart" style="top: -50px; left: -100px;">💘</div>
+            <div class="float-heart" style="top: 100px; right: -100px;">💕</div>
+            <h1>XRCupid</h1>
+            <p class="hero-subtitle">AI DATING COACHES SINCE 2025</p>
+        </div>
+    </section>
+    
+    <!-- STORY -->
+    <section class="story">
+        <div>
+            <h2 style="color: #2D1B69;">From Hackathon to Revolution</h2>
+            
+            <div class="story-grid">
+                <div class="story-card">
+                    <h3>January 2025: The Spark</h3>
+                    <p>MIT Reality Hack. 48 hours. One crazy idea: What if AI could teach you how to date? We built it. We won. The judges cried (happy tears).</p>
+                </div>
+                
+                <div class="story-card">
+                    <h3>Six Months Later: The Fire</h3>
+                    <p>Not a demo anymore. A full platform. Real-time face tracking. Voice analysis. Body language coaching. Chemistry algorithms. It's all working. Right now.</p>
+                </div>
+                
+                <div class="story-card">
+                    <h3>Today: The Revolution</h3>
+                    <p>Ready to scale. Ready to help millions find love. Ready to make dating anxiety a thing of the past. Ready for YOU to join us.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- FEATURES -->
+    <section class="features">
+        <div>
+            <h2>What We're Building</h2>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Mobile First</h3>
+                    <p>AI coaches in your pocket. Practice anytime. Build confidence daily.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🥽</div>
+                    <h3>XR Ready</h3>
+                    <p>Vision Pro. Quest 3. Practice dates in virtual worlds.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <h3>Live Assist</h3>
+                    <p>Real-time whispers during actual dates. Your AI wingman.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🏢</div>
+                    <h3>Enterprise</h3>
+                    <p>Corporate training. Therapy tools. B2B goldmine.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- TECH -->
+    <section class="tech">
+        <div>
+            <h2>The Tech Is Real</h2>
+            
+            <div class="tech-pills">
+                <span class="pill">98% Face Tracking</span>
+                <span class="pill">67 Expressions</span>
+                <span class="pill">Voice Prosody</span>
+                <span class="pill">Posture Analysis</span>
+                <span class="pill">Chemistry Score</span>
+                <span class="pill">4 AI Coaches</span>
+                <span class="pill">WebRTC Live</span>
+                <span class="pill">Avatar Mirror</span>
+            </div>
+        </div>
+    </section>
+    
+    <!-- STATS -->
+    <section class="stats">
+        <div>
+            <h2>Where We Are Now</h2>
+            
+            <div class="stats-container">
+                <div class="stat">
+                    <span class="stat-number">6</span>
+                    <span class="stat-label">Months Building</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">12</span>
+                    <span class="stat-label">Live Metrics</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">4</span>
+                    <span class="stat-label">AI Personalities</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">∞</span>
+                    <span class="stat-label">Practice Dates</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- CTA -->
+    <section class="cta">
+        <div class="cta-box">
+            <h2 style="color: #2D1B69;">Join the Love Revolution</h2>
+            <p style="font-size: 1.3rem;">We're teaching humanity how to connect again.</p>
+            <div class="cta-amount">$3M SEED</div>
+            <p>Be part of the platform that ends dating anxiety forever.</p>
+            <a href="mailto:invest@xrcupid.ai" class="cta-button">LET'S TALK</a>
+            <p style="margin-top: 40px; font-weight: 800;">LIVE DEMO • AWE 2025 • BOOTH #1247</p>
+        </div>
+    </section>
+</body>
+</html>

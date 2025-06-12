@@ -1,3 +1,196 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:53aabf440ac3b89e561652affedc7373c3eb3014ffe304793987130158dbfcfb
-size 3186
+.user-avatar-pip {
+  position: fixed;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid #ff69b4;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  background: rgba(255, 105, 180, 0.3);
+  transition: all 0.3s ease;
+  cursor: move;
+}
+
+/* Position variants */
+.user-avatar-pip.top-left {
+  top: 20px;
+  left: 20px;
+}
+
+.user-avatar-pip.top-right {
+  top: 20px;
+  right: 20px;
+}
+
+.user-avatar-pip.bottom-left {
+  bottom: 20px;
+  left: 20px;
+}
+
+.user-avatar-pip.bottom-right {
+  bottom: 20px;
+  right: 20px;
+}
+
+/* Size variants */
+.user-avatar-pip.pip-small {
+  width: 200px;
+  height: 200px;
+}
+
+.user-avatar-pip.pip-medium {
+  width: 300px;
+  height: 300px;
+}
+
+.user-avatar-pip.pip-large {
+  width: 400px;
+  height: 400px;
+}
+
+/* Floating close button */
+.pip-close-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  z-index: 10;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+
+.pip-close-button:hover {
+  opacity: 1;
+  background: rgba(255, 100, 150, 0.8);
+  transform: scale(1.1);
+}
+
+/* Content area */
+.pip-content {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: #000;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.pip-content canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Minimized state */
+.user-avatar-pip.minimized {
+  height: auto;
+}
+
+.user-avatar-pip.minimized .pip-content {
+  display: none;
+}
+
+/* Error state */
+.pip-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 20px;
+  text-align: center;
+}
+
+.pip-error p {
+  color: #ef4444;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.pip-error button {
+  background: #7c3aed;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.pip-error button:hover {
+  background: #6d28d9;
+}
+
+/* Expression debug */
+.expression-debug {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px;
+  backdrop-filter: blur(8px);
+}
+
+.expression-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.expression-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.expression-name {
+  color: rgba(255, 255, 255, 0.7);
+  width: 80px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.expression-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.expression-fill {
+  height: 100%;
+  background: linear-gradient(to right, #7c3aed, #a855f7);
+  transition: width 0.2s ease;
+}
+
+/* Draggable support (optional) */
+.user-avatar-pip.dragging {
+  cursor: move;
+  opacity: 0.8;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .user-avatar-pip.pip-large {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .user-avatar-pip.pip-medium {
+    width: 150px;
+    height: 150px;
+  }
+}

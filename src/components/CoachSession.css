@@ -1,3 +1,273 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:87f9db2eb9a70c570d5dbc71df066841050a5c0f1e6be22464c98d1132b0afcd
-size 5079
+.coach-session {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: white;
+  position: relative;
+  z-index: 1;
+}
+
+.coach-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.back-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-2px);
+}
+
+.connection-status {
+  font-size: 0.9rem;
+}
+
+.status-connected {
+  color: #4ade80;
+}
+
+.status-disconnected {
+  color: #ef4444;
+}
+
+.coach-content {
+  display: flex;
+  gap: 2rem;
+  padding: 2rem;
+  height: calc(100vh - 120px);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.coach-avatar-scene {
+  flex: 1;
+  background: #1a1a1a;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  height: 100%;
+  min-height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coach-avatar-scene canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+}
+
+.coach-avatar-scene.dating-scene {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #ff006e 0%, #8338ec 100%);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.coach-avatar-scene.dating-scene::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(255, 0, 110, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(131, 56, 236, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(251, 86, 7, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.coach-interaction {
+  flex: 0 0 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  overflow-y: auto;
+}
+
+.connection-panel {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.connection-panel h2 {
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.connection-panel p {
+  margin-bottom: 2rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+}
+
+.connect-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 1rem 3rem;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.connect-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+}
+
+.connect-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-message {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #fca5a5;
+}
+
+.conversation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.coach-message,
+.user-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.coach-message h3,
+.user-input h4 {
+  margin-bottom: 0.5rem;
+  color: #a78bfa;
+}
+
+.coach-message p,
+.user-input p {
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+}
+
+.emotion-display {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.emotion-display h4 {
+  margin-bottom: 1rem;
+  color: #fbbf24;
+}
+
+.emotion-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.emotion-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.emotion-label {
+  width: 80px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: capitalize;
+}
+
+.emotion-progress {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.emotion-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%);
+  transition: width 0.3s ease;
+}
+
+.session-controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.end-session-button {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.end-session-button:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .coach-content {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .coach-avatar-scene {
+    height: 400px;
+  }
+}
+
+/* PiP Avatar */
+.pip-avatar {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 200px !important;
+  height: 200px !important;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid #ff69b4;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  background: rgba(255, 105, 180, 0.3);
+}
+
+.pip-avatar canvas {
+  width: 100% !important;
+  height: 100% !important;
+}

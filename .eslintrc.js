@@ -1,3 +1,23 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:708d7368e5c936899246dc00bc204f3084ab05f94725bbddcfb5e68ee2cfbe3e
-size 535
+module.exports = {
+  extends: [
+    'react-app',
+    'react-app/jest'
+  ],
+  rules: {
+    '@typescript-eslint/no-empty-object-type': 'off',
+    '@typescript-eslint/no-unsafe-function-type': 'off',
+    '@typescript-eslint/no-wrapper-object-types': 'off',
+    '@typescript-eslint/no-unused-vars': ['warn', { 
+      varsIgnorePattern: '^_',
+      argsIgnorePattern: '^_'
+    }]
+  },
+  overrides: [
+    {
+      files: ['*.js', '*.jsx'],
+      rules: {
+        '@typescript-eslint/explicit-function-return-type': 'off'
+      }
+    }
+  ]
+};

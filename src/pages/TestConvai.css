@@ -1,3 +1,415 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:2df9e635c0564fbca9d80d5480ee20414656e7e7bd2b3c3635d53d71851a0428
-size 6335
+.test-convai-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.test-convai-container h1 {
+  color: #333;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.connection-section,
+.text-section,
+.audio-section,
+.messages-section,
+.info-section {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.connection-section h2,
+.text-section h2,
+.audio-section h2,
+.messages-section h2,
+.info-section h3 {
+  margin-top: 0;
+  color: #555;
+}
+
+.character-input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.connect-btn,
+.disconnect-btn,
+.send-btn,
+.record-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.connect-btn {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.connect-btn:hover {
+  background-color: #45a049;
+}
+
+.disconnect-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+.disconnect-btn:hover {
+  background-color: #da190b;
+}
+
+.status {
+  margin-top: 10px;
+  font-size: 16px;
+}
+
+.status .connected {
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+.status .disconnected {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.text-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.text-input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.send-btn {
+  background-color: #2196F3;
+  color: white;
+}
+
+.send-btn:hover {
+  background-color: #0b7dda;
+}
+
+.record-btn {
+  background-color: #FF9800;
+  color: white;
+  width: 200px;
+}
+
+.record-btn:hover {
+  background-color: #e68900;
+}
+
+.record-btn.recording {
+  background-color: #f44336;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.messages-list {
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.message {
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: 8px;
+  word-wrap: break-word;
+}
+
+.message.user {
+  background-color: #e3f2fd;
+  margin-left: 20%;
+  text-align: right;
+}
+
+.message.assistant {
+  background-color: #f5f5f5;
+  margin-right: 20%;
+}
+
+.message.system {
+  background-color: #fff3cd;
+  text-align: center;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+.message .sender {
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.info-section {
+  background-color: #e3f2fd;
+}
+
+.info-section p {
+  margin: 5px 0;
+  font-family: monospace;
+}
+
+/* Service Toggle Switch */
+.service-toggle {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 120px;
+  height: 34px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ff6b6b;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #4CAF50;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(86px);
+}
+
+.toggle-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.service-toggle small {
+  display: block;
+  margin-top: 10px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Connection Status */
+.connection-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 20px 0;
+  font-size: 16px;
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.status-indicator.connected {
+  background-color: #4CAF50;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.status-indicator.disconnected {
+  background-color: #f44336;
+  box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
+}
+
+/* Emotion Display */
+.emotion-display {
+  background-color: #f0f0f0;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 20px 0;
+  text-align: center;
+  font-size: 14px;
+}
+
+.emotion-display strong {
+  color: #333;
+  margin-right: 10px;
+}
+
+/* Message Emotions */
+.message-emotion {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #999;
+  margin-top: 5px;
+}
+
+/* Updated controls layout */
+.controls {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.connect-btn,
+.disconnect-btn {
+  padding: 12px 30px;
+  font-size: 16px;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.connect-btn {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.connect-btn:hover:not(:disabled) {
+  background-color: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.connect-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.disconnect-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+.disconnect-btn:hover {
+  background-color: #da190b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Input controls */
+.input-controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border-top: 1px solid #e0e0e0;
+  padding: 20px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
+
+.text-input-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.text-input {
+  flex: 1;
+  padding: 12px 20px;
+  border: 1px solid #ddd;
+  border-radius: 25px;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.text-input:focus {
+  border-color: #4CAF50;
+}
+
+.send-btn {
+  padding: 12px 30px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.send-btn:hover {
+  background-color: #45a049;
+  transform: translateY(-2px);
+}
+
+.audio-controls {
+  text-align: center;
+}
+
+.messages-container {
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 20px 0 120px 0;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+}

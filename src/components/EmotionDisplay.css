@@ -1,3 +1,139 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:47eb666e504d5a3ce01ffe1647110f9946a4df7f033e6045fbd26b565681be70
-size 2129
+.emotion-display {
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 15px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.emotion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.emotion-header h4 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.dominant-emotion {
+  background: linear-gradient(45deg, #ff006e, #3a86ff);
+  padding: 5px 15px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.emotion-bars {
+  margin-bottom: 20px;
+}
+
+.emotion-bar-container {
+  margin-bottom: 12px;
+}
+
+.emotion-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.emotion-emoji {
+  font-size: 1.2rem;
+}
+
+.emotion-name {
+  color: #fff;
+  font-size: 0.9rem;
+  text-transform: capitalize;
+  flex: 1;
+}
+
+.emotion-bar-wrapper {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  height: 8px;
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+
+.emotion-bar {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.5s ease;
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 10px currentColor;
+  }
+}
+
+.emotion-score {
+  color: #aaa;
+  font-size: 0.8rem;
+  margin-left: 8px;
+}
+
+.emotion-radar {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.emotion-svg {
+  width: 150px;
+  height: 150px;
+}
+
+.emotion-dot {
+  animation: emotionPulse 2s ease-in-out infinite;
+}
+
+@keyframes emotionPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.emotion-radar-label {
+  fill: #fff;
+}
+
+/* Real-time indicator */
+.emotion-display::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  background: #06ffa5;
+  border-radius: 50%;
+  animation: liveIndicator 2s ease-in-out infinite;
+}
+
+@keyframes liveIndicator {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 10px #06ffa5;
+  }
+}

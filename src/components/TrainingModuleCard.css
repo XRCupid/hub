@@ -1,3 +1,185 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:d392e7f8bc00e8850c5c42d4c33c5979fa09dc9d6097690bd1df987903dc8b8b
-size 3042
+.training-module-card {
+  background: #1a1a1a;
+  border-radius: 12px;
+  border: 2px solid;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.training-module-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.training-module-card.locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.training-module-card.completed {
+  box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+}
+
+.module-header {
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.module-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+.difficulty-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.module-body {
+  padding: 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.module-description {
+  color: #ccc;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.module-info {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #999;
+}
+
+.module-info span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.module-objectives {
+  margin-top: 0.5rem;
+}
+
+.module-objectives h4 {
+  font-size: 0.85rem;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.module-objectives ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  list-style: none;
+}
+
+.module-objectives li {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin-bottom: 0.25rem;
+  position: relative;
+}
+
+.module-objectives li::before {
+  content: '•';
+  position: absolute;
+  left: -1rem;
+  color: #666;
+}
+
+.module-objectives li.more {
+  font-style: italic;
+  color: #777;
+}
+
+.module-progress {
+  margin-top: 0.5rem;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.progress-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.module-footer {
+  padding: 0 1rem 1rem;
+}
+
+.module-btn {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 2px solid;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.module-btn:hover:not(:disabled) {
+  transform: scale(1.02);
+}
+
+.module-btn.locked {
+  background: #333;
+  border-color: #333;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.module-btn.completed {
+  color: #fff;
+}
+
+.module-btn.start:hover {
+  background-color: var(--coach-color) !important;
+  color: #fff !important;
+}
+
+/* Icons (using simple text symbols for now) */
+.icon-clock::before { content: '⏱'; }
+.icon-exercise::before { content: '💪'; }
+.icon-lock::before { content: '🔒'; }
+.icon-replay::before { content: '🔄'; }
+.icon-play::before { content: '▶'; }

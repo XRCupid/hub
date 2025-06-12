@@ -1,3 +1,46 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:1941a0802cb824fc35da53a4f463566f5f3e71b6b90c53cfdcdb6f8ea0ec27f6
-size 754
+/* HumeApiKeyInput.css */
+.hume-api-key-input {
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.hume-api-key-input h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.hume-api-key-input input {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.hume-api-key-input button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.hume-api-key-input button:hover {
+  background-color: #0056b3;
+}
+
+.hume-api-key-input .error {
+  color: #dc3545;
+  margin-top: 10px;
+}
+
+.hume-api-key-input .success {
+  color: #28a745;
+  margin-top: 10px;
+}

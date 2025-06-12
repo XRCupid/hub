@@ -1,3 +1,246 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:e1ff123d0468afe19a7360ffdce16c2e0eeacdfd29a6ceaca138d83c6c34460b
-size 4397
+.eye-contact-game {
+  width: 100%;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.game-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.game-header {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+}
+
+.score-display {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 15px 25px;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  gap: 30px;
+}
+
+.status {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.avatar-area {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  z-index: 50;
+}
+
+.avatar-area.gazing {
+  background: radial-gradient(circle, rgba(76, 175, 80, 0.3) 0%, transparent 70%);
+  box-shadow: 0 0 50px rgba(76, 175, 80, 0.5);
+}
+
+.avatar-area.not-gazing {
+  background: radial-gradient(circle, rgba(244, 67, 54, 0.2) 0%, transparent 70%);
+}
+
+.avatar-container {
+  text-align: center;
+}
+
+.coach-avatar {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: 5px solid white;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+  background: #f0f0f0;
+  object-fit: cover;
+}
+
+.speech-bubble {
+  background: white;
+  padding: 15px 20px;
+  border-radius: 20px;
+  margin-top: 20px;
+  position: relative;
+  max-width: 300px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.speech-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid white;
+}
+
+.start-button {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 15px 40px;
+  font-size: 20px;
+  font-weight: bold;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+  transition: all 0.3s ease;
+}
+
+.start-button:hover {
+  transform: translateX(-50%) scale(1.05);
+  box-shadow: 0 7px 20px rgba(76, 175, 80, 0.5);
+}
+
+/* Distractions */
+.distraction {
+  position: absolute;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.distraction-person {
+  width: 150px;
+  height: 200px;
+}
+
+.distraction-person img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.distraction-bird {
+  font-size: 50px;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.distraction-notification {
+  background: white;
+  padding: 15px 20px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  font-size: 16px;
+  font-weight: 500;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.distraction-text {
+  background: #25D366;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 20px;
+  font-size: 14px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  animation: bounce 1s ease-in-out infinite;
+}
+
+.distraction-content {
+  white-space: nowrap;
+}
+
+/* Instructions */
+.instructions {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  border-radius: 15px;
+  max-width: 300px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.instructions h3 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.instructions ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Animations */
+@keyframes move-distraction {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(100vw + 400px));
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* WebGazer prediction points styling */
+.webgazerVideoFeed {
+  display: none !important;
+}
+
+.webgazerFaceFeedbackBox {
+  display: none !important;
+}
+
+.webgazerVideoCanvas {
+  display: none !important;
+}
+
+.webgazerFaceOverlay {
+  display: none !important;
+}

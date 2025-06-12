@@ -1,3 +1,53 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:570c3a4b74d5c94051b1cab32f187faf47a055a6ed54f8a18f01cffcd1dcfe5e
-size 993
+.cupid-cursor-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.heart-particle {
+  position: absolute;
+  pointer-events: none;
+  animation: heart-float 1s ease-out forwards;
+  transform-origin: center;
+}
+
+@keyframes heart-float {
+  0% {
+    transform: translate(0, 0) scale(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(0, -20px) scale(1.2) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(0, -40px) scale(0.8) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Arrow shooting effect on click */
+body:active::after {
+  content: '';
+  position: fixed;
+  width: 30px;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #FF1493);
+  pointer-events: none;
+  animation: arrow-shoot 0.3s ease-out;
+}
+
+@keyframes arrow-shoot {
+  0% {
+    transform: translateX(0) scaleX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(50px) scaleX(1);
+    opacity: 0;
+  }
+}

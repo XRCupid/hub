@@ -1,3 +1,308 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:09546d21143440d97e93aa20953acb0e3e2edaba3707d1de39661d50d88fe620
-size 5072
+.performance-to-progress {
+  padding: 2rem;
+  background: #0a0a0a;
+  color: #fff;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.header h2 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(45deg, #ff69b4, #ff1493);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header p {
+  font-size: 1.2rem;
+  color: #888;
+}
+
+/* Last Date Analysis */
+.last-date-analysis {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.last-date-analysis h3 {
+  color: #ff69b4;
+  margin-bottom: 1.5rem;
+}
+
+.performance-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.category {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 1.5rem;
+}
+
+.category h4 {
+  color: #ff69b4;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.skill-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.skill-item {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: 1rem;
+}
+
+.skill-item span:first-child {
+  color: #ccc;
+  font-size: 0.9rem;
+}
+
+.skill-bar {
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.skill-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff69b4, #ff1493);
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.skill-fill.success {
+  background: linear-gradient(90deg, #00ff00, #00cc00);
+}
+
+.skill-value {
+  color: #fff;
+  font-weight: bold;
+  text-align: right;
+}
+
+.skill-feedback {
+  grid-column: 1 / -1;
+  padding: 0.75rem;
+  background: rgba(255, 105, 180, 0.1);
+  border-radius: 5px;
+  font-size: 0.9rem;
+  color: #ff69b4;
+  margin-top: 0.5rem;
+}
+
+.skill-feedback.positive {
+  background: rgba(0, 255, 0, 0.1);
+  color: #00ff00;
+}
+
+/* Poker Wisdom */
+.poker-wisdom {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 105, 180, 0.2);
+}
+
+.poker-wisdom h4 {
+  color: #ff69b4;
+  margin-bottom: 1rem;
+}
+
+.insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.insight:last-child {
+  margin-bottom: 0;
+}
+
+.insight-icon {
+  font-size: 1.5rem;
+  color: #ff69b4;
+}
+
+.insight p {
+  margin: 0;
+  color: #ccc;
+  line-height: 1.6;
+}
+
+/* Progress to Unlocks */
+.progress-to-unlocks {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.progress-to-unlocks h3 {
+  color: #ff69b4;
+  margin-bottom: 1.5rem;
+}
+
+.unlocks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.unlock-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 105, 180, 0.2);
+}
+
+.unlock-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.unlock-header h4 {
+  color: #fff;
+  margin: 0;
+}
+
+.requirement {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.unlock-progress {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 25px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff69b4, #ff1493);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  color: #fff;
+  font-weight: bold;
+  min-width: 80px;
+  text-align: right;
+}
+
+.motivation-message {
+  text-align: center;
+  padding: 1.5rem;
+  background: rgba(255, 105, 180, 0.1);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 105, 180, 0.3);
+}
+
+.motivation-message p {
+  margin: 0;
+  color: #ff69b4;
+  font-size: 1.1rem;
+}
+
+/* Overall Stats */
+.overall-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 2rem;
+  text-align: center;
+  border: 1px solid rgba(255, 105, 180, 0.2);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+}
+
+.stat-number {
+  display: block;
+  font-size: 3rem;
+  font-weight: bold;
+  color: #ff69b4;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  color: #888;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Ethics Reminder */
+.ethics-reminder-small {
+  background: rgba(255, 105, 180, 0.1);
+  border: 1px solid rgba(255, 105, 180, 0.3);
+  border-radius: 10px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.ethics-reminder-small p {
+  margin: 0;
+  color: #ff69b4;
+  line-height: 1.6;
+}
+
+.ethics-reminder-small strong {
+  color: #fff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .performance-categories {
+    grid-template-columns: 1fr;
+  }
+  
+  .overall-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .unlock-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

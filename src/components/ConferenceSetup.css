@@ -1,3 +1,330 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:57094c6918b768e46152eb8f401408225d17ca28b93e2a84e51dcb5ba67e2384
-size 5665
+.conference-setup {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+  color: white;
+  padding: 20px;
+}
+
+.setup-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.setup-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  background: linear-gradient(45deg, #FF006E, #3A86FF);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.mode-indicator {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 5px 20px;
+  border-radius: 20px;
+  display: inline-block;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.setup-form {
+  max-width: 600px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.host-setup h2,
+.mobile-setup h2,
+.audience-setup h2 {
+  margin-bottom: 30px;
+  text-align: center;
+  color: #4ECDC4;
+}
+
+.name-input,
+.room-input {
+  width: 100%;
+  padding: 15px;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  color: white;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.name-input::placeholder,
+.room-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.room-input {
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.setup-button {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(45deg, #FF006E, #3A86FF);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.setup-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(255, 0, 110, 0.3);
+}
+
+.room-info {
+  margin-top: 30px;
+  text-align: center;
+  background: rgba(78, 205, 196, 0.1);
+  padding: 30px;
+  border-radius: 15px;
+  border: 1px solid rgba(78, 205, 196, 0.3);
+}
+
+.room-info h3 {
+  color: #4ECDC4;
+  margin-bottom: 20px;
+}
+
+.room-code {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: 5px;
+  margin: 20px 0;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  font-family: 'Courier New', monospace;
+  color: #FFD700;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.room-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+}
+
+.room-info li {
+  padding: 5px 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.waiting-status {
+  color: #FFD700;
+  font-style: italic;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Connected View */
+.connected-view {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.participant-view h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #4ECDC4;
+}
+
+.video-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.local-video,
+.remote-video {
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 15px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.local-video h3,
+.remote-video h3 {
+  margin-bottom: 15px;
+  color: #FFD700;
+}
+
+.video-element {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  background: #000;
+}
+
+.host-controls {
+  text-align: center;
+  padding: 20px;
+  background: rgba(78, 205, 196, 0.1);
+  border-radius: 10px;
+  border: 1px solid rgba(78, 205, 196, 0.3);
+}
+
+.audience-display {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.setup-description {
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.mobile-connected {
+  text-align: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  margin-top: 20px;
+}
+
+.mobile-connected h3 {
+  color: #4ECDC4;
+  margin-bottom: 20px;
+}
+
+.mobile-preview {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  border-radius: 10px;
+  background: #000;
+  margin: 20px auto;
+  display: block;
+  border: 2px solid rgba(78, 205, 196, 0.5);
+}
+
+.mobile-status {
+  color: #FFD700;
+  font-size: 0.9rem;
+  margin-top: 15px;
+}
+
+/* Analytics View */
+.analytics-view {
+  animation: fadeIn 0.5s ease-in;
+}
+
+.analytics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  margin-bottom: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+}
+
+.analytics-header h2 {
+  margin: 0;
+  color: #4ECDC4;
+}
+
+.room-badge {
+  background: rgba(255, 215, 0, 0.2);
+  color: #FFD700;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  font-size: 1.1rem;
+}
+
+.presence-avatar-container {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  background: rgba(78, 205, 196, 0.1);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-code {
+  display: block;
+  margin: 20px auto;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: white;
+  padding: 10px;
+}
+
+.qr-section {
+  margin: 30px 0;
+  padding: 20px;
+  background: rgba(78, 205, 196, 0.05);
+  border-radius: 10px;
+  border: 2px dashed rgba(78, 205, 196, 0.3);
+}
+
+.qr-instruction {
+  text-align: center;
+  color: #4ECDC4;
+  font-weight: 600;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.mobile-scan-info {
+  text-align: center;
+  margin-top: 10px;
+  color: #666;
+  font-size: 14px;
+}
+
+.mobile-scan-info strong {
+  color: #4ECDC4;
+  font-size: 16px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .setup-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .room-code {
+    font-size: 2rem;
+    letter-spacing: 3px;
+  }
+  
+  .video-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .setup-form {
+    padding: 20px;
+  }
+}

@@ -1,3 +1,642 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:62839c36f78e2757c833405a60ef5bbe28a80c23cb633081649fe46a9ee5ea3d
-size 20330
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XRCupid: Teaching Love Since 2024</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cooper+Hewitt:wght@400;700&family=Courier+Prime&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Cooper Hewitt', sans-serif;
+            background: #f5e6d3;
+            color: #4a3f36;
+            overflow-x: hidden;
+            cursor: crosshair;
+        }
+        
+        /* Heavy risograph grain texture */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.4;
+            z-index: 1;
+            pointer-events: none;
+            background: 
+                repeating-radial-gradient(circle at 0 0, transparent 0, #d4a574 2px, transparent 4px),
+                repeating-radial-gradient(circle at 50% 50%, transparent 0, #e8b4b8 1px, transparent 3px),
+                repeating-radial-gradient(circle at 100% 100%, transparent 0, #95a99c 2px, transparent 4px);
+            background-size: 50px 50px, 30px 30px, 40px 40px;
+            mix-blend-mode: multiply;
+        }
+        
+        /* Paper texture overlay */
+        .paper-texture {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.1;
+            z-index: 2;
+            pointer-events: none;
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(139, 109, 87, 0.1) 35px, rgba(139, 109, 87, 0.1) 70px),
+                repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(139, 109, 87, 0.05) 35px, rgba(139, 109, 87, 0.05) 70px);
+        }
+        
+        section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 60px 20px;
+            z-index: 10;
+        }
+        
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            position: relative;
+        }
+        
+        /* SECTION 1: Hero with Cupid */
+        .hero {
+            background: linear-gradient(180deg, #e8b4b8 0%, #d4a574 50%, #95a99c 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::after {
+            content: '♡';
+            position: absolute;
+            font-size: 500px;
+            opacity: 0.05;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+        }
+        
+        h1 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: clamp(4rem, 12vw, 10rem);
+            line-height: 0.8;
+            letter-spacing: 0.05em;
+            margin-bottom: 20px;
+            color: #d4a574;
+            text-shadow: 
+                3px 3px 0 #e8b4b8,
+                6px 6px 0 #95a99c,
+                9px 9px 20px rgba(0,0,0,0.1);
+            transform: rotate(-3deg);
+        }
+        
+        .subtitle {
+            font-family: 'Courier Prime', monospace;
+            font-size: 1.2rem;
+            color: #4a3f36;
+            background: rgba(245, 230, 211, 0.8);
+            padding: 10px 20px;
+            display: inline-block;
+            transform: rotate(1deg);
+            box-shadow: 3px 3px 0 #d4a574;
+        }
+        
+        /* Vintage badge */
+        .vintage-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 120px;
+            height: 120px;
+            background: #e8b4b8;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transform: rotate(15deg);
+            box-shadow: 
+                inset 0 0 0 10px #d4a574,
+                inset 0 0 0 20px #e8b4b8,
+                5px 5px 20px rgba(0,0,0,0.1);
+            z-index: 20;
+        }
+        
+        .vintage-badge span {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 0.9rem;
+            color: #4a3f36;
+            line-height: 1.2;
+        }
+        
+        /* Timeline Section */
+        .story {
+            background: #f5e6d3;
+            position: relative;
+        }
+        
+        .timeline-card {
+            background: #e8b4b8;
+            padding: 40px;
+            margin: 30px 0;
+            position: relative;
+            transform: rotate(-1deg);
+            box-shadow: 
+                5px 5px 0 #d4a574,
+                10px 10px 0 #95a99c,
+                15px 15px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .timeline-card:nth-child(even) {
+            background: #95a99c;
+            transform: rotate(1deg);
+        }
+        
+        .timeline-card:hover {
+            transform: rotate(0deg) scale(1.02);
+        }
+        
+        .timeline-card h3 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 2.5rem;
+            color: #4a3f36;
+            margin-bottom: 15px;
+        }
+        
+        .timeline-card p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #4a3f36;
+        }
+        
+        /* Vision Cards */
+        .vision {
+            background: linear-gradient(135deg, #d4a574 0%, #e8b4b8 100%);
+        }
+        
+        .vision-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+        
+        .vision-item {
+            background: #f5e6d3;
+            padding: 30px;
+            border: 3px solid #4a3f36;
+            position: relative;
+            transition: all 0.3s;
+        }
+        
+        .vision-item::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: 10px;
+            bottom: 10px;
+            background: repeating-linear-gradient(
+                45deg,
+                #e8b4b8,
+                #e8b4b8 10px,
+                transparent 10px,
+                transparent 20px
+            );
+            z-index: -1;
+            opacity: 0.5;
+        }
+        
+        .vision-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .vision-item h3 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 2rem;
+            color: #d4a574;
+            margin-bottom: 15px;
+        }
+        
+        /* Tech Stack */
+        .tech {
+            background: #95a99c;
+            color: #f5e6d3;
+        }
+        
+        .tech h2 {
+            color: #f5e6d3;
+        }
+        
+        .tech-stamps {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 60px;
+        }
+        
+        .stamp {
+            width: 150px;
+            height: 150px;
+            background: #f5e6d3;
+            border: 3px solid #4a3f36;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            font-weight: 700;
+            color: #4a3f36;
+            position: relative;
+            transform: rotate(-5deg);
+            transition: all 0.3s;
+            box-shadow: 3px 3px 0 #d4a574;
+        }
+        
+        .stamp:nth-child(even) {
+            transform: rotate(5deg);
+        }
+        
+        .stamp:hover {
+            transform: rotate(0deg) scale(1.1);
+            box-shadow: 5px 5px 0 #d4a574;
+        }
+        
+        .stamp::before {
+            content: '★';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #e8b4b8;
+            font-size: 1.5rem;
+        }
+        
+        /* Stats */
+        .stats {
+            background: #e8b4b8;
+        }
+        
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+        
+        .stat-card {
+            background: #f5e6d3;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 50% 50% 0 0;
+            border: 3px solid #4a3f36;
+            position: relative;
+        }
+        
+        .stat-number {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 4rem;
+            color: #d4a574;
+            line-height: 1;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            color: #4a3f36;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        
+        /* Call to Action */
+        .cta {
+            background: linear-gradient(135deg, #d4a574 0%, #e8b4b8 50%, #95a99c 100%);
+            text-align: center;
+        }
+        
+        .cta-content {
+            background: rgba(245, 230, 211, 0.9);
+            padding: 60px;
+            border-radius: 20px;
+            border: 5px solid #4a3f36;
+            box-shadow: 
+                10px 10px 0 #d4a574,
+                20px 20px 0 #e8b4b8,
+                30px 30px 50px rgba(0,0,0,0.1);
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: #d4a574;
+            color: #f5e6d3;
+            padding: 20px 60px;
+            font-family: 'Bebas Neue', cursive;
+            font-size: 2rem;
+            text-decoration: none;
+            letter-spacing: 0.1em;
+            margin-top: 40px;
+            border: 3px solid #4a3f36;
+            position: relative;
+            transition: all 0.3s;
+            box-shadow: 5px 5px 0 #4a3f36;
+        }
+        
+        .cta-button:hover {
+            transform: translate(-5px, -5px);
+            box-shadow: 10px 10px 0 #4a3f36;
+        }
+        
+        /* Floating hearts */
+        .heart {
+            position: absolute;
+            color: #e8b4b8;
+            font-size: 2rem;
+            animation: float-heart 10s infinite ease-in-out;
+            opacity: 0.3;
+        }
+        
+        @keyframes float-heart {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-20px) rotate(-10deg); }
+            50% { transform: translateY(10px) rotate(10deg); }
+            75% { transform: translateY(-10px) rotate(-5deg); }
+        }
+        
+        /* Typography */
+        h2 {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 40px;
+            color: #4a3f36;
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        h2::before,
+        h2::after {
+            content: '～';
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2rem;
+            color: #d4a574;
+        }
+        
+        h2::before {
+            left: 20%;
+        }
+        
+        h2::after {
+            right: 20%;
+        }
+        
+        /* Retro scroll indicator */
+        .scroll-indicator {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier Prime', monospace;
+            color: #4a3f36;
+            background: rgba(245, 230, 211, 0.8);
+            padding: 10px 20px;
+            border: 2px solid #4a3f36;
+            animation: bounce 2s infinite;
+            z-index: 100;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-10px); }
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 4rem;
+            }
+            
+            .vision-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tech-stamps {
+                gap: 20px;
+            }
+            
+            .stamp {
+                width: 120px;
+                height: 120px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="paper-texture"></div>
+    
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="vintage-badge">
+            <span>EST.<br>2024<br>MIT</span>
+        </div>
+        <div class="container">
+            <h1>XRCupid</h1>
+            <p class="subtitle">TEACHING HUMANS HOW TO LOVE SINCE 2024</p>
+            <div class="heart" style="top: 10%; left: 10%;">♡</div>
+            <div class="heart" style="top: 70%; right: 15%;">♡</div>
+            <div class="heart" style="bottom: 20%; left: 80%;">♡</div>
+        </div>
+    </section>
+    
+    <!-- Story Section -->
+    <section class="story">
+        <div class="container">
+            <h2>The Origin Story</h2>
+            
+            <div class="timeline-card">
+                <h3>Hour 0: The Loneliness Epidemic</h3>
+                <p>MIT Hackathon begins. The challenge: solve human connection in the digital age. We looked around and saw a generation that could swipe but couldn't speak, match but couldn't meet.</p>
+            </div>
+            
+            <div class="timeline-card">
+                <h3>Hour 24: The Breakthrough</h3>
+                <p>What if AI could be your dating coach? Not another matching algorithm, but a patient teacher helping you build real confidence for real connections.</p>
+            </div>
+            
+            <div class="timeline-card">
+                <h3>Hour 48: We Won</h3>
+                <p>Live demo. Real-time face tracking. AI coaches with personality. The judges saw the future. First place. But this was just the beginning...</p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Vision Section -->
+    <section class="vision">
+        <div class="container">
+            <h2>The Vision Unfolds</h2>
+            
+            <div class="vision-grid">
+                <div class="vision-item">
+                    <h3>Mobile Magic</h3>
+                    <p>AI coaches in your pocket. Practice conversations. Master body language. Build confidence one lesson at a time.</p>
+                </div>
+                
+                <div class="vision-item">
+                    <h3>XR Romance</h3>
+                    <p>Step into virtual dating lounges. Practice with avatars before real dates. Safe space to be vulnerable.</p>
+                </div>
+                
+                <div class="vision-item">
+                    <h3>Live Wingman</h3>
+                    <p>Real-time coaching during actual dates. Gentle whispers. Chemistry tracking. Your AI guardian angel.</p>
+                </div>
+                
+                <div class="vision-item">
+                    <h3>Beyond Dating</h3>
+                    <p>Corporate training. Therapy tools. Social skills for everyone. The platform that teaches connection.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Tech Section -->
+    <section class="tech">
+        <div class="container">
+            <h2>What We Built</h2>
+            <p style="text-align: center; margin-bottom: 40px; font-size: 1.2rem;">Six months later, it's not a prototype. It's a platform.</p>
+            
+            <div class="tech-stamps">
+                <div class="stamp">ML5 +<br>MediaPipe<br>Fusion</div>
+                <div class="stamp">67 Facial<br>Expressions</div>
+                <div class="stamp">Real-time<br>Posture<br>Tracking</div>
+                <div class="stamp">Voice<br>Prosody<br>Analysis</div>
+                <div class="stamp">Chemistry<br>Algorithm</div>
+                <div class="stamp">Avatar<br>Mirroring</div>
+                <div class="stamp">4 AI<br>Coaches</div>
+                <div class="stamp">WebRTC<br>Multiplayer</div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <h2>Where We Are Now</h2>
+            
+            <div class="stat-cards">
+                <div class="stat-card">
+                    <div class="stat-number">98%</div>
+                    <div class="stat-label">Tracking Accuracy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">12</div>
+                    <div class="stat-label">Real-time Metrics</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">AI Personalities</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">∞</div>
+                    <div class="stat-label">Practice Dates</div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Join the Love Revolution</h2>
+                
+                <p style="font-size: 1.5rem; margin-bottom: 20px;">
+                    We're teaching a generation how to love again.
+                </p>
+                
+                <p style="font-family: 'Bebas Neue', cursive; font-size: 3rem; color: #d4a574; margin: 30px 0;">
+                    $3M SEED ROUND
+                </p>
+                
+                <p style="font-size: 1.2rem; margin-bottom: 40px;">
+                    Be part of the platform that brings humanity back to dating.
+                </p>
+                
+                <a href="mailto:invest@xrcupid.ai" class="cta-button">
+                    LET'S TALK LOVE
+                </a>
+                
+                <p style="margin-top: 60px; font-family: 'Courier Prime', monospace;">
+                    SEE IT LIVE AT AWE 2025 • BOOTH #1247 • TUESDAY
+                </p>
+            </div>
+        </div>
+    </section>
+    
+    <div class="scroll-indicator">↓ SCROLL FOR MORE ↓</div>
+    
+    <script>
+        // Hide scroll indicator when not at top
+        window.addEventListener('scroll', () => {
+            const indicator = document.querySelector('.scroll-indicator');
+            if (window.scrollY > 100) {
+                indicator.style.opacity = '0';
+            } else {
+                indicator.style.opacity = '1';
+            }
+        });
+        
+        // Parallax hearts
+        document.addEventListener('mousemove', (e) => {
+            const hearts = document.querySelectorAll('.heart');
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            
+            hearts.forEach((heart, index) => {
+                const speed = (index + 1) * 20;
+                heart.style.transform = `translate(${x * speed}px, ${y * speed}px)`;
+            });
+        });
+        
+        // Smooth reveal on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+        
+        document.querySelectorAll('.timeline-card, .vision-item, .stamp, .stat-card').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'all 0.8s ease-out';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

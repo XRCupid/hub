@@ -1,3 +1,1085 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:e2fe44bf64db853fb692f6d051aecf4990b082e100a58e971f7bebaa16e74f6c
-size 35501
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XRCupid - Love in Full Color</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,900;1,900&family=Space+Mono:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            /* VIBRANT CUPID COLORS */
+            --hot-pink: #FF1E6F;
+            --electric-coral: #FF6B9D;
+            --sunset-orange: #FFA652;
+            --golden-yellow: #FFD93D;
+            --sky-blue: #6BCAFF;
+            --lavender: #C589E8;
+            --deep-purple: #8B5CF6;
+            --cream: #FFF8F3;
+            --navy: #2D3561;
+        }
+        
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--cream);
+            color: var(--navy);
+            overflow-x: hidden;
+            scroll-snap-type: y mandatory;
+            height: 100vh;
+            overflow-y: scroll;
+        }
+        
+        /* Vibrant grain overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.4;
+            pointer-events: none;
+            z-index: 1000;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.95" numOctaves="4" /></filter><rect width="100%" height="100%" filter="url(%23noise)" /></svg>');
+            mix-blend-mode: multiply;
+        }
+        
+        /* Deck sections */
+        .deck-slide {
+            min-height: 100vh;
+            scroll-snap-align: start;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 60px 20px;
+            overflow: hidden;
+        }
+        
+        /* SLIDE 1: Hero */
+        .hero-slide {
+            background: linear-gradient(135deg, var(--hot-pink) 0%, var(--electric-coral) 25%, var(--sunset-orange) 50%, var(--golden-yellow) 75%, var(--sky-blue) 100%);
+            background-size: 400% 400%;
+            animation: gradient-shift 20s ease infinite;
+        }
+        
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(5rem, 15vw, 12rem);
+            font-weight: 900;
+            font-style: italic;
+            color: var(--cream);
+            text-align: center;
+            text-shadow: 
+                0 0 40px rgba(255,255,255,0.5),
+                4px 4px 0 var(--hot-pink),
+                8px 8px 0 var(--electric-coral),
+                12px 12px 0 var(--sunset-orange),
+                16px 16px 30px rgba(0,0,0,0.2);
+            animation: float 6s ease-in-out infinite;
+            transform: rotate(-5deg);
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(-5deg); }
+            50% { transform: translateY(-20px) rotate(-3deg); }
+        }
+        
+        .hero-tagline {
+            background: var(--cream);
+            color: var(--hot-pink);
+            padding: 20px 50px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            display: inline-block;
+            transform: rotate(2deg);
+            margin-top: 40px;
+            box-shadow: 
+                5px 5px 0 var(--electric-coral),
+                10px 10px 0 var(--sunset-orange);
+            animation: bounce 2s ease-in-out infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: rotate(2deg) translateY(0); }
+            50% { transform: rotate(2deg) translateY(-10px); }
+        }
+        
+        /* Floating elements */
+        .float-element {
+            position: absolute;
+            font-size: 4rem;
+            animation: float-around 20s infinite;
+            opacity: 0.7;
+        }
+        
+        @keyframes float-around {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(100px, -100px) rotate(90deg); }
+            50% { transform: translate(-100px, -200px) rotate(180deg); }
+            75% { transform: translate(-200px, 100px) rotate(270deg); }
+            100% { transform: translate(0, 0) rotate(360deg); }
+        }
+        
+        /* SLIDE 2: Problem */
+        .problem-slide {
+            background: var(--deep-purple);
+            color: var(--cream);
+        }
+        
+        .big-stat {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(8rem, 20vw, 15rem);
+            font-weight: 900;
+            font-style: italic;
+            color: var(--golden-yellow);
+            text-shadow: 
+                0 0 40px var(--hot-pink),
+                5px 5px 0 var(--electric-coral);
+            animation: pulse 3s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+        
+        .stat-label {
+            font-size: 2rem;
+            margin-top: 20px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            opacity: 0.9;
+        }
+        
+        /* SLIDE 3: Solution */
+        .solution-slide {
+            background: linear-gradient(180deg, var(--sky-blue) 0%, var(--lavender) 100%);
+        }
+        
+        .solution-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            max-width: 800px;
+            animation: slide-up 1s ease-out;
+        }
+        
+        @keyframes slide-up {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .solution-card {
+            background: var(--cream);
+            padding: 40px;
+            border-radius: 30px;
+            border: 4px solid var(--navy);
+            position: relative;
+            overflow: hidden;
+            transform: rotate(-2deg);
+            transition: all 0.3s;
+        }
+        
+        .solution-card:nth-child(even) {
+            transform: rotate(2deg);
+        }
+        
+        .solution-card:hover {
+            transform: rotate(0) scale(1.05);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        
+        .solution-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, var(--hot-pink) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .solution-card:hover::before {
+            opacity: 0.1;
+        }
+        
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            display: block;
+            animation: wiggle 3s ease-in-out infinite;
+        }
+        
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
+        }
+        
+        .card-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            color: var(--hot-pink);
+            margin-bottom: 15px;
+            font-weight: 900;
+        }
+        
+        /* SLIDE 4: Tech Magic */
+        .tech-slide {
+            background: var(--golden-yellow);
+        }
+        
+        .tech-showcase {
+            text-align: center;
+            max-width: 1000px;
+        }
+        
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            margin-top: 60px;
+        }
+        
+        .tech-bubble {
+            width: 150px;
+            height: 150px;
+            background: var(--cream);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 4px solid var(--navy);
+            font-weight: 700;
+            text-align: center;
+            padding: 20px;
+            position: relative;
+            animation: float-bubble 4s ease-in-out infinite;
+            transition: all 0.3s;
+        }
+        
+        .tech-bubble:nth-child(odd) {
+            animation-delay: 2s;
+        }
+        
+        @keyframes float-bubble {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-20px) scale(1.1); }
+        }
+        
+        .tech-bubble:hover {
+            background: var(--hot-pink);
+            color: var(--cream);
+            transform: scale(1.2);
+        }
+        
+        /* SLIDE 5: Investment */
+        .investment-slide {
+            background: linear-gradient(45deg, var(--hot-pink), var(--electric-coral), var(--sunset-orange), var(--golden-yellow));
+            background-size: 400% 400%;
+            animation: gradient-shift 15s ease infinite;
+        }
+        
+        .investment-box {
+            background: var(--cream);
+            padding: 80px;
+            border-radius: 50px;
+            border: 6px solid var(--navy);
+            text-align: center;
+            max-width: 700px;
+            position: relative;
+            box-shadow: 
+                10px 10px 0 var(--hot-pink),
+                20px 20px 0 var(--electric-coral),
+                30px 30px 0 var(--sunset-orange),
+                40px 40px 60px rgba(0,0,0,0.2);
+            animation: rotate-slight 10s ease-in-out infinite;
+        }
+        
+        @keyframes rotate-slight {
+            0%, 100% { transform: rotate(-1deg); }
+            50% { transform: rotate(1deg); }
+        }
+        
+        .investment-amount {
+            font-family: 'Playfair Display', serif;
+            font-size: 5rem;
+            color: var(--hot-pink);
+            font-weight: 900;
+            font-style: italic;
+            margin: 30px 0;
+            text-shadow: 3px 3px 0 var(--electric-coral);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: var(--hot-pink);
+            color: var(--cream);
+            padding: 25px 80px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-decoration: none;
+            border: 4px solid var(--navy);
+            border-radius: 50px;
+            margin-top: 40px;
+            transition: all 0.3s;
+            letter-spacing: 0.1em;
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px var(--hot-pink); }
+            50% { box-shadow: 0 0 40px var(--hot-pink), 0 0 60px var(--electric-coral); }
+        }
+        
+        .cta-button:hover {
+            transform: scale(1.1) rotate(-5deg);
+            background: var(--sunset-orange);
+        }
+        
+        /* Common styles */
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(3rem, 8vw, 5rem);
+            font-weight: 900;
+            margin-bottom: 40px;
+            text-align: center;
+            animation: fade-in 1s ease-out;
+        }
+        
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Parallax clouds */
+        .cloud {
+            position: absolute;
+            width: 300px;
+            height: 150px;
+            background: var(--cream);
+            opacity: 0.1;
+            border-radius: 100px;
+            filter: blur(40px);
+        }
+        
+        /* Scroll indicator */
+        .scroll-hint {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--cream);
+            font-size: 2rem;
+            animation: scroll-bounce 2s ease-in-out infinite;
+            z-index: 1001;
+            mix-blend-mode: difference;
+        }
+        
+        @keyframes scroll-bounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(10px); }
+        }
+        
+        /* SLIDE 6: Traction */
+        .traction-slide {
+            background: linear-gradient(45deg, var(--deep-purple) 0%, var(--lavender) 100%);
+            color: var(--cream);
+        }
+        
+        .traction-content {
+            text-align: center;
+            max-width: 900px;
+        }
+        
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 60px 0;
+            position: relative;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--golden-yellow);
+            z-index: 0;
+        }
+        
+        .timeline-item {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            animation: pop-in 0.6s ease-out;
+        }
+        
+        @keyframes pop-in {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        .timeline-bubble {
+            background: var(--hot-pink);
+            color: var(--cream);
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            display: inline-block;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            border: 3px solid var(--cream);
+            animation: float 4s ease-in-out infinite;
+        }
+        
+        .traction-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 60px;
+            gap: 40px;
+        }
+        
+        .mini-stat {
+            text-align: center;
+            animation: count-up 2s ease-out;
+        }
+        
+        @keyframes count-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .mini-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 4rem;
+            font-weight: 900;
+            color: var(--golden-yellow);
+            text-shadow: 3px 3px 0 var(--hot-pink);
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .mini-label {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        /* SLIDE 7: Market */
+        .market-slide {
+            background: linear-gradient(135deg, var(--sky-blue) 0%, var(--electric-coral) 100%);
+            color: var(--cream);
+        }
+        
+        .market-visual {
+            text-align: center;
+        }
+        
+        .market-circles {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 60px 0;
+            gap: -20px;
+        }
+        
+        .market-circle {
+            background: var(--cream);
+            color: var(--navy);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border-radius: 50%;
+            border: 6px solid var(--navy);
+            font-weight: 700;
+            position: relative;
+            animation: bubble-float 6s ease-in-out infinite;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        
+        .market-circle.large {
+            width: 300px;
+            height: 300px;
+            z-index: 3;
+            background: var(--hot-pink);
+            color: var(--cream);
+        }
+        
+        .market-circle.medium {
+            width: 250px;
+            height: 250px;
+            z-index: 2;
+            background: var(--sunset-orange);
+            margin-left: -40px;
+        }
+        
+        .market-circle.small {
+            width: 200px;
+            height: 200px;
+            z-index: 1;
+            background: var(--golden-yellow);
+            margin-left: -40px;
+        }
+        
+        @keyframes bubble-float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-30px) scale(1.05); }
+        }
+        
+        .market-value {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-style: italic;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .market-insight {
+            font-size: 1.8rem;
+            margin-top: 40px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+        
+        /* SLIDE 8: Business Model */
+        .revenue-slide {
+            background: linear-gradient(45deg, var(--golden-yellow), var(--sunset-orange));
+            color: var(--navy);
+        }
+        
+        .revenue-streams {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin-top: 60px;
+        }
+        
+        .stream-card {
+            background: var(--cream);
+            padding: 50px 40px;
+            border-radius: 30px;
+            border: 5px solid var(--navy);
+            width: 350px;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+            transform: rotate(-2deg);
+            transition: all 0.3s;
+            box-shadow: 10px 10px 0 var(--navy);
+        }
+        
+        .stream-card:hover {
+            transform: rotate(0) scale(1.05);
+            box-shadow: 15px 15px 0 var(--navy);
+        }
+        
+        .stream-card.b2c {
+            background: var(--hot-pink);
+            color: var(--cream);
+        }
+        
+        .stream-card.b2c::before {
+            content: '💕';
+            position: absolute;
+            font-size: 200px;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+        }
+        
+        .stream-card.b2b {
+            background: var(--deep-purple);
+            color: var(--cream);
+            transform: rotate(2deg);
+        }
+        
+        .stream-card.b2b::before {
+            content: '🏢';
+            position: absolute;
+            font-size: 200px;
+            opacity: 0.1;
+            top: -50px;
+            right: -50px;
+        }
+        
+        .stream-card h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+        
+        .price-tag {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 30px;
+            display: block;
+            text-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+        }
+        
+        .stream-card ul {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 30px;
+        }
+        
+        .stream-card li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .revenue-projection {
+            font-size: 1.2rem;
+            font-weight: 700;
+            padding: 15px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            text-align: center;
+        }
+        
+        /* SLIDE 9: Competition */
+        .competition-slide {
+            background: linear-gradient(135deg, var(--lavender), var(--electric-coral));
+            color: var(--navy);
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            max-width: 800px;
+            margin: 60px auto;
+        }
+        
+        .competitor, .xrcupid-advantage {
+            background: var(--cream);
+            padding: 40px;
+            border-radius: 20px;
+            border: 4px solid var(--navy);
+            text-align: center;
+            position: relative;
+            transition: all 0.3s;
+        }
+        
+        .competitor {
+            opacity: 0.8;
+        }
+        
+        .competitor:hover {
+            transform: scale(0.95);
+            opacity: 0.6;
+        }
+        
+        .competitor h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .vs {
+            font-size: 3rem;
+            display: block;
+            margin: 15px 0;
+        }
+        
+        .xrcupid-advantage {
+            grid-column: span 2;
+            background: var(--hot-pink);
+            color: var(--cream);
+            transform: scale(1.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        
+        .xrcupid-advantage:hover {
+            transform: scale(1.15) rotate(2deg);
+        }
+        
+        .xrcupid-advantage h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            font-style: italic;
+        }
+        
+        .moat {
+            font-size: 1.5rem;
+            margin-top: 40px;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        
+        /* SLIDE 10: Team */
+        .team-slide {
+            background: linear-gradient(180deg, var(--deep-purple), var(--navy));
+            color: var(--cream);
+        }
+        
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            margin: 60px 0;
+        }
+        
+        .team-member {
+            background: rgba(255,255,255,0.1);
+            padding: 30px 20px;
+            border-radius: 20px;
+            border: 3px solid var(--cream);
+            text-align: center;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        
+        .team-member:hover {
+            background: var(--hot-pink);
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        
+        .member-avatar {
+            font-size: 4rem;
+            display: block;
+            margin-bottom: 20px;
+            animation: wiggle 4s ease-in-out infinite;
+        }
+        
+        .team-member h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .team-member p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+        
+        .team-note {
+            font-size: 1.5rem;
+            margin-top: 40px;
+            font-style: italic;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <!-- SLIDE 1: Hero -->
+    <section class="deck-slide hero-slide">
+        <div class="float-element" style="top: 10%; left: 10%;">💘</div>
+        <div class="float-element" style="top: 20%; right: 20%;">💕</div>
+        <div class="float-element" style="bottom: 20%; left: 30%;">💖</div>
+        <div class="float-element" style="bottom: 10%; right: 10%;">💗</div>
+        
+        <div>
+            <h1>XRCupid</h1>
+            <div class="hero-tagline">AI DATING COACHES SINCE 2025</div>
+        </div>
+        
+        <div class="cloud" style="top: -50px; left: -100px;"></div>
+        <div class="cloud" style="bottom: -50px; right: -100px;"></div>
+    </section>
+    
+    <!-- SLIDE 2: The Problem -->
+    <section class="deck-slide problem-slide">
+        <div style="text-align: center;">
+            <h2>The Loneliness Crisis</h2>
+            <div class="big-stat">73%</div>
+            <p class="stat-label">of Gen Z struggles with dating anxiety</p>
+            <p style="margin-top: 40px; font-size: 1.3rem; opacity: 0.8;">
+                They can swipe but can't speak.<br>
+                Match but can't meet.<br>
+                We're fixing that.
+            </p>
+        </div>
+    </section>
+    
+    <!-- SLIDE 3: The Solution -->
+    <section class="deck-slide solution-slide">
+        <div>
+            <h2 style="color: var(--navy);">The XRCupid Magic</h2>
+            <div class="solution-cards">
+                <div class="solution-card">
+                    <span class="card-icon">🤖</span>
+                    <h3 class="card-title">AI Coaches</h3>
+                    <p>Four unique personalities teaching confidence through practice</p>
+                </div>
+                <div class="solution-card">
+                    <span class="card-icon">👁️</span>
+                    <h3 class="card-title">Real-Time Analysis</h3>
+                    <p>Face tracking, voice prosody, body language - all live</p>
+                </div>
+                <div class="solution-card">
+                    <span class="card-icon">🎮</span>
+                    <h3 class="card-title">Gamified Dating</h3>
+                    <p>Practice scenarios, chemistry scores, achievement unlocks</p>
+                </div>
+                <div class="solution-card">
+                    <span class="card-icon">🔮</span>
+                    <h3 class="card-title">XR Future</h3>
+                    <p>Virtual dating lounges for safe practice spaces</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- SLIDE 4: Tech Magic -->
+    <section class="deck-slide tech-slide">
+        <div class="tech-showcase">
+            <h2 style="color: var(--navy);">Built & Working Now</h2>
+            <p style="font-size: 1.5rem; color: var(--navy); margin-bottom: 40px;">
+                Six months from hackathon to platform. It's all real.
+            </p>
+            <div class="tech-grid">
+                <div class="tech-bubble">98% Accuracy</div>
+                <div class="tech-bubble">67 Expressions</div>
+                <div class="tech-bubble">Voice Analysis</div>
+                <div class="tech-bubble">Posture Tracking</div>
+                <div class="tech-bubble">Chemistry AI</div>
+                <div class="tech-bubble">4 Coaches</div>
+                <div class="tech-bubble">WebRTC Live</div>
+                <div class="tech-bubble">Avatar Mirror</div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- SLIDE 5: Investment -->
+    <section class="deck-slide investment-slide">
+        <div class="investment-box">
+            <h2 style="color: var(--navy);">Join the Revolution</h2>
+            <p style="font-size: 1.5rem; margin-bottom: 20px;">
+                We're teaching a generation how to love again.
+            </p>
+            <div class="investment-amount">$3M SEED</div>
+            <p style="font-size: 1.2rem;">
+                100B+ market opportunity<br>
+                B2C + B2B revenue streams<br>
+                First-mover in AI dating confidence
+            </p>
+            <a href="mailto:invest@xrcupid.ai" class="cta-button">LET'S BUILD LOVE</a>
+            <p style="margin-top: 60px; font-weight: 700;">
+                SEE IT LIVE • AWE 2025 • BOOTH #1247
+            </p>
+        </div>
+    </section>
+    
+    <!-- SLIDE 6: Traction -->
+    <section class="deck-slide traction-slide">
+        <div class="traction-content">
+            <h2>Six Months of Magic</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-bubble">JAN 2025</div>
+                    <p>MIT Reality Hack Winner</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-bubble">MAR 2025</div>
+                    <p>Working MVP • 100 Beta Users</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-bubble">MAY 2025</div>
+                    <p>AI Coaches Live • 92% Satisfaction</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-bubble">JUNE 2025</div>
+                    <p>AWE Demo • 3 LOIs</p>
+                </div>
+            </div>
+            <div class="traction-stats">
+                <div class="mini-stat">
+                    <span class="mini-number">1,247</span>
+                    <span class="mini-label">Waitlist</span>
+                </div>
+                <div class="mini-stat">
+                    <span class="mini-number">8.5min</span>
+                    <span class="mini-label">Avg Session</span>
+                </div>
+                <div class="mini-stat">
+                    <span class="mini-number">73%</span>
+                    <span class="mini-label">Weekly Return</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- SLIDE 7: Market -->
+    <section class="deck-slide market-slide">
+        <div class="market-visual">
+            <h2 style="color: var(--cream);">The Love Economy</h2>
+            <div class="market-circles">
+                <div class="market-circle large">
+                    <span class="market-value">$100B</span>
+                    <span class="market-label">Dating Apps</span>
+                </div>
+                <div class="market-circle medium">
+                    <span class="market-value">$45B</span>
+                    <span class="market-label">Mental Health</span>
+                </div>
+                <div class="market-circle small">
+                    <span class="market-value">$20B</span>
+                    <span class="market-label">Social Skills</span>
+                </div>
+            </div>
+            <p class="market-insight">
+                We're not competing with dating apps.<br>
+                We're making them actually work.
+            </p>
+        </div>
+    </section>
+    
+    <!-- SLIDE 8: Business Model -->
+    <section class="deck-slide revenue-slide">
+        <div class="revenue-container">
+            <h2>Multiple Revenue Streams</h2>
+            <div class="revenue-streams">
+                <div class="stream-card b2c">
+                    <h3>B2C: Direct to Lovers</h3>
+                    <div class="price-tag">$29/mo</div>
+                    <ul>
+                        <li>AI Coach Sessions</li>
+                        <li>Practice Scenarios</li>
+                        <li>Progress Tracking</li>
+                        <li>XR Dating Lounges</li>
+                    </ul>
+                    <p class="revenue-projection">10K users = $3.5M ARR</p>
+                </div>
+                <div class="stream-card b2b">
+                    <h3>B2B: Enterprise</h3>
+                    <div class="price-tag">$50K/yr</div>
+                    <ul>
+                        <li>Corporate Training</li>
+                        <li>Therapy Clinics</li>
+                        <li>Dating App APIs</li>
+                        <li>University Programs</li>
+                    </ul>
+                    <p class="revenue-projection">20 clients = $1M ARR</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- SLIDE 9: Competition -->
+    <section class="deck-slide competition-slide">
+        <div class="competition-content">
+            <h2 style="color: var(--navy);">Why We Win</h2>
+            <div class="comparison-grid">
+                <div class="competitor">
+                    <h3>Dating Apps</h3>
+                    <span class="vs">❌</span>
+                    <p>Swipe addiction, no skill building</p>
+                </div>
+                <div class="competitor">
+                    <h3>Dating Coaches</h3>
+                    <span class="vs">❌</span>
+                    <p>Expensive, not scalable, no tech</p>
+                </div>
+                <div class="competitor">
+                    <h3>Therapy Apps</h3>
+                    <span class="vs">❌</span>
+                    <p>Too clinical, not fun, no practice</p>
+                </div>
+                <div class="xrcupid-advantage">
+                    <h3>XRCupid</h3>
+                    <span class="vs">✅</span>
+                    <p>AI + Gaming + Real Practice + Fun</p>
+                </div>
+            </div>
+            <p class="moat">Our moat: Real-time multimodal AI + XR + gamification</p>
+        </div>
+    </section>
+    
+    <!-- SLIDE 10: Team -->
+    <section class="deck-slide team-slide">
+        <div class="team-showcase">
+            <h2>Built by Love Nerds</h2>
+            <div class="team-grid">
+                <div class="team-member">
+                    <div class="member-avatar">👨‍💻</div>
+                    <h3>AI/ML Lead</h3>
+                    <p>Ex-Meta • MIT PhD</p>
+                </div>
+                <div class="team-member">
+                    <div class="member-avatar">👩‍🎨</div>
+                    <h3>XR Designer</h3>
+                    <p>Ex-Magic Leap • RISD</p>
+                </div>
+                <div class="team-member">
+                    <div class="member-avatar">👨‍⚕️</div>
+                    <h3>Psychology Advisor</h3>
+                    <p>Stanford • Published</p>
+                </div>
+                <div class="team-member">
+                    <div class="member-avatar">👩‍💼</div>
+                    <h3>CEO</h3>
+                    <p>2x Founder • YC Alum</p>
+                </div>
+            </div>
+            <p class="team-note">+ 3 engineers who actually use dating apps</p>
+        </div>
+    </section>
+    
+    <div class="scroll-hint">↓</div>
+    
+    <script>
+        // Hide scroll hint when not at a slide edge
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            document.querySelector('.scroll-hint').style.opacity = '0';
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                document.querySelector('.scroll-hint').style.opacity = '1';
+            }, 1000);
+        });
+        
+        // Parallax effect for floating elements
+        document.addEventListener('mousemove', (e) => {
+            const floatElements = document.querySelectorAll('.float-element');
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            
+            floatElements.forEach((el, i) => {
+                const speed = (i + 1) * 50;
+                el.style.transform = `translate(${x * speed}px, ${y * speed}px)`;
+            });
+        });
+        
+        // Add stagger animation to cards
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const cards = entry.target.querySelectorAll('.solution-card, .tech-bubble');
+                    cards.forEach((card, i) => {
+                        card.style.animation = `slide-up 0.6s ease-out ${i * 0.1}s both`;
+                    });
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        document.querySelectorAll('.solution-slide, .tech-slide').forEach(slide => {
+            observer.observe(slide);
+        });
+    </script>
+</body>
+</html>

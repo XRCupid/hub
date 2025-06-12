@@ -1,3 +1,400 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:8091129c74fc79e0db5e1bb5009b9d2fbe313bcbff164ae66250a8e00793f10d
-size 8322
+/* Enhanced ConversationSummary.css with better styling */
+
+.conversation-summary-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+    z-index: 1000;
+    overflow-y: auto;
+    padding: 25px;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #2d3748;
+  }
+  
+  .summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 20px;
+    margin-bottom: 25px;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+  }
+  
+  .summary-header h2 {
+    font-size: 32px;
+    color: #2c3e50;
+    margin: 0;
+    font-weight: 600;
+    position: relative;
+  }
+  
+  .summary-header h2:after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 60px;
+    height: 4px;
+    background: linear-gradient(90deg, #4285f4, #34a853);
+    border-radius: 2px;
+  }
+  
+  .header-buttons {
+    display: flex;
+    gap: 15px;
+  }
+  
+  .close-button, .download-button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .close-button {
+    background-color: #ea4335;
+    color: white;
+  }
+  
+  .close-button:hover {
+    background-color: #d33426;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 10px rgba(234, 67, 53, 0.3);
+  }
+  
+  .download-button {
+    background-color: #4285f4;
+    color: white;
+  }
+  
+  .download-button:hover {
+    background-color: #3367d6;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 10px rgba(66, 133, 244, 0.3);
+  }
+  
+  .download-button::before {
+    content: '⬇️';
+    margin-right: 8px;
+    font-size: 18px;
+  }
+  
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  }
+  
+  .loading-spinner {
+    border: 5px solid rgba(66, 133, 244, 0.1);
+    border-top: 5px solid #4285f4;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 25px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .loading-container p {
+    font-size: 18px;
+    color: #555;
+    margin-top: 15px;
+    font-weight: 500;
+  }
+  
+  .summary-content {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .text-summary {
+    background-color: white;
+    padding: 35px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease;
+  }
+  
+  .text-summary:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  }
+  
+  .markdown-content h1 {
+    font-size: 28px;
+    color: #2c3e50;
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    position: relative;
+  }
+  
+  .markdown-content h1:after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100px;
+    height: 3px;
+    background: linear-gradient(90deg, #4285f4, #34a853);
+    border-radius: 1.5px;
+  }
+  
+  .markdown-content h2 {
+    font-size: 22px;
+    color: #3d4852;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f1f1;
+  }
+  
+  .markdown-content h3 {
+    font-size: 20px;
+    color: #4a5568;
+    margin-top: 25px;
+    margin-bottom: 12px;
+  }
+  
+  .markdown-content p {
+    font-size: 16px;
+    line-height: 1.8;
+    color: #4a5568;
+    margin-bottom: 18px;
+  }
+  
+  .markdown-content .list-item {
+    margin-left: 25px;
+    margin-bottom: 12px;
+    color: #4a5568;
+    position: relative;
+    padding-left: 10px;
+  }
+  
+  .markdown-content .list-item::before {
+    content: '•';
+    position: absolute;
+    left: -15px;
+    color: #4285f4;
+    font-weight: bold;
+  }
+  
+  .charts-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 25px;
+    justify-content: space-between;
+  }
+  
+  .chart-section {
+    background-color: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    width: calc(50% - 15px);
+    box-sizing: border-box;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .chart-section:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  }
+  
+  .chart-section.full-width {
+    width: 100%;
+  }
+  
+  .chart-wrapper {
+    height: 100%;
+    min-height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 0;
+  }
+  
+  .chart-section h3 {
+    font-size: 20px;
+    color: #3d4852;
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    position: relative;
+    padding-bottom: 10px;
+  }
+  
+  .chart-section h3:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(90deg, #4285f4, #34a853);
+    border-radius: 1.5px;
+  }
+  
+  .no-data-message {
+    color: #718096;
+    text-align: center;
+    font-style: italic;
+    background-color: #f9fafb;
+    padding: 30px;
+    border-radius: 12px;
+    border: 1px dashed #cbd5e0;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  
+  .error-message {
+    background-color: #fff5f5;
+    color: #c53030;
+    padding: 20px;
+    margin-bottom: 25px;
+    border-radius: 12px;
+    border-left: 5px solid #f56565;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    font-size: 15px;
+  }
+  
+  .error-message p {
+    margin: 8px 0;
+  }
+  
+  /* For shorter conversations */
+  .short-conversation-notice {
+    background-color: #ebf8ff;
+    border-left: 5px solid #4299e1;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #2c5282;
+  }
+  
+  /* Highlight cards for important metrics */
+  .metrics-highlights {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .metric-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    flex: 1;
+    min-width: 200px;
+    text-align: center;
+    transition: transform 0.3s ease;
+  }
+  
+  .metric-card:hover {
+    transform: translateY(-5px);
+  }
+  
+  .metric-card .metric-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: #3182ce;
+    margin: 10px 0;
+  }
+  
+  .metric-card .metric-title {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #718096;
+    margin-bottom: 5px;
+  }
+  
+  .metric-card .metric-emoji {
+    font-size: 28px;
+    margin-bottom: 10px;
+  }
+  
+  /* Responsive design */
+  @media (max-width: 1200px) {
+    .chart-section {
+      width: 100%;
+    }
+    
+    .metrics-highlights {
+      flex-wrap: wrap;
+    }
+    
+    .metric-card {
+      min-width: 40%;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .conversation-summary-container {
+      padding: 15px;
+    }
+    
+    .summary-header {
+      flex-direction: column;
+      gap: 15px;
+      align-items: flex-start;
+    }
+    
+    .header-buttons {
+      width: 100%;
+      justify-content: space-between;
+    }
+    
+    .close-button, .download-button {
+      padding: 10px 15px;
+      font-size: 14px;
+    }
+    
+    .metric-card {
+      min-width: 100%;
+    }
+    
+    .text-summary {
+      padding: 20px;
+    }
+    
+    .chart-section {
+      padding: 15px;
+    }
+    
+    .markdown-content h1 {
+      font-size: 24px;
+    }
+    
+    .markdown-content h2 {
+      font-size: 20px;
+    }
+  }

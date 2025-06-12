@@ -1,3 +1,345 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:89026a5c190eae6a3c72b638158657fdc02920756a2b3e3536ac28523dc1d67f
-size 5988
+/* NPC Date Call - Risographic Styling */
+
+.npc-date-call {
+  background: linear-gradient(135deg, #E5F5FF 0%, #FFE5E5 100%);
+  border-radius: 20px;
+  padding: 2rem;
+  border: 4px solid #333;
+  box-shadow: 8px 8px 0 #FFB6C1, 16px 16px 40px rgba(0, 0, 0, 0.1);
+}
+
+.npc-date-call.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 500px;
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.loading-content p {
+  margin-top: 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #666;
+}
+
+/* Call Container */
+.call-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+/* Video Section */
+.video-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.npc-video, .user-video {
+  position: relative;
+  background: white;
+  border: 3px solid #333;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 6px 6px 0 #87CEEB;
+}
+
+.npc-video {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.npc-avatar-placeholder {
+  position: relative;
+  text-align: center;
+  padding: 2rem;
+}
+
+.npc-avatar-placeholder img {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 4px solid #FF6B6B;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Speaking Indicator */
+.npc-speaking-indicator {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+}
+
+.npc-speaking-indicator span {
+  width: 8px;
+  height: 8px;
+  background: #FF6B6B;
+  border-radius: 50%;
+  animation: speakingPulse 1.4s infinite ease-in-out both;
+}
+
+.npc-speaking-indicator span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.npc-speaking-indicator span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes speakingPulse {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.npc-info, .user-info {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 2px solid #333;
+}
+
+.npc-info h3, .user-info h4 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.npc-info p {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+}
+
+.user-video {
+  position: relative;
+  height: 200px;
+}
+
+.user-video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Interaction Panel */
+.interaction-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Emotion Display */
+.emotion-display {
+  background: white;
+  border: 3px solid #333;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 4px 4px 0 #FFB6C1;
+}
+
+.emotion-display h4 {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+  color: #FF6B6B;
+}
+
+.emotion-indicators {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.emotion-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.emotion-label {
+  min-width: 80px;
+  font-weight: 600;
+  color: #666;
+  text-transform: capitalize;
+}
+
+.emotion-bar {
+  flex: 1;
+  height: 12px;
+  background: #f0f0f0;
+  border: 2px solid #333;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.emotion-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #87CEEB 0%, #5F9EA0 100%);
+  transition: width 0.5s ease;
+}
+
+/* Chemistry Meter */
+.chemistry-meter {
+  background: white;
+  border: 3px solid #333;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 4px 4px 0 #87CEEB;
+  text-align: center;
+}
+
+.chemistry-meter h4 {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+  color: #FF6B6B;
+}
+
+.chemistry-visual {
+  position: relative;
+  width: 80px;
+  height: 120px;
+  background: #f0f0f0;
+  border: 3px solid #333;
+  border-radius: 40px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.chemistry-progress {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background: linear-gradient(180deg, #FF6B6B 0%, #FF1493 100%);
+  transition: height 0.5s ease;
+  animation: chemistryBubble 2s ease-in-out infinite;
+}
+
+@keyframes chemistryBubble {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.chemistry-value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #333;
+  text-shadow: 2px 2px 0 white;
+}
+
+/* Conversation Hints */
+.conversation-hints {
+  background: linear-gradient(135deg, #FFE5E5 0%, #FFF0E5 100%);
+  border: 3px solid #333;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 4px 4px 0 #FFB6C1;
+}
+
+.conversation-hints h4 {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.conversation-hints ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style: none;
+}
+
+.conversation-hints li {
+  position: relative;
+  padding-left: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #666;
+}
+
+.conversation-hints li::before {
+  content: '💡';
+  position: absolute;
+  left: 0;
+}
+
+/* Call Controls */
+.call-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.pip-toggle {
+  padding: 0.75rem 1rem;
+  font-size: 1.5rem;
+  background: #87CEEB;
+  color: #333;
+  border: 3px solid #333;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 4px 4px 0 #5F9EA0;
+}
+
+.pip-toggle:hover {
+  background: #5F9EA0;
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #5F9EA0;
+}
+
+.end-call-button {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: #FFB6C1;
+  color: #333;
+  border: 3px solid #333;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.end-call-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 0 #FF8FA3, 0 12px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .call-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .interaction-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  
+  .chemistry-visual {
+    width: 60px;
+    height: 100px;
+  }
+}

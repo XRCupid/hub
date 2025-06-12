@@ -1,3 +1,62 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:1643c2ce5c1dd5b5eed2f56b0dab44894e5f12130404bcf07b4e56bb06062d38
-size 1027
+.avatar-test-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: white;
+  padding: 2rem;
+}
+
+.test-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.test-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.test-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.instructions {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+  margin-bottom: 2rem;
+}
+
+.instructions h2 {
+  color: #4ecdc4;
+  margin-bottom: 1rem;
+}
+
+.instructions h3 {
+  color: #ff6b6b;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.instructions ul {
+  list-style: none;
+  padding: 0;
+}
+
+.instructions li {
+  padding: 0.5rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.instructions li:before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: #4ecdc4;
+}

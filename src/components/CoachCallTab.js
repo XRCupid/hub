@@ -1,3 +1,13 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:7234fd0eed7d50bf17de66fcfe91aad4e958d4f49e73fd4daf7a09b7cfb31a51
-size 231
+import React from 'react';
+import VideoChat from './VideoChat';
+
+function CoachCallTab() {
+  return (
+    <div className="content-card">
+      <h2>Coach Call</h2>
+      <VideoChat />
+    </div>
+  );
+}
+
+export default CoachCallTab;
