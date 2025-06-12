@@ -1,3 +1,59 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:d6b53cb54dbfe87c663c999cabc5e4706203d87c783aa21116407443be77d82e
-size 924
+/* Custom Cursors for XRCupid */
+body {
+  cursor: url('/assets/bow-arrow-cursor.svg') 8 16, auto;
+}
+
+body:active {
+  cursor: url('/assets/bow-arrow-cursor-active.svg') 6 16, auto;
+}
+
+a, button, .clickable {
+  cursor: url('/assets/bow-arrow-cursor.svg') 8 16, pointer;
+}
+
+a:active, button:active, .clickable:active {
+  cursor: url('/assets/bow-arrow-cursor-active.svg') 6 16, pointer;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea,
+.form-control {
+  cursor: text;
+}
+
+.draggable {
+  cursor: grab;
+}
+
+.dragging {
+  cursor: grabbing;
+}
+
+/* Fallback cursor styles */
+@supports not (cursor: url()) {
+  body {
+    cursor: default;
+  }
+  
+  a, button, .clickable {
+    cursor: pointer;
+  }
+  
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  .form-control {
+    cursor: text;
+  }
+  
+  .draggable {
+    cursor: grab;
+  }
+  
+  .dragging {
+    cursor: grabbing;
+  }
+}

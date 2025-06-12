@@ -1,3 +1,61 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:c98ce6987f65ab180d06aae2e625436b08cf8a4d9a1e1113e1277c3553a21169
-size 1398
+{
+  "animations": {
+    "greeting_wave": {
+      "type": "procedural",
+      "duration": 2.0,
+      "description": "Friendly wave gesture"
+    },
+    "flirty_hair_flip": {
+      "type": "procedural", 
+      "duration": 2.5,
+      "description": "Playful hair flip"
+    },
+    "confident_stance": {
+      "type": "procedural",
+      "duration": 3.0,
+      "description": "Power pose"
+    },
+    "nervous_fidget": {
+      "type": "procedural",
+      "duration": 2.0,
+      "description": "Nervous hand movements"
+    },
+    "interested_lean": {
+      "type": "procedural",
+      "duration": 3.0,
+      "description": "Lean forward with interest"
+    },
+    "genuine_laugh": {
+      "type": "procedural",
+      "duration": 2.5,
+      "description": "Natural laughing motion"
+    },
+    "subtle_smile": {
+      "type": "morph",
+      "duration": 1.5,
+      "description": "Gentle smile"
+    },
+    "thoughtful_nod": {
+      "type": "procedural",
+      "duration": 1.0,
+      "description": "Understanding nod"
+    },
+    "playful_wink": {
+      "type": "morph",
+      "duration": 0.8,
+      "description": "Quick wink"
+    },
+    "idle_relaxed": {
+      "type": "file",
+      "path": "idle_relaxed.fbx",
+      "duration": 4.0,
+      "loop": true
+    },
+    "idle_engaged": {
+      "type": "procedural",
+      "duration": 4.0,
+      "loop": true,
+      "description": "Attentive idle state"
+    }
+  }
+}

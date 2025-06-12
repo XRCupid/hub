@@ -1,3 +1,82 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:e10a26a62a240ef9596d124b89b0d905708683fc80dbab050705be4892ba97d1
-size 2751
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RPM Message Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #messages { 
+            background: #f0f0f0; 
+            padding: 10px; 
+            height: 200px; 
+            overflow-y: auto; 
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        iframe { width: 100%; height: 600px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>RPM Avatar Creator Message Test</h1>
+    <button onclick="clearMessages()">Clear Messages</button>
+    <button onclick="saveAvatar()">Save Current Avatar</button>
+    <div id="messages"></div>
+    
+    <iframe 
+        id="rpm-frame"
+        src="https://xr-cupid.readyplayer.me/avatar?frameApi=true"
+        allow="camera *; microphone *; clipboard-write">
+    </iframe>
+
+    <script>
+        const messagesDiv = document.getElementById('messages');
+        let lastAvatarUrl = null;
+
+        function log(message) {
+            const time = new Date().toLocaleTimeString();
+            messagesDiv.innerHTML += `[${time}] ${message}<br>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function clearMessages() {
+            messagesDiv.innerHTML = '';
+        }
+
+        // Listen for all messages
+        window.addEventListener('message', (event) => {
+            log(`Message from ${event.origin}:`);
+            log(`Type: ${typeof event.data}`);
+            log(`Data: ${JSON.stringify(event.data, null, 2)}`);
+            
+            // Check for avatar URL
+            if (typeof event.data === 'string' && event.data.includes('.glb')) {
+                lastAvatarUrl = event.data;
+                log(`🎉 AVATAR URL DETECTED: ${event.data}`);
+            }
+            
+            log('---');
+        });
+
+        function saveAvatar() {
+            if (lastAvatarUrl) {
+                // Save to localStorage
+                const avatars = JSON.parse(localStorage.getItem('rpm_avatars') || '[]');
+                avatars.push({
+                    id: `avatar_${Date.now()}`,
+                    url: lastAvatarUrl,
+                    imageUrl: lastAvatarUrl.replace('.glb', '.png'),
+                    gender: 'unknown',
+                    createdAt: new Date().toISOString()
+                });
+                localStorage.setItem('rpm_avatars', JSON.stringify(avatars));
+                alert(`Avatar saved! Total avatars: ${avatars.length}`);
+            } else {
+                alert('No avatar URL detected yet. Create an avatar first!');
+            }
+        }
+
+        log('Ready to receive messages...');
+    </script>
+</body>
+</html>

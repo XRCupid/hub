@@ -1,3 +1,1 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:5d389c94097a184cec681d353f6417563c9b962ad571943eabcbd84ac84fdbdd
-size 180
+"use strict";(self.webpackChunkhub=self.webpackChunkhub||[]).push([[1408],{21408:(e,a,s)=>{e.exports=s.p+"static/media/EmotionDrivenAvatar.new.tsx.3d971964f4e432a84c9c.backup"}}]);

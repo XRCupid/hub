@@ -1,3 +1,42 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:3376a4ca616b5360ef9776c554634d4bb174697740074b998dc6f9f7fc6f488d
-size 1723
+[
+  {
+    "name": "Emphasis Point",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Index_pointing_up.svg/1200px-Index_pointing_up.svg.png",
+    "alt": "Diagram of a hand pointing with the index finger."
+  },
+  {
+    "name": "Open Hand",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Hand_open.svg/1200px-Hand_open.svg.png",
+    "alt": "Diagram of an open hand, palm facing forward."
+  },
+  {
+    "name": "Balance",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Two_hands_balancing.svg/1200px-Two_hands_balancing.svg.png",
+    "alt": "Diagram of two hands held out, palms up and level."
+  },
+  {
+    "name": "Chin Rub",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Hand_rubbing_chin.svg/1200px-Hand_rubbing_chin.svg.png",
+    "alt": "Diagram of a hand rubbing the chin."
+  },
+  {
+    "name": "Attentive Rest",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Hand_resting.svg/1200px-Hand_resting.svg.png",
+    "alt": "Diagram of a hand resting calmly."
+  },
+  {
+    "name": "Thumbs Up",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Thumbs_up_font_awesome.svg/1200px-Thumbs_up_font_awesome.svg.png",
+    "alt": "Diagram of a hand giving a thumbs up."
+  },
+  {
+    "name": "Peace Sign",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/Peace_sign_hand.svg/1200px-Peace_sign_hand.svg.png",
+    "alt": "Diagram of a hand making a peace sign."
+  },
+  {
+    "name": "Prayer Hands",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Prayer_hands.svg/1200px-Prayer_hands.svg.png",
+    "alt": "Diagram of two hands pressed together in prayer."
+  }
+]
