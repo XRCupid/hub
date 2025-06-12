@@ -154,6 +154,45 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
     }
   }, [participant1Stream, participant2Stream, participant1Name, participant2Name]);
 
+  // Use passed emotional data if available
+  useEffect(() => {
+    if (participant1EmotionalData && Array.isArray(participant1EmotionalData) && participant1EmotionalData.length > 0) {
+      console.log('[AudienceAnalyticsDashboard] Using passed emotional data for participant 1:', participant1EmotionalData);
+      setParticipant1HumeExpressions(participant1EmotionalData);
+    } else {
+      // Use test data if no real data available
+      console.log('[AudienceAnalyticsDashboard] No emotional data for participant 1, using test data');
+      setParticipant1HumeExpressions([
+        { emotion: 'Joy', score: 0.75 },
+        { emotion: 'Interest', score: 0.65 },
+        { emotion: 'Excitement', score: 0.55 },
+        { emotion: 'Admiration', score: 0.45 },
+        { emotion: 'Contentment', score: 0.40 },
+        { emotion: 'Amusement', score: 0.35 },
+        { emotion: 'Love', score: 0.30 },
+        { emotion: 'Calmness', score: 0.25 }
+      ]);
+    }
+    
+    if (participant2EmotionalData && Array.isArray(participant2EmotionalData) && participant2EmotionalData.length > 0) {
+      console.log('[AudienceAnalyticsDashboard] Using passed emotional data for participant 2:', participant2EmotionalData);
+      setParticipant2HumeExpressions(participant2EmotionalData);
+    } else {
+      // Use test data if no real data available
+      console.log('[AudienceAnalyticsDashboard] No emotional data for participant 2, using test data');
+      setParticipant2HumeExpressions([
+        { emotion: 'Interest', score: 0.70 },
+        { emotion: 'Joy', score: 0.60 },
+        { emotion: 'Surprise', score: 0.50 },
+        { emotion: 'Excitement', score: 0.45 },
+        { emotion: 'Admiration', score: 0.40 },
+        { emotion: 'Amusement', score: 0.35 },
+        { emotion: 'Contentment', score: 0.30 },
+        { emotion: 'Love', score: 0.25 }
+      ]);
+    }
+  }, [participant1EmotionalData, participant2EmotionalData]);
+
   // Realtime chemistry calculation based on Hume expressions
   useEffect(() => {
     const calculateRealtimeChemistry = () => {
