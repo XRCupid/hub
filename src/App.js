@@ -116,6 +116,7 @@ import { HeartIcon, SparkleIcon, RadiatingHeartIcon, WingedHeartIcon } from './c
 import { CupidCursor } from './components/CupidCursor';
 import { TestMicrophone } from './pages/TestMicrophone';
 import { TestPiP } from './pages/TestPiP';
+import EmotionAnalysisShowcase from './components/EmotionAnalysisShowcase';
 import './App.css';
 
 // Make testBlendshapeCompositor, testRPMIntegration, and testRPMAvatars available globally
@@ -216,6 +217,8 @@ const AppContent = () => {
           <Route path="/conference-booth" element={<ConferenceBoothDemo />} />
           <Route path="/test-mic" element={<TestMicrophone />} />
           <Route path="/test-pip" element={<TestPiP />} />
+          <Route path="/emotion-showcase" element={<EmotionAnalysisShowcase />} />
+          <Route path="/emotion-analysis" element={<EmotionAnalysisShowcase />} />
           <Route path="/conference" element={<ConferenceHost />} />
           <Route path="/conference-host" element={<ConferenceHost />} />
           <Route path="/conference-mobile" element={<ConferenceMobile />} />

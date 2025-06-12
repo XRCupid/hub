@@ -17,7 +17,7 @@ const HumeCoachCall: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [currentEmotion, setCurrentEmotion] = useState<EmotionalState>({});
+  const [currentEmotion, setCurrentEmotion] = useState<Array<{name: string, score: number}>>([]);
   const [audioData, setAudioData] = useState<Uint8Array>(new Uint8Array(128));
   const [coachMessage, setCoachMessage] = useState('');
   const [userTranscript, setUserTranscript] = useState('');
@@ -229,13 +229,13 @@ Important instructions:
   }, [isSpeaking]);
 
   const getEmotionBasedLighting = () => {
-    const { joy = 0, sadness = 0, anger = 0 } = currentEmotion;
+    const maxEmotion = currentEmotion.reduce((max, emotion) => emotion.score > max.score ? emotion : max, {name: '', score: 0});
     
-    if (joy > 0.5) {
+    if (maxEmotion.name === 'joy') {
       return { color: '#fff5e6', intensity: 0.9 }; // Warm, bright
-    } else if (sadness > 0.5) {
+    } else if (maxEmotion.name === 'sadness') {
       return { color: '#e6f0ff', intensity: 0.6 }; // Cool, dim
-    } else if (anger > 0.5) {
+    } else if (maxEmotion.name === 'anger') {
       return { color: '#ffe6e6', intensity: 0.8 }; // Reddish
     }
     
@@ -353,13 +353,13 @@ Important instructions:
           <div className="emotion-display">
             <h4>Detected Emotions</h4>
             <div className="emotion-bars">
-              {Object.entries(currentEmotion).map(([emotion, value]) => (
-                <div key={emotion} className="emotion-bar">
-                  <span className="emotion-label">{emotion}</span>
+              {currentEmotion.map((emotion) => (
+                <div key={emotion.name} className="emotion-bar">
+                  <span className="emotion-label">{emotion.name}</span>
                   <div className="emotion-value">
                     <div 
                       className="emotion-fill" 
-                      style={{ width: `${(value || 0) * 100}%` }}
+                      style={{ width: `${emotion.score * 100}%` }}
                     />
                   </div>
                 </div>

@@ -193,14 +193,20 @@ const CoachRizzoSession: React.FC = () => {
         humeVoiceServiceRef.current.onEmotion((emotions) => {
           // Update blend shapes based on emotions
           const blendShapeValues: any = {};
-          if (emotions.joy && emotions.joy > 0.3) {
-            blendShapeValues.mouthSmile = emotions.joy;
+          
+          // Find specific emotions in the array
+          const joyEmotion = emotions.find((e: any) => e.name === 'Joy');
+          const surpriseEmotion = emotions.find((e: any) => e.name === 'Surprise');
+          const angerEmotion = emotions.find((e: any) => e.name === 'Anger');
+          
+          if (joyEmotion && joyEmotion.score > 0.3) {
+            blendShapeValues.mouthSmile = joyEmotion.score;
           }
-          if (emotions.surprise && emotions.surprise > 0.3) {
-            blendShapeValues.eyesWide = emotions.surprise;
+          if (surpriseEmotion && surpriseEmotion.score > 0.3) {
+            blendShapeValues.eyesWide = surpriseEmotion.score;
           }
-          if (emotions.anger && emotions.anger > 0.3) {
-            blendShapeValues.browFurrower = emotions.anger;
+          if (angerEmotion && angerEmotion.score > 0.3) {
+            blendShapeValues.browFurrower = angerEmotion.score;
           }
           setBlendShapes(blendShapeValues);
         });

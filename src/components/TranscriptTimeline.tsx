@@ -248,9 +248,9 @@ const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
                     >
                       {getEmotionEmoji(segment.dominantEmotion)}
                       <span className="emotion-label">
-                        {segment.prosodyEmotions?.length > 0 && segment.facialEmotions?.length > 0 
+                        {(segment.prosodyEmotions?.length ?? 0) > 0 && (segment.facialEmotions?.length ?? 0) > 0 
                           ? '🎙️+😊' 
-                          : segment.prosodyEmotions?.length > 0 
+                          : (segment.prosodyEmotions?.length ?? 0) > 0 
                           ? '🎙️' 
                           : '😊'}
                       </span>

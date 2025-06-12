@@ -102,7 +102,7 @@ export class CombinedFaceTrackingService {
   }
   
   setHumeApiKey(apiKey: string) {
-    this.humeService.setApiKey(apiKey);
+    // API key is now hardcoded in HumeExpressionService
     this.useHume = true;
   }
   
@@ -123,7 +123,7 @@ export class CombinedFaceTrackingService {
     if (this.useHume && !this.humeError) {
       console.log('[CombinedFaceTracking] Also starting Hume tracking...');
       try {
-        this.humeService.startTracking(videoElement);
+        await this.humeService.startTracking(videoElement);
       } catch (error: any) {
         console.error('[CombinedFaceTracking] Hume tracking failed:', error);
         if (error.message?.includes('usage limit')) {
@@ -147,7 +147,7 @@ export class CombinedFaceTrackingService {
     console.log(`[CombinedFaceTracking] ML5 reports jawOpen: ${ml5Expressions.jawOpen.toFixed(3)}`);
     
     // Get Hume expressions (emotions) if available
-    const humeExpressions = (this.useHume && !this.humeError) ? this.humeService.getExpressions() : null;
+    const humeExpressions = (this.useHume && !this.humeError) ? this.humeService.getLastExpressions() : null;
     
     // Combine expressions
     // ML5 provides: mouthOpen, eyeSquint, browUp (from facial landmarks)

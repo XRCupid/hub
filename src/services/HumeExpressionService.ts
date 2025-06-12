@@ -21,6 +21,8 @@ export class HumeExpressionService {
   private canvas!: HTMLCanvasElement;
   private context!: CanvasRenderingContext2D;
   private onEmotionCallback?: (emotions: Array<{ emotion: string; score: number }>) => void;
+  private socket: WebSocket | null = null;
+  private frameInterval: NodeJS.Timeout | null = null;
   private lastExpressions: FacialExpressions = {
     mouthSmile: 0,
     mouthSmileLeft: 0,
@@ -147,192 +149,158 @@ export class HumeExpressionService {
     // Create offscreen canvas for frame capture
     this.canvas = document.createElement('canvas');
     this.context = this.canvas.getContext('2d')!;
-    
-    // Check for API key in environment
-    if (!this.apiKey) {
-      console.warn('[HumeExpressionService] No Hume API key found. Please set REACT_APP_HUME_API_KEY');
-    }
+    console.log('[HumeExpressionService] Service initialized');
   }
 
-  async initialize() {
-    console.log('[HumeExpressionService] Initialized');
-    // No model to load - we'll use Hume's API
-  }
-
-  setApiKey(apiKey: string) {
-    this.apiKey = apiKey;
-    console.log('[HumeExpressionService] API key set');
-  }
-
-  startTracking(video: HTMLVideoElement, onEmotionCallback?: (emotions: Array<{ emotion: string; score: number }>) => void) {
-    if (!this.apiKey) {
-      console.error('[HumeExpressionService] Cannot start tracking without API key');
-      return;
-    }
-
-    this.video = video;
-    this.isTracking = true;
-    this.onEmotionCallback = onEmotionCallback;
-    
-    // Set canvas size to match video
-    this.canvas.width = video.videoWidth;
-    this.canvas.height = video.videoHeight;
-    
-    console.log('[HumeExpressionService] Starting expression tracking');
-    this.track();
-  }
-
-  stopTracking() {
-    this.isTracking = false;
-    console.log('[HumeExpressionService] Stopped expression tracking');
-  }
-
-  getExpressions(): FacialExpressions {
-    return { ...this.lastExpressions };
-  }
-
-  private async track() {
-    if (!this.isTracking || !this.video) return;
-
-    try {
-      // Capture current frame
-      this.context.drawImage(this.video, 0, 0);
-      const imageData = this.canvas.toDataURL('image/jpeg', 0.8);
-      const base64Data = imageData.split(',')[1];
-
-      // Send to Hume API
-      const response = await fetch('https://api.hume.ai/v0/batch/jobs', {
-        method: 'POST',
-        headers: {
-          'X-Hume-Api-Key': this.apiKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          models: {
-            face: {}
-          },
-          urls: [],
-          files: [{
-            content: base64Data,
-            content_type: 'image/jpeg'
-          }]
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const jobId = result.job_id;
-        
-        // Poll for results (in production, use webhooks)
-        const predictions = await this.pollForResults(jobId);
-        if (predictions) {
-          this.processHumePredictions(predictions);
-        }
-      } else {
-        const errorText = await response.text();
-        console.error('[HumeExpressionService] API error:', response.status, errorText);
-        
-        // Check for usage limit error
-        if (response.status === 402 || errorText.includes('usage limit')) {
-          console.error('[HumeExpressionService] Monthly usage limit reached');
-          // Stop tracking to avoid repeated errors
-          this.isTracking = false;
-          throw new Error('Monthly usage limit reached');
-        }
-      }
-    } catch (error) {
-      console.error('[HumeExpressionService] Tracking error:', error);
-    }
-
-    // Continue tracking at a lower rate to avoid API limits
-    if (this.isTracking) {
-      setTimeout(() => this.track(), 500); // 2 FPS
-    }
-  }
-
-  private async pollForResults(jobId: string): Promise<HumePrediction[] | null> {
-    // Simple polling - in production use webhooks
-    // Increased polling duration: 20 attempts, 500ms interval (10 seconds total)
-    for (let i = 0; i < 20; i++) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+  private async connectWebSocket(): Promise<void> {
+    return new Promise((resolve, reject) => {
       try {
-        const response = await fetch(`https://api.hume.ai/v0/batch/jobs/${jobId}/predictions`, {
-          headers: {
-            'X-Hume-Api-Key': this.apiKey
+        // Use the streaming WebSocket API for real-time analysis
+        this.socket = new WebSocket(`wss://api.hume.ai/v0/stream/models?apikey=${this.apiKey}`);
+        
+        this.socket.onopen = () => {
+          console.log('[HumeExpressionService] WebSocket connected');
+          // Send initial configuration
+          this.socket!.send(JSON.stringify({
+            models: {
+              face: {
+                fps_pred: 3, // 3 predictions per second
+                prob_threshold: 0.1,
+                identify_faces: false,
+                min_face_size: 60
+              }
+            },
+            raw_text: false,
+            data: null
+          }));
+          resolve();
+        };
+
+        this.socket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.face && data.face.predictions && data.face.predictions.length > 0) {
+              const predictions = data.face.predictions[0];
+              if (predictions.emotions) {
+                this.processStreamingEmotions(predictions.emotions);
+              }
+            }
+          } catch (error) {
+            console.error('[HumeExpressionService] Error processing message:', error);
           }
-        });
-  
-        if (response.ok) {
-          const data = await response.json();
-          if (data[0]?.results?.predictions?.[0]?.models?.face?.grouped_predictions?.[0]?.predictions) {
-            return data[0].results.predictions[0].models.face.grouped_predictions[0].predictions;
-          }
-        } else if (response.status === 400) {
-          // Job might still be processing or invalid
-          console.warn('[HumeExpressionService] Job not ready or invalid:', jobId);
-          continue;
-        } else {
-          console.error('[HumeExpressionService] Polling error:', response.status);
-          break;
-        }
+        };
+
+        this.socket.onerror = (error) => {
+          console.error('[HumeExpressionService] WebSocket error:', error);
+          reject(error);
+        };
+
+        this.socket.onclose = () => {
+          console.log('[HumeExpressionService] WebSocket closed');
+          this.socket = null;
+        };
       } catch (error) {
-        console.error('[HumeExpressionService] Polling request failed:', error);
-        break;
+        console.error('[HumeExpressionService] Failed to connect WebSocket:', error);
+        reject(error);
       }
-    }
-    
-    return null;
+    });
   }
 
-  private processHumePredictions(predictions: HumePrediction[]) {
-    if (!predictions.length) return;
-
-    // Reset expressions
-    const newExpressions: FacialExpressions = { ...this.lastExpressions };
-    Object.keys(newExpressions).forEach(key => {
-      newExpressions[key as keyof FacialExpressions] *= 0.5; // Decay
-    });
-
-    // Process emotions from Hume
-    const emotions = predictions[0].emotions || [];
+  private processStreamingEmotions(emotions: HumeExpression[]): void {
+    // Sort emotions by score
+    const sortedEmotions = [...emotions].sort((a, b) => b.score - a.score);
     
-    // Sort by score and take top emotions
-    const topEmotions = emotions
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3); // Top 3 emotions
-
-    console.log('[HumeExpressionService] Top emotions:', topEmotions.map(e => `${e.name}: ${e.score.toFixed(2)}`));
-
-    // Format emotions for callback
-    const formattedEmotions = topEmotions.map(e => ({
+    // Convert to the expected format
+    const formattedEmotions = sortedEmotions.map(e => ({
       emotion: e.name,
-      score: e.score
+      score: Math.round(e.score * 100) // Convert to percentage
     }));
 
-    // Call emotion callback if provided
+    console.log('[HumeExpressionService] Detected emotions:', formattedEmotions.slice(0, 5));
+
+    // Call the callback with emotions
     if (this.onEmotionCallback) {
       this.onEmotionCallback(formattedEmotions);
     }
+  }
 
-    // Apply emotion mappings to blendshapes
-    for (const emotion of topEmotions) {
-      const mapping = this.emotionToBlendshapeMap[emotion.name];
-      if (mapping) {
-        Object.entries(mapping).forEach(([key, value]) => {
-          const blendshapeKey = key as keyof FacialExpressions;
-          newExpressions[blendshapeKey] = Math.max(
-            newExpressions[blendshapeKey],
-            (value as number) * emotion.score
-          );
-        });
-      }
+  async startTracking(videoElement: HTMLVideoElement): Promise<void> {
+    console.log('[HumeExpressionService] Starting tracking...');
+    this.video = videoElement;
+    this.isTracking = true;
+
+    // Set canvas size to match video
+    this.canvas.width = videoElement.videoWidth || 640;
+    this.canvas.height = videoElement.videoHeight || 480;
+
+    // Connect to WebSocket
+    await this.connectWebSocket();
+
+    // Start sending frames
+    this.startFrameCapture();
+  }
+
+  private startFrameCapture(): void {
+    if (!this.isTracking || !this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      return;
     }
 
-    // Smooth the values
-    Object.keys(newExpressions).forEach(key => {
-      const k = key as keyof FacialExpressions;
-      this.lastExpressions[k] = this.lastExpressions[k] * 0.7 + newExpressions[k] * 0.3;
-    });
+    // Capture and send frames at 3 FPS
+    this.frameInterval = setInterval(() => {
+      if (this.video && this.socket && this.socket.readyState === WebSocket.OPEN) {
+        this.sendFrame();
+      }
+    }, 333); // ~3 FPS
+  }
+
+  private async sendFrame(): Promise<void> {
+    if (!this.video || !this.socket) return;
+
+    try {
+      // Draw current frame to canvas
+      this.context.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+      
+      // Convert to base64
+      const imageData = this.canvas.toDataURL('image/jpeg', 0.7);
+      const base64Data = imageData.split(',')[1];
+
+      // Send frame through WebSocket
+      this.socket.send(JSON.stringify({
+        data: base64Data,
+        models: {
+          face: {}
+        }
+      }));
+    } catch (error) {
+      console.error('[HumeExpressionService] Error sending frame:', error);
+    }
+  }
+
+  stopTracking(): void {
+    console.log('[HumeExpressionService] Stopping tracking...');
+    this.isTracking = false;
+    
+    if (this.frameInterval) {
+      clearInterval(this.frameInterval);
+      this.frameInterval = null;
+    }
+
+    if (this.socket) {
+      this.socket.close();
+      this.socket = null;
+    }
+  }
+
+  setOnEmotionCallback(callback: (emotions: Array<{ emotion: string; score: number }>) => void): void {
+    this.onEmotionCallback = callback;
+  }
+
+  getLastExpressions(): FacialExpressions {
+    return { ...this.lastExpressions };
+  }
+
+  getHeadRotation(): HeadRotation {
+    // Not implemented for Hume API
+    return { pitch: 0, yaw: 0, roll: 0 };
   }
 }

@@ -223,8 +223,8 @@ export const ConferenceSetup: React.FC<ConferenceSetupProps> = ({ mode }) => {
             <div className="room-badge">Room: {roomId}</div>
           </div>
           <AudienceAnalyticsDashboard
-            participant1Stream={localStream || undefined}
-            participant2Stream={remoteStream || undefined}
+            participant1Stream={localStream || null}
+            participant2Stream={remoteStream || null}
             participant1Name={hostName}
             participant2Name={mobileName}
             roomId={roomId}

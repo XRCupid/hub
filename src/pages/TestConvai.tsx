@@ -8,7 +8,7 @@ interface Message {
   text: string;
   sender: 'user' | 'assistant' | 'system';
   timestamp: Date;
-  emotion?: EmotionalState;
+  emotion?: Array<{name: string, score: number}>;
 }
 
 const TestConvai: React.FC = () => {
@@ -17,7 +17,7 @@ const TestConvai: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [currentEmotion, setCurrentEmotion] = useState<EmotionalState>({});
+  const [currentEmotion, setCurrentEmotion] = useState<Array<{name: string, score: number}>>([]);
   const [useHume, setUseHume] = useState(true); // Toggle between Hume and Convai
   
   const voiceServiceRef = useRef<HybridVoiceService | null>(null);
@@ -41,7 +41,7 @@ const TestConvai: React.FC = () => {
       audio.play().catch(e => console.error('Error playing audio:', e));
     });
     
-    voiceServiceRef.current.setOnEmotionCallback((emotion: EmotionalState) => {
+    voiceServiceRef.current.setOnEmotionCallback((emotion) => {
       console.log('Emotion data:', emotion);
       setCurrentEmotion(emotion);
       // Add emotion to the last assistant message
@@ -178,12 +178,12 @@ const TestConvai: React.FC = () => {
     addMessage(`Switched to ${!useHume ? 'Hume' : 'Convai'} service`, 'system');
   };
 
-  const formatEmotion = (emotion: EmotionalState) => {
-    const topEmotions = Object.entries(emotion)
-      .filter(([_, score]) => score > 0.1)
-      .sort(([_, a], [__, b]) => b - a)
+  const formatEmotion = (emotion: Array<{name: string, score: number}>) => {
+    const topEmotions = emotion
+      .filter(({ score }) => score > 0.1)
+      .sort((a, b) => b.score - a.score)
       .slice(0, 3)
-      .map(([name, score]) => `${name}: ${(score * 100).toFixed(1)}%`)
+      .map(({ name, score }) => `${name}: ${(score * 100).toFixed(1)}%`)
       .join(', ');
     return topEmotions || 'No strong emotions detected';
   };
@@ -211,7 +211,7 @@ const TestConvai: React.FC = () => {
         <span>{isConnected ? `Connected to ${useHume ? 'Hume' : 'Convai'}` : 'Disconnected'}</span>
       </div>
       
-      {currentEmotion && Object.keys(currentEmotion).length > 0 && (
+      {currentEmotion.length > 0 && (
         <div className="emotion-display">
           <strong>Current Emotions:</strong> {formatEmotion(currentEmotion)}
         </div>

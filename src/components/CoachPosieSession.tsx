@@ -224,18 +224,24 @@ const CoachPosieSession: React.FC = () => {
         humeVoiceServiceRef.current.onEmotion((emotions) => {
           // Update blend shapes based on emotions
           const blendShapeValues: any = {};
-          if (emotions.joy && emotions.joy > 0.3) {
-            blendShapeValues.mouthSmile = emotions.joy;
-            blendShapeValues.cheekSquintLeft = emotions.joy * 0.5;
-            blendShapeValues.cheekSquintRight = emotions.joy * 0.5;
+          
+          // Find specific emotions in the array
+          const joyEmotion = emotions.find((e: any) => e.name === 'Joy');
+          const sadnessEmotion = emotions.find((e: any) => e.name === 'Sadness');
+          const surpriseEmotion = emotions.find((e: any) => e.name === 'Surprise');
+          
+          if (joyEmotion && joyEmotion.score > 0.3) {
+            blendShapeValues.mouthSmile = joyEmotion.score;
+            blendShapeValues.cheekSquintLeft = joyEmotion.score * 0.5;
+            blendShapeValues.cheekSquintRight = joyEmotion.score * 0.5;
           }
-          if (emotions.sadness && emotions.sadness > 0.3) {
-            blendShapeValues.browInnerUp = emotions.sadness * 0.3;
-            blendShapeValues.mouthFrown = emotions.sadness * 0.2;
+          if (sadnessEmotion && sadnessEmotion.score > 0.3) {
+            blendShapeValues.browInnerUp = sadnessEmotion.score * 0.3;
+            blendShapeValues.mouthFrown = sadnessEmotion.score * 0.2;
           }
-          if (emotions.surprise && emotions.surprise > 0.3) {
-            blendShapeValues.browRaiserLeft = emotions.surprise * 0.4;
-            blendShapeValues.browRaiserRight = emotions.surprise * 0.4;
+          if (surpriseEmotion && surpriseEmotion.score > 0.3) {
+            blendShapeValues.browRaiserLeft = surpriseEmotion.score * 0.4;
+            blendShapeValues.browRaiserRight = surpriseEmotion.score * 0.4;
           }
           setBlendShapes(blendShapeValues);
         });

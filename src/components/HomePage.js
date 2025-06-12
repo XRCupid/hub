@@ -71,6 +71,15 @@ const HomePage = () => {
             <h3>Progress Dashboard</h3>
             <p>Track your dating journey with analytics and personalized insights</p>
           </Link>
+
+          {/* Emotion Analysis */}
+          <Link to="/emotion-analysis" className="feature-card">
+            <div className="feature-icon">
+              <RadiatingHeartIcon size={40} />
+            </div>
+            <h3>Emotion Analysis Lab</h3>
+            <p>Real-time facial and voice emotion detection to improve your emotional awareness</p>
+          </Link>
         </div>
       </section>
 

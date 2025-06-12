@@ -139,7 +139,7 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
           video.srcObject = participant.stream;
           
           // Start Hume expression tracking on video feed
-          participant.humeExpressionService.startTracking(video, (expressions: Array<{ emotion: string; score: number }>) => {
+          participant.humeExpressionService.setOnEmotionCallback((expressions: Array<{ emotion: string; score: number }>) => {
             console.log(`[AudienceAnalyticsDashboard] 🎭 Hume expressions for ${participant.name}:`, expressions);
             
             if (index === 0) {
@@ -158,6 +158,8 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
               setParticipant2HumeExpressions(expressions);
             }
           });
+          
+          participant.humeExpressionService.startTracking(video);
         }
       });
 
@@ -170,7 +172,12 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
   useEffect(() => {
     if (participant1EmotionalData && Array.isArray(participant1EmotionalData) && participant1EmotionalData.length > 0) {
       console.log('[AudienceAnalyticsDashboard] Using passed emotional data for participant 1:', participant1EmotionalData);
-      setParticipant1HumeExpressions(participant1EmotionalData);
+      // Convert from { name: string; score: number } to { emotion: string; score: number }
+      const convertedData = participant1EmotionalData.map(item => ({
+        emotion: item.name,
+        score: item.score
+      }));
+      setParticipant1HumeExpressions(convertedData);
     } else {
       // Use test data if no real data available
       console.log('[AudienceAnalyticsDashboard] No emotional data for participant 1, using test data');
@@ -188,7 +195,12 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
     
     if (participant2EmotionalData && Array.isArray(participant2EmotionalData) && participant2EmotionalData.length > 0) {
       console.log('[AudienceAnalyticsDashboard] Using passed emotional data for participant 2:', participant2EmotionalData);
-      setParticipant2HumeExpressions(participant2EmotionalData);
+      // Convert from { name: string; score: number } to { emotion: string; score: number }
+      const convertedData = participant2EmotionalData.map(item => ({
+        emotion: item.name,
+        score: item.score
+      }));
+      setParticipant2HumeExpressions(convertedData);
     } else {
       // Use test data if no real data available
       console.log('[AudienceAnalyticsDashboard] No emotional data for participant 2, using test data');

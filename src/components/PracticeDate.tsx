@@ -36,7 +36,7 @@ const PracticeDate: React.FC = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [conversation, setConversation] = useState<Array<{role: string, message: string}>>([]);
-  const [emotionalState, setEmotionalState] = useState<EmotionalState>({});
+  const [emotionalState, setEmotionalState] = useState<Array<{name: string, score: number}>>([]);
   const [dateScore, setDateScore] = useState({
     connection: 50,
     attraction: 50,
@@ -404,39 +404,24 @@ const PracticeDate: React.FC = () => {
     }
   };
 
-  const updateDateScore = (emotions: EmotionalState) => {
-    // Update date metrics based on emotional state
-    setDateScore(prev => {
-      const updates = { ...prev };
-      
-      // Connection increases with joy
-      if (emotions.joy && emotions.joy > 0.3) {
-        updates.connection = Math.min(100, prev.connection + 2);
-      }
-      
-      // Attraction affected by joy and surprise
-      if ((emotions.joy && emotions.joy > 0.3) || (emotions.surprise && emotions.surprise > 0.3)) {
-        updates.attraction = Math.min(100, prev.attraction + 1.5);
-      }
-      
-      // Comfort decreases with fear or anger
-      if (emotions.fear && emotions.fear > 0.3) {
-        updates.comfort = Math.max(0, prev.comfort - 2);
-      } else if (emotions.anger && emotions.anger > 0.3) {
-        updates.comfort = Math.max(0, prev.comfort - 1);
-      } else if (!emotions.fear && !emotions.anger) {
-        // Comfort slowly increases when no negative emotions
-        updates.comfort = Math.min(100, prev.comfort + 0.5);
-      }
-      
-      // Engagement based on overall emotional activity
-      const totalEmotion = Object.values(emotions).reduce((sum: number, val) => sum + (val || 0), 0);
-      if (totalEmotion > 1.5) {
-        updates.engagement = Math.min(100, prev.engagement + 1);
-      }
-      
-      return updates;
-    });
+  const updateDateScore = (emotions: Array<{name: string, score: number}>) => {
+    // Find specific emotions in the array
+    const joyEmotion = emotions.find(e => e.name === 'Joy');
+    const interestEmotion = emotions.find(e => e.name === 'Interest');
+    const calmEmotion = emotions.find(e => e.name === 'Calmness');
+    const excitementEmotion = emotions.find(e => e.name === 'Excitement');
+    
+    const joy = joyEmotion?.score || 0;
+    const interest = interestEmotion?.score || 0;
+    const calmness = calmEmotion?.score || 0;
+    const excitement = excitementEmotion?.score || 0;
+    
+    setDateScore(prev => ({
+      connection: Math.min(100, prev.connection + (joy * 2)),
+      attraction: Math.min(100, prev.attraction + (interest * 1.5)),
+      comfort: Math.min(100, prev.comfort + (calmness * 1)),
+      engagement: Math.min(100, prev.engagement + (excitement * 1.5))
+    }));
   };
 
   const sendMessage = (message: string) => {

@@ -109,93 +109,78 @@ export const RealTimeEmotionSliders: React.FC<RealTimeEmotionSlidersProps> = ({
     return { emoji: '😐', color: '#808080', description: emotion };
   };
 
-  // Get top 8 emotions
-  const topEmotions = animatedEmotions.slice(0, 8);
-  const dominantEmotion = topEmotions[0];
-
   // Calculate emotional categories
   const positiveEmotions = ['joy', 'amusement', 'excitement', 'contentment', 'love', 'admiration', 'interest', 'pride', 'calmness'];
   const negativeEmotions = ['fear', 'anxiety', 'sadness', 'anger', 'disgust', 'contempt', 'disappointment', 'embarrassment', 'shame'];
   const engagedEmotions = ['interest', 'concentration', 'surprise', 'awe', 'confusion'];
 
-  const calculateCategoryScore = (category: string[]) => {
-    const categoryEmotions = animatedEmotions.filter(e => 
-      category.some(cat => e.emotion.toLowerCase().includes(cat))
-    );
-    if (categoryEmotions.length === 0) return 0;
-    return categoryEmotions.reduce((sum, e) => sum + e.score, 0) / categoryEmotions.length;
-  };
+  const positiveScore = animatedEmotions
+    .filter(e => positiveEmotions.includes(e.emotion.toLowerCase()))
+    .reduce((sum, e) => sum + e.score, 0) / positiveEmotions.length;
+  
+  const negativeScore = animatedEmotions
+    .filter(e => negativeEmotions.includes(e.emotion.toLowerCase()))
+    .reduce((sum, e) => sum + e.score, 0) / negativeEmotions.length;
+  
+  const engagedScore = animatedEmotions
+    .filter(e => engagedEmotions.includes(e.emotion.toLowerCase()))
+    .reduce((sum, e) => sum + e.score, 0) / engagedEmotions.length;
 
-  const positiveScore = calculateCategoryScore(positiveEmotions);
-  const negativeScore = calculateCategoryScore(negativeEmotions);
-  const engagedScore = calculateCategoryScore(engagedEmotions);
+  // Show all emotions, but highlight the top ones
+  const displayEmotions = animatedEmotions.length > 12 
+    ? animatedEmotions.slice(0, 12) 
+    : animatedEmotions;
+
+  const dominantEmotion = displayEmotions[0];
 
   return (
-    <div className={`realtime-emotion-sliders ${position}`}>
-      {dominantEmotion && (
-        <div className="dominant-emotion">
-          <span className="dominant-emoji">
-            {getEmotionConfig(dominantEmotion.emotion).emoji}
-          </span>
-          <div className="dominant-label">
-            {getEmotionConfig(dominantEmotion.emotion).description}
+    <div className={`realtime-emotion-sliders ${position || ''}`}>
+      <div className="participant-header">
+        <h4>{participantName}</h4>
+        {dominantEmotion && (
+          <div className="dominant-emotion">
+            <span className="dominant-emoji">{getEmotionConfig(dominantEmotion.emotion).emoji}</span>
+            <span className="dominant-label">{dominantEmotion.emotion}</span>
+            <span className="dominant-score">{Math.round(dominantEmotion.score * 100)}%</span>
           </div>
-          <div className="dominant-percentage">
-            {(dominantEmotion.score * 100).toFixed(0)}%
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      <div className="emotion-sliders-list">
-        {topEmotions.map((emotion, index) => {
+      <div className="emotion-sliders">
+        {displayEmotions.map((emotion, index) => {
           const config = getEmotionConfig(emotion.emotion);
+          const isTop3 = index < 3;
           
           return (
-            <div 
-              key={emotion.emotion} 
-              className="emotion-slider-item"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <span className="emotion-emoji">{config.emoji}</span>
-              <div className="emotion-info">
-                <div className="emotion-text">
-                  <span className="emotion-name">{config.description}</span>
-                  <span className="emotion-percentage">
-                    {(emotion.score * 100).toFixed(0)}%
-                  </span>
-                </div>
-                <div className="emotion-slider-container">
+            <div key={emotion.emotion} className={`emotion-slider ${isTop3 ? 'top-emotion' : ''}`}>
+              <div className="emotion-label">
+                <span className="emotion-emoji">{config.emoji}</span>
+                <span className="emotion-name">{emotion.emotion}</span>
+                <span className="emotion-description">{config.description}</span>
+              </div>
+              <div className="slider-container">
+                <div className="slider-track">
                   <div 
-                    className="emotion-slider-fill"
-                    style={{
+                    className="slider-fill"
+                    style={{ 
                       width: `${emotion.score * 100}%`,
                       backgroundColor: config.color,
+                      opacity: isTop3 ? 1 : 0.7
                     }}
                   />
                 </div>
+                <span className="emotion-score">{Math.round(emotion.score * 100)}%</span>
               </div>
             </div>
           );
         })}
       </div>
 
-      <div className="emotional-summary">
-        <div className="summary-item">
-          <span className="summary-icon">😊</span>
-          <div className="summary-label">Positive</div>
-          <div className="summary-value">{(positiveScore * 100).toFixed(0)}%</div>
+      {animatedEmotions.length > 12 && (
+        <div className="more-emotions-note">
+          +{animatedEmotions.length - 12} more emotions detected
         </div>
-        <div className="summary-item">
-          <span className="summary-icon">😔</span>
-          <div className="summary-label">Negative</div>
-          <div className="summary-value">{(negativeScore * 100).toFixed(0)}%</div>
-        </div>
-        <div className="summary-item">
-          <span className="summary-icon">🎯</span>
-          <div className="summary-label">Engaged</div>
-          <div className="summary-value">{(engagedScore * 100).toFixed(0)}%</div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

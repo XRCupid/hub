@@ -240,127 +240,205 @@ export class HumeVoiceService {
         console.log('[HumeVoiceService] Connect options:', connectOptions);
         
         this.socket = await this.client.empathicVoice.chat.connect(connectOptions);
-      } catch (connectError: any) {
-        console.error('[HumeVoiceService] Socket connection failed:', {
-          error: connectError,
-          message: connectError?.message,
-          status: connectError?.status,
-          statusText: connectError?.statusText,
-          response: connectError?.response,
-          stack: connectError?.stack,
-          configId: configToUse,
-          apiKeyFirst5: apiKey?.substring(0, 5) + '...',
-          apiKeyLength: apiKey?.length
+        
+        console.log('[HumeVoiceService] Socket created:', {
+          socket: !!this.socket,
+          socketType: typeof this.socket,
+          hasMethod: typeof this.socket?.sendAudioInput,
+          socketKeys: this.socket ? Object.keys(this.socket) : [],
+          socketPrototype: this.socket ? Object.getPrototypeOf(this.socket).constructor.name : 'N/A'
         });
         
-        // Check if it's an auth error
-        if (connectError?.status === 401 || connectError?.message?.includes('401')) {
-          throw new Error('Authentication failed. Please check your Hume API credentials. API key starts with: ' + apiKey?.substring(0, 5));
-        }
+        // Set up event handlers immediately after creating socket
+        console.log('[HumeVoiceService] Setting up event handlers');
         
-        // Check if it's a config not found error
-        if (connectError?.message?.includes('does not exist')) {
-          throw new Error(`Config ID ${configToUse} not found. This config may belong to a different Hume account. Current API key starts with: ${apiKey?.substring(0, 5)}`);
-        }
-        
-        // Check if it's a network error
-        if (connectError?.message?.includes('network') || connectError?.message?.includes('fetch')) {
-          throw new Error('Network error. Please check your internet connection.');
-        }
-        
-        throw connectError;
-      }
-      
-      console.log('[HumeVoiceService] Socket created:', {
-        socket: !!this.socket,
-        socketType: typeof this.socket,
-        hasMethod: typeof this.socket?.sendAudioInput,
-        socketKeys: this.socket ? Object.keys(this.socket) : [],
-        socketPrototype: this.socket ? Object.getPrototypeOf(this.socket).constructor.name : 'N/A'
-      });
-
-      // Set up microphone streaming
-      await this.setupMicrophoneStreaming();
-
-      // Try to find the actual WebSocket
-      let actualWebSocket: any = null;
-      if (this.socket) {
-        // Check common property names for the underlying WebSocket
-        const possibleSocketProps = ['_socket', 'socket', 'ws', '_ws', 'webSocket', '_webSocket'];
-        for (const prop of possibleSocketProps) {
-          if ((this.socket as any)[prop]) {
-            actualWebSocket = (this.socket as any)[prop];
-            console.log(`[HumeVoiceService] Found WebSocket at property: ${prop}`);
-            break;
+        this.socket.on('open', () => {
+          console.log('[HumeVoiceService] 🟢 Socket opened');
+          this.isConnected = true;
+          this.hasConnectedBefore = true;
+          if (this.onOpenCallback) {
+            this.onOpenCallback();
           }
-        }
+        });
         
-        // If not found, try to find it in the prototype chain
-        if (!actualWebSocket) {
-          const proto = Object.getPrototypeOf(this.socket);
-          for (const prop of possibleSocketProps) {
-            if (proto[prop]) {
-              actualWebSocket = proto[prop];
-              console.log(`[HumeVoiceService] Found WebSocket in prototype at property: ${prop}`);
-              break;
-            }
-          }
-        }
-      }
-
-      // Wait for the underlying WebSocket to be fully open
-      // The Hume SDK socket might have an internal WebSocket that needs to be ready
-      const waitForSocketOpen = async (maxAttempts = 50): Promise<boolean> => {
-        for (let i = 0; i < maxAttempts; i++) {
-          try {
-            let socketState: number | undefined;
-            
-            // Try multiple ways to get the socket state
-            if (actualWebSocket && typeof actualWebSocket.readyState === 'number') {
-              socketState = actualWebSocket.readyState;
-            } else if ((this.socket as any)._socket?.readyState !== undefined) {
-              socketState = (this.socket as any)._socket.readyState;
-            } else if ((this.socket as any).readyState !== undefined) {
-              socketState = (this.socket as any).readyState;
-            }
-            
-            console.log(`[HumeVoiceService] Checking socket state (attempt ${i + 1}/${maxAttempts}):`, socketState, 'actualWebSocket:', !!actualWebSocket);
-            
-            if (socketState === 1) { // 1 = WebSocket.OPEN
-              return true;
-            }
-            
-            // If we can't find the readyState but have waited a bit, assume it's ready
-            if (i > 10 && socketState === undefined) {
-              console.log('[HumeVoiceService] Cannot determine socket state, assuming ready after wait');
-              return true;
-            }
-          } catch (e) {
-            console.log('[HumeVoiceService] Could not check socket readyState, waiting...', e);
-          }
+        this.socket.on('message', (message: any) => {
+          console.log('[HumeVoiceService] 📨 Received message:', {
+            type: message.type,
+            hasTranscript: !!message.transcript,
+            hasProsody: !!message.prosody,
+            hasModels: !!message.models,
+            messageKeys: Object.keys(message)
+          });
           
-          // Wait 100ms before next check
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        return false;
-      };
+          switch (message.type) {
+            case 'audio_output':
+              console.log('[HumeVoiceService] 🎵 Received audio_output');
+              if (message.data && this.onAudioCallback) {
+                try {
+                  // Use Hume SDK's convertBase64ToBlob if available, otherwise fallback
+                  const audioBlob = typeof convertBase64ToBlob === 'function' 
+                    ? convertBase64ToBlob(message.data)
+                    : base64ToBlob(message.data, 'audio/wav');
+                  console.log('[HumeVoiceService] Created audio blob:', audioBlob.size, 'type:', audioBlob.type);
+                  this.onAudioCallback(audioBlob);
+                } catch (error) {
+                  console.error('[HumeVoiceService] Error creating audio blob:', error);
+                }
+              }
+              break;
 
-      // Wait for socket to be fully open
-      const socketReady = await waitForSocketOpen();
-      if (!socketReady) {
-        console.warn('[HumeVoiceService] Socket did not reach OPEN state after 5 seconds, proceeding anyway');
-      }
-      
-      this.isConnected = true;
-      this.hasConnectedBefore = true; // Set flag
-      console.log('[HumeVoiceService] Socket connected successfully and ready');
-      
-      // Set up event handlers
-      this.setupEventHandlers();
-      
-      // Notify connection is ready
-      if (this.onOpenCallback) {
-        this.onOpenCallback();
+            case 'assistant_message':
+              console.log('[HumeVoiceService] 🤖 Assistant message:', {
+                content: message.message?.content,
+                hasProsody: !!message.models?.prosody
+              });
+              
+              if (message.message?.content && this.onMessageCallback) {
+                this.onMessageCallback?.(message);
+              }
+              
+              // Create transcript segment for assistant
+              if (message.message?.content && this.onTranscriptCallback) {
+                console.log('[HumeVoiceService] 📝 Creating assistant transcript segment');
+                const segment: TranscriptSegment = {
+                  timestamp: Date.now(),
+                  speaker: 'Assistant',
+                  text: message.message.content,
+                  emotions: this.lastEmotions || [],
+                  prosodyEmotions: this.lastProsodyEmotions || [],
+                  facialEmotions: this.lastFacialEmotions || [],
+                  dominantEmotion: this.lastEmotions?.[0]?.name,
+                  emotionIntensity: this.lastEmotions?.[0]?.score / 100,
+                  prosodyData: message.models?.prosody
+                };
+                this.transcriptHistory.push(segment);
+                this.onTranscriptCallback(segment);
+              }
+              
+              // Extract emotion data from prosody scores
+              if (message.models?.prosody?.scores && this.onEmotionCallback) {
+                console.log('[HumeVoiceService] 🎭 Found prosody emotion data');
+                const emotions = this.convertEmotionsToArray(message.models.prosody.scores);
+                console.log('[HumeVoiceService] Converted prosody emotions:', emotions.slice(0, 5));
+                this.lastProsodyEmotions = emotions;
+                this.lastEmotions = emotions;
+                this.onEmotionCallback(emotions);
+              }
+              break;
+
+            case 'user_message':
+              console.log('[HumeVoiceService] 👤 User message:', {
+                content: message.message?.content,
+                hasProsody: !!message.models?.prosody
+              });
+              
+              if (message.message?.content) {
+                if (this.onUserMessageCallback) {
+                  this.onUserMessageCallback(message.message.content);
+                }
+                
+                // Create transcript segment for user
+                if (this.onTranscriptCallback) {
+                  console.log('[HumeVoiceService] 📝 Creating user transcript segment');
+                  const segment: TranscriptSegment = {
+                    timestamp: Date.now(),
+                    speaker: 'User',
+                    text: message.message.content,
+                    emotions: this.lastEmotions || [],
+                    prosodyEmotions: this.lastProsodyEmotions || [],
+                    facialEmotions: this.lastFacialEmotions || [],
+                    dominantEmotion: this.lastEmotions?.[0]?.name,
+                    emotionIntensity: this.lastEmotions?.[0]?.score / 100,
+                    prosodyData: message.models?.prosody
+                  };
+                  this.transcriptHistory.push(segment);
+                  this.onTranscriptCallback(segment);
+                }
+              }
+              break;
+
+            case 'user_interruption':
+              console.log('[HumeVoiceService] 🛑 User interruption');
+              if (this.onUserInterruptionCallback) {
+                this.onUserInterruptionCallback();
+              }
+              break;
+
+            case 'emotion_features':
+              console.log('[HumeVoiceService] 🎭 Emotion features received');
+              if (message.models?.prosody?.scores && this.onEmotionCallback) {
+                const emotions = this.convertEmotionsToArray(message.models.prosody.scores);
+                this.lastProsodyEmotions = emotions;
+                this.lastEmotions = emotions;
+                this.onEmotionCallback(emotions);
+              }
+              break;
+
+            case 'error':
+              console.error('[HumeVoiceService] ❌ Error message:', message);
+              if (message.message?.includes('too many active chats')) {
+                console.error('[HumeVoiceService] Too many active chats - consider closing old connections');
+                if (this.onErrorCallback) {
+                  this.onErrorCallback(new Error('Too many active chats. Please close other sessions and try again.'));
+                }
+              }
+              break;
+
+            default:
+              console.log('[HumeVoiceService] 🔍 Unknown message type:', message.type);
+          }
+        });
+
+        this.socket.on('error', (error: any) => {
+          console.error('[HumeVoiceService] ❌ Socket error:', error);
+          if (this.onErrorCallback) {
+            this.onErrorCallback(error);
+          }
+        });
+
+        this.socket.on('close', (code: number, reason: Buffer) => {
+          const reasonString = reason ? reason.toString() : 'No reason provided';
+          console.log(`[HumeVoiceService] WebSocket closed. Code: ${code}, Reason: ${reasonString}`);
+          this.isConnected = false;
+          if (this.onCloseCallback) {
+            this.onCloseCallback(code, reasonString);
+          }
+        });
+        
+        // Set up microphone streaming
+        console.log('[HumeVoiceService] Setting up microphone streaming...');
+        await this.setupMicrophoneStreaming();
+        
+        // Wait for socket to be ready (the 'open' event will set isConnected = true)
+        let attempts = 0;
+        while (!this.isConnected && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+        
+        if (!this.isConnected) {
+          console.warn('[HumeVoiceService] Socket did not reach connected state after 5 seconds');
+        } else {
+          console.log('[HumeVoiceService] Socket is connected and ready');
+        }
+      } catch (error: any) {
+        console.error('[HumeVoiceService] Failed to connect:', {
+          error: error,
+          message: error?.message,
+          stack: error?.stack,
+          name: error?.name
+        });
+        
+        // Set connection state to false
+        this.isConnected = false;
+        
+        // If this is a reconnect attempt, increment the counter
+        if (this.reconnectAttempts > 0) {
+          // The reconnect logic will handle retries
+          throw error;
+        }
+        
+        throw error;
       }
     } catch (error: any) {
       console.error('[HumeVoiceService] Failed to connect:', {
@@ -406,6 +484,7 @@ export class HumeVoiceService {
       this.mediaRecorder.ondataavailable = async (event) => {
         if (event.data.size > 0 && this.socket && this.isConnected) {
           try {
+            console.log('[HumeVoiceService] Sending audio chunk, size:', event.data.size);
             // Convert blob to base64
             const base64Audio = await blobToBase64(event.data);
             // Send to Hume
@@ -418,192 +497,12 @@ export class HumeVoiceService {
       
       // Start recording with small time slices for low latency
       this.mediaRecorder.start(100); // 100ms chunks for real-time streaming
-      console.log('[HumeVoiceService] Microphone streaming started');
+      console.log('[HumeVoiceService] Microphone streaming started with timeslice: 100ms');
       
     } catch (error) {
       console.error('[HumeVoiceService] Error setting up microphone:', error);
       throw new Error('Failed to set up microphone streaming');
     }
-  }
-
-  private setupEventHandlers(): void {
-    if (!this.socket) {
-      console.error('[HumeVoiceService] Cannot setup event handlers: socket is null');
-      return;
-    }
-
-    console.log('[HumeVoiceService] Setting up event handlers');
-    
-    this.socket.on('message', (message: any) => {
-      console.log('[HumeVoiceService] Received message:', message);
-      console.log('[HumeVoiceService] Message type:', message.type);
-      console.log('[HumeVoiceService] Message keys:', Object.keys(message));
-      
-      // Log ALL message types to understand what we're getting
-      console.log('[HumeVoiceService] 📨 FULL MESSAGE:', JSON.stringify(message, null, 2));
-      
-      // Log specific details for debugging audio issues
-      if (message.type === 'assistant_message') {
-        console.log('[HumeVoiceService] Assistant message has data?', !!message.data);
-        console.log('[HumeVoiceService] Assistant message keys:', message.message ? Object.keys(message.message) : 'no message key');
-      }
-      
-      switch (message.type) {
-        case 'audio_output':
-          console.log('[HumeVoiceService] 🎵 Received audio_output');
-          if (message.data && this.onAudioCallback) {
-            try {
-              // Use Hume SDK's convertBase64ToBlob if available, otherwise fallback
-              const audioBlob = typeof convertBase64ToBlob === 'function' 
-                ? convertBase64ToBlob(message.data)
-                : base64ToBlob(message.data, 'audio/wav');
-              console.log('[HumeVoiceService] Created audio blob:', audioBlob.size, 'type:', audioBlob.type);
-              this.onAudioCallback(audioBlob);
-            } catch (error) {
-              console.error('[HumeVoiceService] Error creating audio blob:', error);
-            }
-          } else {
-            console.warn('[HumeVoiceService] ⚠️ No audio data in audio_output message or no callback set');
-          }
-          break;
-
-        case 'assistant_message':
-          if (message.message?.content && this.onMessageCallback) {
-            console.log('[HumeVoiceService] Assistant message:', message.message.content);
-            console.log('[HumeVoiceService] Invoking onMessageCallback with message type:', message.type);
-            this.onMessageCallback?.(message);
-            console.log('[HumeVoiceService] onMessageCallback invoked.');
-            
-            // Create transcript segment for assistant
-            if (this.onTranscriptCallback) {
-              const segment: TranscriptSegment = {
-                timestamp: Date.now(),
-                speaker: 'Assistant',
-                text: message.message.content,
-                emotions: this.lastEmotions || [],
-                prosodyEmotions: this.lastProsodyEmotions || [],
-                facialEmotions: this.lastFacialEmotions || [],
-                dominantEmotion: this.lastEmotions?.[0]?.name,
-                emotionIntensity: this.lastEmotions?.[0]?.score / 100,
-                prosodyData: message.models?.prosody
-              };
-              this.transcriptHistory.push(segment);
-              this.onTranscriptCallback(segment);
-            }
-          }
-          // Extract emotion data from prosody scores in assistant messages
-          if (message.models?.prosody?.scores && this.onEmotionCallback) {
-            console.log('[HumeVoiceService] Found prosody emotion data in assistant message');
-            const emotions = this.convertEmotions(message.models.prosody.scores);
-            console.log('[HumeVoiceService] Converted prosody emotions:', emotions);
-            this.lastProsodyEmotions = emotions;
-            this.lastEmotions = emotions; // Keep for backward compatibility
-            this.onEmotionCallback(emotions);
-          }
-          break;
-
-        case 'assistant_end':
-          console.log('[HumeVoiceService] Assistant finished');
-          if (this.onAssistantEndCallback) {
-            this.onAssistantEndCallback();
-          }
-          break;
-
-        case 'user_message':
-          if (message.message?.content) {
-            console.log('[HumeVoiceService] User message:', message.message.content);
-            
-            if (this.onUserMessageCallback) {
-              this.onUserMessageCallback(message.message.content);
-            }
-            
-            // Create transcript segment for user
-            if (this.onTranscriptCallback) {
-              const segment: TranscriptSegment = {
-                timestamp: Date.now(),
-                speaker: 'User',
-                text: message.message.content,
-                emotions: this.lastEmotions || [],
-                prosodyEmotions: this.lastProsodyEmotions || [],
-                facialEmotions: this.lastFacialEmotions || [],
-                dominantEmotion: this.lastEmotions?.[0]?.name,
-                emotionIntensity: this.lastEmotions?.[0]?.score / 100,
-                prosodyData: message.models?.prosody
-              };
-              this.transcriptHistory.push(segment);
-              this.onTranscriptCallback(segment);
-            }
-          }
-          break;
-
-        case 'user_interruption':
-          console.log('[HumeVoiceService] User interruption');
-          if (this.onUserInterruptionCallback) {
-            this.onUserInterruptionCallback();
-          }
-          break;
-
-        case 'emotion_features':
-          if (message.models?.prosody?.scores && this.onEmotionCallback) {
-            const emotions = this.convertEmotions(message.models.prosody.scores);
-            this.lastProsodyEmotions = emotions;
-            this.lastEmotions = emotions;
-            this.onEmotionCallback(emotions);
-          }
-          break;
-
-        case 'error':
-          console.error('[HumeVoiceService] Error message:', message);
-          if (message.message?.includes('too many active chats')) {
-            console.error('[HumeVoiceService] Too many active chats - consider closing old connections');
-            if (this.onErrorCallback) {
-              this.onErrorCallback(new Error('Too many active chats. Please close other sessions and try again.'));
-            }
-          }
-          break;
-      }
-    });
-
-    this.socket.on('error', (error: any) => {
-      console.error('[HumeVoiceService] Socket error:', error);
-      if (this.onErrorCallback) {
-        this.onErrorCallback(error);
-      }
-    });
-
-    this.socket.on('close', (code: number, reason: Buffer) => {
-      const reasonString = reason ? reason.toString() : 'No reason provided';
-      console.log(`[HumeVoiceService] WebSocket closed. Code: ${code}, Reason: ${reasonString}`);
-      this.isConnected = false;
-      console.log('[HumeVoiceService] Invoking onCloseCallback...');
-      if (this.onCloseCallback) {
-        this.onCloseCallback(code, reasonString);
-      }
-      console.log('[HumeVoiceService] onCloseCallback invoked.');
-      
-      // Don't reconnect if we never successfully connected
-      if (this.reconnectAttempts === 0 && !this.hasConnectedBefore) {
-        console.error('[HumeVoiceService] Initial connection failed. Not attempting reconnect.');
-        return;
-      }
-      
-      // Attempt to reconnect if not explicitly disconnected
-      if (!this.explicitlyClosed) {
-        if (this.reconnectAttempts < this.MAX_RECONNECT_ATTEMPTS) {
-          const delay = this.BASE_RECONNECT_DELAY_MS * Math.pow(2, this.reconnectAttempts);
-          this.reconnectAttempts++;
-          console.log(`[HumeVoiceService] Unexpected close. Attempting reconnect #${this.reconnectAttempts} in ${delay / 1000}s...`);
-          this.reconnectTimeoutId = setTimeout(() => {
-            this.reconnect();
-          }, delay);
-        } else {
-          console.error(`[HumeVoiceService] Max reconnect attempts (${this.MAX_RECONNECT_ATTEMPTS}) reached. Stopping reconnection attempts.`);
-          this.onErrorCallback?.(new Error('Max reconnect attempts reached. Please check your connection or Hume service status.'));
-        }
-      } else {
-        this.reconnectAttempts = 0; // Reset if explicitly closed
-      }
-    });
   }
 
   public async reconnect(): Promise<void> {
@@ -664,6 +563,63 @@ export class HumeVoiceService {
     }
   }
 
+  private convertEmotions(scores: any): EmotionalState {
+    const emotions: EmotionalState = {};
+    
+    // Map Hume emotion names to our simplified set
+    // Using the highest scoring relevant emotions
+    if (scores.joy !== undefined) emotions.joy = scores.joy;
+    if (scores.Joy !== undefined) emotions.joy = scores.Joy;
+    if (scores.sadness !== undefined) emotions.sadness = scores.sadness;
+    if (scores.Sadness !== undefined) emotions.sadness = scores.Sadness;
+    if (scores.anger !== undefined) emotions.anger = scores.anger;
+    if (scores.Anger !== undefined) emotions.anger = scores.Anger;
+    if (scores.fear !== undefined) emotions.fear = scores.fear;
+    if (scores.Fear !== undefined) emotions.fear = scores.Fear;
+    if (scores.surprise !== undefined) emotions.surprise = scores.surprise;
+    if (scores.Surprise !== undefined) emotions.surprise = scores.Surprise;
+    if (scores.disgust !== undefined) emotions.disgust = scores.disgust;
+    if (scores.Disgust !== undefined) emotions.disgust = scores.Disgust;
+    if (scores.contempt !== undefined) emotions.contempt = scores.contempt;
+    if (scores.Contempt !== undefined) emotions.contempt = scores.Contempt;
+    
+    // Also capture some key prosody features that map to emotions
+    if (scores.amusement !== undefined && scores.amusement > 0.1) {
+      emotions.joy = Math.max(emotions.joy || 0, scores.amusement);
+    }
+    if (scores.excitement !== undefined && scores.excitement > 0.1) {
+      emotions.joy = Math.max(emotions.joy || 0, scores.excitement);
+    }
+    if (scores.anxiety !== undefined && scores.anxiety > 0.1) {
+      emotions.fear = Math.max(emotions.fear || 0, scores.anxiety);
+    }
+    
+    console.log('[HumeVoiceService] Emotion conversion - Input:', JSON.stringify(scores).substring(0, 200));
+    console.log('[HumeVoiceService] Emotion conversion - Output:', emotions);
+    
+    return emotions;
+  }
+
+  private convertEmotionsToArray(scores: any): { name: string; score: number }[] {
+    const emotionArray: { name: string; score: number }[] = [];
+    
+    // Convert all emotion scores to array format
+    for (const [emotion, score] of Object.entries(scores)) {
+      if (typeof score === 'number' && score > 0.01) { // Only include emotions with score > 1%
+        emotionArray.push({
+          name: emotion.charAt(0).toUpperCase() + emotion.slice(1), // Capitalize first letter
+          score: Math.round(score * 100) // Convert to percentage
+        });
+      }
+    }
+    
+    // Sort by score descending
+    emotionArray.sort((a, b) => b.score - a.score);
+    
+    // Return top 8 emotions
+    return emotionArray.slice(0, 8);
+  }
+
   public disconnect(): void {
     console.log('[HumeVoiceService] Disconnect called - cleaning up connection...');
     
@@ -716,133 +672,6 @@ export class HumeVoiceService {
     }
     
     console.log('[HumeVoiceService] Disconnect complete');
-  }
-
-  private handleMessage(message: any): void {
-    console.log('[HumeVoiceService] Received message type:', message.type);
-    console.log('[HumeVoiceService] Message keys:', Object.keys(message));
-    
-    // Log ALL message types to understand what we're getting
-    console.log('[HumeVoiceService] 📨 FULL MESSAGE:', JSON.stringify(message, null, 2));
-    
-    // Log specific details for debugging audio issues
-    if (message.type === 'assistant_message') {
-      console.log('[HumeVoiceService] Assistant message has data?', !!message.data);
-      console.log('[HumeVoiceService] Assistant message keys:', message.message ? Object.keys(message.message) : 'no message key');
-    }
-    
-    switch (message.type) {
-      case 'audio_output':
-        console.log('[HumeVoiceService] 🎵 Received audio_output');
-        if (message.data && this.onAudioCallback) {
-          try {
-            // Use Hume SDK's convertBase64ToBlob if available, otherwise fallback
-            const audioBlob = typeof convertBase64ToBlob === 'function' 
-              ? convertBase64ToBlob(message.data)
-              : base64ToBlob(message.data, 'audio/wav');
-            console.log('[HumeVoiceService] Created audio blob:', audioBlob.size, 'type:', audioBlob.type);
-            this.onAudioCallback(audioBlob);
-          } catch (error) {
-            console.error('[HumeVoiceService] Error creating audio blob:', error);
-          }
-        } else {
-          console.warn('[HumeVoiceService] ⚠️ No audio data in audio_output message or no callback set');
-        }
-        break;
-
-      case 'assistant_message':
-        if (message.message?.content && this.onMessageCallback) {
-          console.log('[HumeVoiceService] Assistant message:', message.message.content);
-          console.log('[HumeVoiceService] Invoking onMessageCallback with message type:', message.type);
-          this.onMessageCallback?.(message);
-          console.log('[HumeVoiceService] onMessageCallback invoked.');
-        }
-        // Extract emotion data from prosody scores in assistant messages
-        if (message.models?.prosody?.scores && this.onEmotionCallback) {
-          console.log('[HumeVoiceService] Found emotion data in assistant message');
-          const emotions = this.convertEmotions(message.models.prosody.scores);
-          console.log('[HumeVoiceService] Converted emotions:', emotions);
-          this.lastEmotions = emotions;
-          this.onEmotionCallback(emotions);
-        }
-        break;
-
-      case 'assistant_end':
-        console.log('[HumeVoiceService] Assistant finished');
-        if (this.onAssistantEndCallback) {
-          this.onAssistantEndCallback();
-        }
-        break;
-
-      case 'user_message':
-        if (message.message?.content && this.onUserMessageCallback) {
-          console.log('[HumeVoiceService] User message:', message.message.content);
-          this.onUserMessageCallback(message.message.content);
-        }
-        break;
-
-      case 'user_interruption':
-        console.log('[HumeVoiceService] User interruption');
-        if (this.onUserInterruptionCallback) {
-          this.onUserInterruptionCallback();
-        }
-        break;
-
-      case 'emotion_features':
-        if (message.models?.prosody?.scores && this.onEmotionCallback) {
-          const emotions = this.convertEmotions(message.models.prosody.scores);
-          this.lastEmotions = emotions;
-          this.onEmotionCallback(emotions);
-        }
-        break;
-
-      case 'error':
-        console.error('[HumeVoiceService] Error message:', message);
-        if (message.message?.includes('too many active chats')) {
-          console.error('[HumeVoiceService] Too many active chats - consider closing old connections');
-          if (this.onErrorCallback) {
-            this.onErrorCallback(new Error('Too many active chats. Please close other sessions and try again.'));
-          }
-        }
-        break;
-    }
-  }
-
-  private convertEmotions(scores: any): EmotionalState {
-    const emotions: EmotionalState = {};
-    
-    // Map Hume emotion names to our simplified set
-    // Using the highest scoring relevant emotions
-    if (scores.joy !== undefined) emotions.joy = scores.joy;
-    if (scores.Joy !== undefined) emotions.joy = scores.Joy;
-    if (scores.sadness !== undefined) emotions.sadness = scores.sadness;
-    if (scores.Sadness !== undefined) emotions.sadness = scores.Sadness;
-    if (scores.anger !== undefined) emotions.anger = scores.anger;
-    if (scores.Anger !== undefined) emotions.anger = scores.Anger;
-    if (scores.fear !== undefined) emotions.fear = scores.fear;
-    if (scores.Fear !== undefined) emotions.fear = scores.Fear;
-    if (scores.surprise !== undefined) emotions.surprise = scores.surprise;
-    if (scores.Surprise !== undefined) emotions.surprise = scores.Surprise;
-    if (scores.disgust !== undefined) emotions.disgust = scores.disgust;
-    if (scores.Disgust !== undefined) emotions.disgust = scores.Disgust;
-    if (scores.contempt !== undefined) emotions.contempt = scores.contempt;
-    if (scores.Contempt !== undefined) emotions.contempt = scores.Contempt;
-    
-    // Also capture some key prosody features that map to emotions
-    if (scores.amusement !== undefined && scores.amusement > 0.1) {
-      emotions.joy = Math.max(emotions.joy || 0, scores.amusement);
-    }
-    if (scores.excitement !== undefined && scores.excitement > 0.1) {
-      emotions.joy = Math.max(emotions.joy || 0, scores.excitement);
-    }
-    if (scores.anxiety !== undefined && scores.anxiety > 0.1) {
-      emotions.fear = Math.max(emotions.fear || 0, scores.anxiety);
-    }
-    
-    console.log('[HumeVoiceService] Emotion conversion - Input:', JSON.stringify(scores).substring(0, 200));
-    console.log('[HumeVoiceService] Emotion conversion - Output:', emotions);
-    
-    return emotions;
   }
 
   async sendAudio(audioBlob: Blob): Promise<void> {
@@ -988,7 +817,7 @@ export class HumeVoiceService {
     this.onMessageCallback = callback;
   }
 
-  onEmotion(callback: (emotions: EmotionalState) => void): void {
+  onEmotion(callback: (emotions: any[]) => void): void {
     this.onEmotionCallback = callback;
   }
 

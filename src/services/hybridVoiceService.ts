@@ -10,7 +10,7 @@ export class HybridVoiceService {
   // Callbacks
   private onMessageCallback?: (message: string) => void;
   private onAudioCallback?: (audio: Blob) => void;
-  private onEmotionCallback?: (emotion: EmotionalState) => void;
+  private onEmotionCallback?: (emotions: Array<{name: string, score: number}>) => void;
   private onUserMessageCallback?: (message: string) => void;
   private onErrorCallback?: (error: Error) => void;
   
@@ -19,8 +19,8 @@ export class HybridVoiceService {
     this.convaiService = new ConvaiVoiceServiceV2();
     
     // Set up Hume callbacks for emotion tracking
-    this.humeService.setOnEmotionCallback((emotion) => {
-      this.onEmotionCallback?.(emotion);
+    this.humeService.setOnEmotionCallback((emotions) => {
+      this.onEmotionCallback?.(emotions);
     });
     
     // Forward callbacks based on which service is active
@@ -47,8 +47,8 @@ export class HybridVoiceService {
     });
     
     // Always use Hume for emotion tracking
-    this.humeService.setOnEmotionCallback((emotion) => {
-      this.onEmotionCallback?.(emotion);
+    this.humeService.setOnEmotionCallback((emotions) => {
+      this.onEmotionCallback?.(emotions);
     });
   }
   
@@ -71,7 +71,7 @@ export class HybridVoiceService {
     activeService.setOnAudioCallback(callback);
   }
   
-  public setOnEmotionCallback(callback: (emotion: EmotionalState) => void): void {
+  public setOnEmotionCallback(callback: (emotions: Array<{name: string, score: number}>) => void): void {
     this.onEmotionCallback = callback;
     // Always use Hume for emotions
     this.humeService.setOnEmotionCallback(callback);
@@ -102,7 +102,7 @@ export class HybridVoiceService {
     this.setOnAudioCallback(callback);
   }
   
-  public onEmotion(callback: (emotions: EmotionalState) => void): void {
+  public onEmotion(callback: (emotions: Array<{name: string, score: number}>) => void): void {
     this.setOnEmotionCallback(callback);
   }
   

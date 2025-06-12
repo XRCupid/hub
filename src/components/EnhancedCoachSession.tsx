@@ -49,7 +49,7 @@ const EnhancedCoachSession: React.FC = () => {
   const [feedback, setFeedback] = useState<string[]>([]);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false); // For AI coach speaking
   const [currentAnimation, setCurrentAnimation] = useState<string>('idle');
-  const [emotionalState, setEmotionalState] = useState<EmotionalState>({});
+  const [emotionalState, setEmotionalState] = useState<Array<{name: string, score: number}>>([]);
   const [blendShapes, setBlendShapes] = useState<Record<string, number>>({});
   const [prosodyBlendshapes, setProsodyBlendshapes] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
@@ -224,10 +224,10 @@ const EnhancedCoachSession: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
-  const formatEmotionalStateForMapping = useCallback((currentEmotionalState: EmotionalState): { name: string; score: number }[] => {
-    return Object.entries(currentEmotionalState)
-      .filter(([, score]) => score !== undefined && score > 0) // Only include emotions with a defined, positive score
-      .map(([name, score]) => ({ name, score: score as number }));
+  const formatEmotionalStateForMapping = useCallback((currentEmotionalState: Array<{name: string, score: number}>): { name: string; score: number }[] => {
+    return currentEmotionalState
+      .filter((emotion) => emotion.score !== undefined && emotion.score > 0) // Only include emotions with a defined, positive score
+      .map((emotion) => ({ name: emotion.name, score: emotion.score }));
   }, []);
 
   const prosodyToBlendshapes = (emotionalValues: Record<string, number>): Record<string, number> => {
@@ -404,7 +404,7 @@ const EnhancedCoachSession: React.FC = () => {
         handleInterruption();
       });
       
-      humeVoiceServiceRef.current.onEmotion((emotionData: EmotionalState) => {
+      humeVoiceServiceRef.current.onEmotion((emotionData: Array<{name: string, score: number}>) => {
         console.log('[EnhancedCoachSession] Hume EVI Emotion Data:', JSON.stringify(emotionData));
         setEmotionalState(emotionData);
       });
@@ -852,7 +852,7 @@ const EnhancedCoachSession: React.FC = () => {
   }, [messages]);
 
   useEffect(() => {
-    if (Object.keys(emotionalState).length > 0) {
+    if (emotionalState.length > 0) {
       const formattedEmotions = formatEmotionalStateForMapping(emotionalState);
       if (formattedEmotions.length > 0) {
         const blendshapes = mapEmotionsToBlendshapes(formattedEmotions);

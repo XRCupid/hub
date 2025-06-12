@@ -346,10 +346,10 @@ const EnhancedVideoChatWithAudience: React.FC<Props> = ({
   if (mode === 'audience') {
     return (
       <AudienceAnalyticsDashboard
-        participant1Stream={isHost ? localStream || undefined : remoteStream || undefined}
-        participant2Stream={isHost ? remoteStream || undefined : localStream || undefined}
-        participant1Name={participant1Name || currentUserName}
-        participant2Name={participant2Name || 'Participant 2'}
+        participant1Stream={isHost ? localStream || null : remoteStream || null}
+        participant2Stream={isHost ? remoteStream || null : localStream || null}
+        participant1Name={isHost ? "Host" : "Guest"}
+        participant2Name={isHost ? "Guest" : "Host"}
         roomId={roomRef.current || undefined}
       />
     );
