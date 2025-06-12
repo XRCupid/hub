@@ -22,12 +22,13 @@ interface ParticipantData {
 }
 
 interface AudienceAnalyticsDashboardProps {
-  participant1Stream?: MediaStream | undefined;
-  participant2Stream?: MediaStream | undefined;
+  participant1Stream: MediaStream | null;
+  participant2Stream: MediaStream | null;
   participant1Name: string;
   participant2Name: string;
-  participant1EmotionalData?: any;
-  participant2EmotionalData?: any;
+  participant1EmotionalData?: Array<{ name: string; score: number }>;
+  participant2EmotionalData?: Array<{ name: string; score: number }>;
+  humeVoiceServiceRef?: React.MutableRefObject<HumeVoiceService | null>;
   roomId?: string;
   showPresenceAvatars?: boolean;
   enableRealTimeCoaching?: boolean;
@@ -54,6 +55,7 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
   participant2Name,
   participant1EmotionalData,
   participant2EmotionalData,
+  humeVoiceServiceRef,
   roomId,
   showPresenceAvatars = true,
   enableRealTimeCoaching = true
@@ -142,6 +144,16 @@ const AudienceAnalyticsDashboard: React.FC<AudienceAnalyticsDashboardProps> = ({
             
             if (index === 0) {
               setParticipant1HumeExpressions(expressions);
+              
+              // Pass facial emotions to voice service for combined tracking
+              if (humeVoiceServiceRef?.current && expressions.length > 0) {
+                // Convert emotion format from {emotion, score} to {name, score}
+                const formattedEmotions = expressions.map(e => ({
+                  name: e.emotion,
+                  score: e.score
+                }));
+                humeVoiceServiceRef.current.setFacialEmotions(formattedEmotions);
+              }
             } else {
               setParticipant2HumeExpressions(expressions);
             }

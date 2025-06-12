@@ -1391,12 +1391,13 @@ const ConferenceBoothDemo: React.FC<Props> = ({
         {/* Analytics Dashboard */}
         {!showExpressionDashboard ? (
           <AudienceAnalyticsDashboard
-            participant1Stream={participant1Data.stream || undefined}
-            participant2Stream={participant2Data.stream || undefined}
+            participant1Stream={participant1Data.stream || null}
+            participant2Stream={participant2Data.stream || null}
             participant1Name={participant1Data.name}
             participant2Name={participant2Data.name}
             participant1EmotionalData={participant1Data.emotionalData}
             participant2EmotionalData={participant2Data.emotionalData}
+            humeVoiceServiceRef={humeVoiceServiceRef}
             roomId={roomId}
           />
         ) : (

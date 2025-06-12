@@ -6,6 +6,8 @@ interface TranscriptSegment {
   speaker: string;
   text: string;
   emotions: { name: string; score: number }[];
+  prosodyEmotions?: { name: string; score: number }[];
+  facialEmotions?: { name: string; score: number }[];
   dominantEmotion?: string;
   emotionIntensity?: number;
 }
@@ -93,6 +95,47 @@ const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
 
   const getSegmentPosition = (timestamp: number) => {
     return (timestamp / callDuration) * 100;
+  };
+
+  const renderEmotionBreakdown = (segment: TranscriptSegment) => {
+    const prosodyEmotions = segment.prosodyEmotions || segment.emotions || [];
+    const facialEmotions = segment.facialEmotions || [];
+    
+    return (
+      <div className="emotion-breakdown">
+        {prosodyEmotions.length > 0 && (
+          <div className="emotion-source">
+            <div className="source-label">🎙️ Voice Emotions:</div>
+            {prosodyEmotions.slice(0, 5).map((emotion, idx) => (
+              <div key={idx} className="emotion-item">
+                <span className="emotion-emoji">{getEmotionEmoji(emotion.name)}</span>
+                <span className="emotion-name">{emotion.name}</span>
+                <span className="emotion-score">{Math.round(emotion.score)}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {facialEmotions.length > 0 && (
+          <div className="emotion-source">
+            <div className="source-label">😊 Facial Emotions:</div>
+            {facialEmotions.slice(0, 5).map((emotion, idx) => (
+              <div key={idx} className="emotion-item">
+                <span className="emotion-emoji">{getEmotionEmoji(emotion.name)}</span>
+                <span className="emotion-name">{emotion.name}</span>
+                <span className="emotion-score">{Math.round(emotion.score)}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {prosodyEmotions.length === 0 && facialEmotions.length === 0 && (
+          <div className="emotion-item">
+            <span>No emotion data available</span>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -203,32 +246,22 @@ const TranscriptTimeline: React.FC<TranscriptTimelineProps> = ({
                       className="segment-emotion"
                       style={{ color: getEmotionColor(segment.dominantEmotion) }}
                     >
-                      {getEmotionEmoji(segment.dominantEmotion)} {segment.dominantEmotion}
+                      {getEmotionEmoji(segment.dominantEmotion)}
+                      <span className="emotion-label">
+                        {segment.prosodyEmotions?.length > 0 && segment.facialEmotions?.length > 0 
+                          ? '🎙️+😊' 
+                          : segment.prosodyEmotions?.length > 0 
+                          ? '🎙️' 
+                          : '😊'}
+                      </span>
                     </span>
                   )}
                 </div>
                 <div className="segment-text">{segment.text}</div>
                 
                 {/* Emotion breakdown on hover/select */}
-                {(hoveredSegment === segment || selectedSegment === segment) && segment.emotions.length > 0 && (
-                  <div className="emotion-breakdown">
-                    {segment.emotions.slice(0, 5).map((emotion, i) => (
-                      <div key={i} className="emotion-item">
-                        <span>{getEmotionEmoji(emotion.name)}</span>
-                        <span>{emotion.name}</span>
-                        <div className="emotion-bar">
-                          <div 
-                            className="emotion-fill"
-                            style={{ 
-                              width: `${emotion.score}%`,
-                              backgroundColor: getEmotionColor(emotion.name)
-                            }}
-                          />
-                        </div>
-                        <span>{Math.round(emotion.score)}%</span>
-                      </div>
-                    ))}
-                  </div>
+                {(hoveredSegment === segment || selectedSegment === segment) && (
+                  renderEmotionBreakdown(segment)
                 )}
               </div>
             );

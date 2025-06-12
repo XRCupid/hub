@@ -45,9 +45,12 @@ export interface TranscriptSegment {
   timestamp: number;
   speaker: string;
   text: string;
-  emotions: { name: string; score: number }[];
+  emotions: { name: string; score: number }[]; // Combined emotions (for backward compatibility)
+  prosodyEmotions?: { name: string; score: number }[]; // Voice-based emotions
+  facialEmotions?: { name: string; score: number }[]; // Face-based emotions
   dominantEmotion?: string;
   emotionIntensity?: number;
+  prosodyData?: any; // Raw prosody data from Hume
 }
 
 export class HumeVoiceService {
@@ -78,6 +81,8 @@ export class HumeVoiceService {
   private mimeType: MimeType = MimeType.WEBM;
 
   private lastEmotions: { name: string; score: number }[] = [];
+  private lastProsodyEmotions: { name: string; score: number }[] = [];
+  private lastFacialEmotions: { name: string; score: number }[] = [];
   private transcriptHistory: TranscriptSegment[] = [];
 
   constructor() {
@@ -476,8 +481,11 @@ export class HumeVoiceService {
                 speaker: 'Assistant',
                 text: message.message.content,
                 emotions: this.lastEmotions || [],
+                prosodyEmotions: this.lastProsodyEmotions || [],
+                facialEmotions: this.lastFacialEmotions || [],
                 dominantEmotion: this.lastEmotions?.[0]?.name,
-                emotionIntensity: this.lastEmotions?.[0]?.score / 100
+                emotionIntensity: this.lastEmotions?.[0]?.score / 100,
+                prosodyData: message.models?.prosody
               };
               this.transcriptHistory.push(segment);
               this.onTranscriptCallback(segment);
@@ -485,10 +493,11 @@ export class HumeVoiceService {
           }
           // Extract emotion data from prosody scores in assistant messages
           if (message.models?.prosody?.scores && this.onEmotionCallback) {
-            console.log('[HumeVoiceService] Found emotion data in assistant message');
+            console.log('[HumeVoiceService] Found prosody emotion data in assistant message');
             const emotions = this.convertEmotions(message.models.prosody.scores);
-            console.log('[HumeVoiceService] Converted emotions:', emotions);
-            this.lastEmotions = emotions;
+            console.log('[HumeVoiceService] Converted prosody emotions:', emotions);
+            this.lastProsodyEmotions = emotions;
+            this.lastEmotions = emotions; // Keep for backward compatibility
             this.onEmotionCallback(emotions);
           }
           break;
@@ -515,8 +524,11 @@ export class HumeVoiceService {
                 speaker: 'User',
                 text: message.message.content,
                 emotions: this.lastEmotions || [],
+                prosodyEmotions: this.lastProsodyEmotions || [],
+                facialEmotions: this.lastFacialEmotions || [],
                 dominantEmotion: this.lastEmotions?.[0]?.name,
-                emotionIntensity: this.lastEmotions?.[0]?.score / 100
+                emotionIntensity: this.lastEmotions?.[0]?.score / 100,
+                prosodyData: message.models?.prosody
               };
               this.transcriptHistory.push(segment);
               this.onTranscriptCallback(segment);
@@ -534,6 +546,7 @@ export class HumeVoiceService {
         case 'emotion_features':
           if (message.models?.prosody?.scores && this.onEmotionCallback) {
             const emotions = this.convertEmotions(message.models.prosody.scores);
+            this.lastProsodyEmotions = emotions;
             this.lastEmotions = emotions;
             this.onEmotionCallback(emotions);
           }
@@ -749,6 +762,7 @@ export class HumeVoiceService {
           console.log('[HumeVoiceService] Found emotion data in assistant message');
           const emotions = this.convertEmotions(message.models.prosody.scores);
           console.log('[HumeVoiceService] Converted emotions:', emotions);
+          this.lastEmotions = emotions;
           this.onEmotionCallback(emotions);
         }
         break;
@@ -777,6 +791,7 @@ export class HumeVoiceService {
       case 'emotion_features':
         if (message.models?.prosody?.scores && this.onEmotionCallback) {
           const emotions = this.convertEmotions(message.models.prosody.scores);
+          this.lastEmotions = emotions;
           this.onEmotionCallback(emotions);
         }
         break;
@@ -1018,6 +1033,12 @@ export class HumeVoiceService {
     } catch (error) {
       console.error('[HumeVoiceService] Error sending message:', error);
     }
+  }
+
+  setFacialEmotions(emotions: { name: string; score: number }[]): void {
+    this.lastFacialEmotions = emotions;
+    // Optionally merge with prosody for combined view
+    // This could be weighted average or other combination strategy
   }
 
   // Additional methods
