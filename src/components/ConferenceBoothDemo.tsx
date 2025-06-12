@@ -14,6 +14,7 @@ import { HumeVoiceService } from '../services/humeVoiceService';
 // import { PostureTrackingService } from '../services/PostureTrackingService';
 import { Link } from 'react-router-dom';
 import RealTimeExpressionDashboard from './RealTimeExpressionDashboard';
+import ChemistryReport from './ChemistryReport';
 import './ConferenceBoothDemo.css';
 
 interface Props {
@@ -28,6 +29,12 @@ interface ParticipantData {
   trackingData?: any;
   ml5Service?: ML5FaceMeshService;
   emotionalData?: any;
+}
+
+interface EmotionSnapshot {
+  timestamp: number;
+  participant1Emotions: { name: string; score: number }[];
+  participant2Emotions: { name: string; score: number }[];
 }
 
 // Utility function to detect mobile devices
@@ -68,6 +75,10 @@ const ConferenceBoothDemo: React.FC<Props> = ({
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [showQrCode, setShowQrCode] = useState(false);
   const [showExpressionDashboard, setShowExpressionDashboard] = useState(false);
+  const [showChemistryReport, setShowChemistryReport] = useState(false);
+  const [emotionHistory, setEmotionHistory] = useState<EmotionSnapshot[]>([]);
+  const [callStartTime, setCallStartTime] = useState<number | null>(null);
+  const [callEndTime, setCallEndTime] = useState<number | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   console.log('ConferenceBoothDemo - Current mode:', mode);
@@ -77,7 +88,7 @@ const ConferenceBoothDemo: React.FC<Props> = ({
   // Tracking services
   const ml5FaceMeshServiceRef1 = useRef<ML5FaceMeshService | null>(null);
   const ml5FaceMeshServiceRef2 = useRef<ML5FaceMeshService | null>(null);
-  const humeVoiceServiceRef = useRef<any | null>(null);
+  const humeVoiceServiceRef = useRef<HumeVoiceService | null>(null);
   // DISABLED: Posture tracking causing crashes
   // const postureTrackingServiceRef = useRef<PostureTrackingService | null>(null);
 
@@ -89,6 +100,7 @@ const ConferenceBoothDemo: React.FC<Props> = ({
   const myPeerIdRef = useRef<string>(`peer_${Date.now()}`);
   const processedSignalsRef = useRef<Set<string>>(new Set());
   const ml5Initialized = useRef(false);
+  const emotionHistoryInterval = useRef<NodeJS.Timeout | null>(null);
 
   // Available avatars for quick selection
   const avatarOptions = [
@@ -614,6 +626,31 @@ const ConferenceBoothDemo: React.FC<Props> = ({
     }
   }, [localStream, mode]);
 
+  useEffect(() => {
+    if (isInRoom) {
+      // Start tracking emotion history when call starts
+      if (!emotionHistoryInterval.current) {
+        setCallStartTime(Date.now());
+        
+        // Capture emotion snapshot every 5 seconds
+        emotionHistoryInterval.current = setInterval(() => {
+          const snapshot: EmotionSnapshot = {
+            timestamp: Date.now(),
+            participant1Emotions: participant1Data.emotionalData || [],
+            participant2Emotions: participant2Data.emotionalData || []
+          };
+          setEmotionHistory(prev => [...prev, snapshot]);
+        }, 5000);
+      }
+    } else {
+      // Stop emotion history tracking
+      if (emotionHistoryInterval.current) {
+        clearInterval(emotionHistoryInterval.current);
+        emotionHistoryInterval.current = null;
+      }
+    }
+  }, [isInRoom, participant1Data.emotionalData, participant2Data.emotionalData]);
+
   // Initialize user media
   useEffect(() => {
     initializeMedia();
@@ -939,6 +976,18 @@ const ConferenceBoothDemo: React.FC<Props> = ({
     setConnectionStatus('');
     setParticipant1Data({ name: '', avatarUrl: '' });
     setParticipant2Data({ name: '', avatarUrl: '' });
+    
+    // Stop emotion history tracking
+    if (emotionHistoryInterval.current) {
+      clearInterval(emotionHistoryInterval.current);
+      emotionHistoryInterval.current = null;
+    }
+    
+    // Set call end time and show chemistry report if there's history
+    if (emotionHistory.length > 0) {
+      setCallEndTime(Date.now());
+      setShowChemistryReport(true);
+    }
   };
 
   // Participant View
@@ -1357,6 +1406,20 @@ const ConferenceBoothDemo: React.FC<Props> = ({
           />
         )}
       </div>
+
+      {/* Chemistry Report Modal */}
+      {showChemistryReport && callStartTime && callEndTime && (
+        <ChemistryReport
+          emotionHistory={emotionHistory}
+          participant1Name={participant1Data.name}
+          participant2Name={participant2Data.name}
+          callDuration={(callEndTime - callStartTime) / 1000}
+          onClose={() => {
+            setShowChemistryReport(false);
+            setEmotionHistory([]);
+          }}
+        />
+      )}
     </div>
   );
 };
