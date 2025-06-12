@@ -41,21 +41,10 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=4096
           GENERATE_SOURCEMAP: false
           
-      - name: Install gh-pages
-        run: |
-          echo "Installing gh-pages..."
-          npm install -g gh-pages@6.1.1
-          echo "gh-pages installed"
-          
-      - name: Deploy to gh-pages
-        run: |
-          echo "Configuring git..."
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          echo "Setting remote URL..."
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-          echo "Deploying to gh-pages..."
-          gh-pages -d build --no-history
-          echo "Deployment completed"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages
+          folder: build
+          clean: true
