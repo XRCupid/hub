@@ -22,28 +22,40 @@ jobs:
           cache: 'npm'
           
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: |
+          echo "Installing dependencies..."
+          npm install --legacy-peer-deps
+          echo "Dependencies installed successfully"
         
       - name: Build with production env
         run: |
-          # Copy production env file to .env
+          echo "Copying production env..."
           cp .env.production .env
-          # Build
-          echo "Starting build..."
+          echo "Building application..."
           npm run build
-          # Verify build output
-          echo "Build completed. Checking build directory..."
-          ls -la build/ | head -10
+          echo "Build completed successfully"
+          echo "Checking build output..."
+          ls -la build/
         env:
           CI: false
           NODE_OPTIONS: --max-old-space-size=4096
           GENERATE_SOURCEMAP: false
           
+      - name: Install gh-pages
+        run: |
+          echo "Installing gh-pages..."
+          npm install -g gh-pages@6.1.1
+          echo "gh-pages installed"
+          
       - name: Deploy to gh-pages
         run: |
+          echo "Configuring git..."
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          echo "Setting remote URL..."
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-          npx gh-pages -d build
+          echo "Deploying to gh-pages..."
+          gh-pages -d build --no-history
+          echo "Deployment completed"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
