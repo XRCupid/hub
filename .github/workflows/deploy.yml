@@ -31,14 +31,19 @@ jobs:
           # Build
           echo "Starting build..."
           npm run build
+          # Verify build output
+          echo "Build completed. Checking build directory..."
+          ls -la build/ | head -10
         env:
           CI: false
           NODE_OPTIONS: --max-old-space-size=4096
           GENERATE_SOURCEMAP: false
           
       - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build
           force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
