@@ -6,16 +6,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  contents: write
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,37 +28,17 @@ jobs:
         run: |
           # Copy production env file to .env
           cp .env.production .env
-          # Debug: Show Node version
-          echo "Node version:"
-          node --version
-          echo "NPM version:"
-          npm --version
-          # List files to ensure everything is present
-          echo "Files in src/services:"
-          ls -la src/services/
-          # Check if node_modules exists
-          echo "Checking node_modules:"
-          ls -la node_modules/ | head -20
           # Build
           echo "Starting build..."
-          npm run build || (echo "Build failed. Showing error details:" && cat npm-debug.log 2>/dev/null && exit 1)
+          npm run build
         env:
           CI: false
           NODE_OPTIONS: --max-old-space-size=4096
           GENERATE_SOURCEMAP: false
           
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          path: ./build
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build
+          force_orphan: true
