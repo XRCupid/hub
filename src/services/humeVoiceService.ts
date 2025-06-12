@@ -41,6 +41,15 @@ export interface EmotionalState {
   contempt?: number;
 }
 
+export interface TranscriptSegment {
+  timestamp: number;
+  speaker: string;
+  text: string;
+  emotions: { name: string; score: number }[];
+  dominantEmotion?: string;
+  emotionIntensity?: number;
+}
+
 export class HumeVoiceService {
   private static connectionCount = 0; // Track total connections for monitoring
   private reconnectAttempts = 0;
@@ -53,20 +62,23 @@ export class HumeVoiceService {
   private hasConnectedBefore: boolean = false; // New
   private onAudioCallback?: (audioBlob: Blob) => void;
   private onMessageCallback?: (message: any) => void; // Type changed
-  private onEmotionCallback?: (emotions: EmotionalState) => void;
+  private onEmotionCallback?: (emotions: any[]) => void;
   private onAssistantEndCallback?: () => void;
   private onUserMessageCallback?: (transcript: string) => void;
   private onUserInterruptionCallback?: () => void;
   private onErrorCallback?: (error: Error) => void;
   private onOpenCallback?: () => void; // New
   private onCloseCallback?: (code: number, reason: string) => void; // New
-
+  private onTranscriptCallback?: (transcript: TranscriptSegment) => void;
   private explicitlyClosed: boolean = false; // New
   private currentConfigId: string | undefined; // New
 
   private audioStream: MediaStream | null = null;
   private mediaRecorder: MediaRecorder | null = null;
   private mimeType: MimeType = MimeType.WEBM;
+
+  private lastEmotions: { name: string; score: number }[] = [];
+  private transcriptHistory: TranscriptSegment[] = [];
 
   constructor() {
     console.log('[HumeVoiceService] Constructor called');
@@ -97,7 +109,7 @@ export class HumeVoiceService {
     this.onMessageCallback = callback;
   }
 
-  public setOnEmotionCallback(callback: (emotions: EmotionalState) => void): void {
+  public setOnEmotionCallback(callback: (emotions: any[]) => void): void {
     this.onEmotionCallback = callback;
   }
 
@@ -115,6 +127,10 @@ export class HumeVoiceService {
   
   public setOnErrorCallback(callback: (error: Error) => void): void {
     this.onErrorCallback = callback;
+  }
+
+  public setOnTranscriptCallback(callback: (transcript: TranscriptSegment) => void): void {
+    this.onTranscriptCallback = callback;
   }
 
   async connect(configId?: string): Promise<void> {
@@ -452,12 +468,27 @@ export class HumeVoiceService {
             console.log('[HumeVoiceService] Invoking onMessageCallback with message type:', message.type);
             this.onMessageCallback?.(message);
             console.log('[HumeVoiceService] onMessageCallback invoked.');
+            
+            // Create transcript segment for assistant
+            if (this.onTranscriptCallback) {
+              const segment: TranscriptSegment = {
+                timestamp: Date.now(),
+                speaker: 'Assistant',
+                text: message.message.content,
+                emotions: this.lastEmotions || [],
+                dominantEmotion: this.lastEmotions?.[0]?.name,
+                emotionIntensity: this.lastEmotions?.[0]?.score / 100
+              };
+              this.transcriptHistory.push(segment);
+              this.onTranscriptCallback(segment);
+            }
           }
           // Extract emotion data from prosody scores in assistant messages
           if (message.models?.prosody?.scores && this.onEmotionCallback) {
             console.log('[HumeVoiceService] Found emotion data in assistant message');
             const emotions = this.convertEmotions(message.models.prosody.scores);
             console.log('[HumeVoiceService] Converted emotions:', emotions);
+            this.lastEmotions = emotions;
             this.onEmotionCallback(emotions);
           }
           break;
@@ -470,9 +501,26 @@ export class HumeVoiceService {
           break;
 
         case 'user_message':
-          if (message.message?.content && this.onUserMessageCallback) {
+          if (message.message?.content) {
             console.log('[HumeVoiceService] User message:', message.message.content);
-            this.onUserMessageCallback(message.message.content);
+            
+            if (this.onUserMessageCallback) {
+              this.onUserMessageCallback(message.message.content);
+            }
+            
+            // Create transcript segment for user
+            if (this.onTranscriptCallback) {
+              const segment: TranscriptSegment = {
+                timestamp: Date.now(),
+                speaker: 'User',
+                text: message.message.content,
+                emotions: this.lastEmotions || [],
+                dominantEmotion: this.lastEmotions?.[0]?.name,
+                emotionIntensity: this.lastEmotions?.[0]?.score / 100
+              };
+              this.transcriptHistory.push(segment);
+              this.onTranscriptCallback(segment);
+            }
           }
           break;
 
@@ -486,6 +534,7 @@ export class HumeVoiceService {
         case 'emotion_features':
           if (message.models?.prosody?.scores && this.onEmotionCallback) {
             const emotions = this.convertEmotions(message.models.prosody.scores);
+            this.lastEmotions = emotions;
             this.onEmotionCallback(emotions);
           }
           break;
@@ -944,6 +993,32 @@ export class HumeVoiceService {
     this.onErrorCallback = callback;
   }
 
+  onTranscript(callback: (transcript: TranscriptSegment) => void): void {
+    this.onTranscriptCallback = callback;
+  }
+
+  getTranscriptHistory(): TranscriptSegment[] {
+    return [...this.transcriptHistory];
+  }
+
+  clearTranscriptHistory(): void {
+    this.transcriptHistory = [];
+  }
+
+  sendTextMessage(message: string): void {
+    if (!this.checkConnection()) {
+      console.error('[HumeVoiceService] Not connected');
+      return;
+    }
+
+    try {
+      // Use SDK's sendUserInput method
+      this.socket.sendUserInput(message);
+      console.log('[HumeVoiceService] Sent user input:', message);
+    } catch (error) {
+      console.error('[HumeVoiceService] Error sending message:', error);
+    }
+  }
 
   // Additional methods
   pauseAudioInput(): void {

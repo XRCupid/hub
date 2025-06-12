@@ -10,6 +10,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
 import { HumeVoiceService } from '../services/humeVoiceService';
+import { TranscriptSegment } from '../services/humeVoiceService';
 // DISABLED: Posture tracking causing crashes
 // import { PostureTrackingService } from '../services/PostureTrackingService';
 import { Link } from 'react-router-dom';
@@ -79,6 +80,7 @@ const ConferenceBoothDemo: React.FC<Props> = ({
   const [emotionHistory, setEmotionHistory] = useState<EmotionSnapshot[]>([]);
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
   const [callEndTime, setCallEndTime] = useState<number | null>(null);
+  const [transcriptSegments, setTranscriptSegments] = useState<TranscriptSegment[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   console.log('ConferenceBoothDemo - Current mode:', mode);
@@ -604,6 +606,11 @@ const ConferenceBoothDemo: React.FC<Props> = ({
             console.log('[ConferenceBoothDemo] Hume Voice Service connection closed:', { code, reason });
           });
           
+          humeService.setOnTranscriptCallback((segment: TranscriptSegment) => {
+            console.log('[ConferenceBoothDemo] Received transcript segment:', segment);
+            setTranscriptSegments(prev => [...prev, segment]);
+          });
+          
           // Connect to Hume service
           await humeService.connect(process.env.REACT_APP_HUME_CONFIG_ID);
           humeVoiceServiceRef.current = humeService;
@@ -986,6 +993,13 @@ const ConferenceBoothDemo: React.FC<Props> = ({
     // Set call end time and show chemistry report if there's history
     if (emotionHistory.length > 0) {
       setCallEndTime(Date.now());
+      
+      // Get final transcript from Hume service
+      if (humeVoiceServiceRef.current) {
+        const fullTranscript = humeVoiceServiceRef.current.getTranscriptHistory();
+        setTranscriptSegments(fullTranscript);
+      }
+      
       setShowChemistryReport(true);
     }
   };
@@ -1414,9 +1428,14 @@ const ConferenceBoothDemo: React.FC<Props> = ({
           participant1Name={participant1Data.name}
           participant2Name={participant2Data.name}
           callDuration={(callEndTime - callStartTime) / 1000}
+          transcriptSegments={transcriptSegments}
           onClose={() => {
             setShowChemistryReport(false);
             setEmotionHistory([]);
+            setTranscriptSegments([]);
+            if (humeVoiceServiceRef.current) {
+              humeVoiceServiceRef.current.clearTranscriptHistory();
+            }
           }}
         />
       )}

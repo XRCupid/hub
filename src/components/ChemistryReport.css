@@ -249,6 +249,14 @@
   font-weight: bold;
 }
 
+.transcript-section {
+  margin: 40px 0;
+  padding: 30px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 15px;
+  border: 1px solid rgba(255, 99, 132, 0.2);
+}
+
 /* Scrollbar styling */
 .chemistry-report::-webkit-scrollbar {
   width: 10px;

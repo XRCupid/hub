@@ -11,6 +11,8 @@ import {
   Legend,
   Filler
 } from 'chart.js';
+import TranscriptTimeline from './TranscriptTimeline';
+import { TranscriptSegment } from '../services/humeVoiceService';
 import './ChemistryReport.css';
 
 ChartJS.register(
@@ -35,6 +37,7 @@ interface ChemistryReportProps {
   participant1Name: string;
   participant2Name: string;
   callDuration: number; // in seconds
+  transcriptSegments?: TranscriptSegment[];
   onClose: () => void;
 }
 
@@ -52,6 +55,7 @@ const ChemistryReport: React.FC<ChemistryReportProps> = ({
   participant1Name,
   participant2Name,
   callDuration,
+  transcriptSegments = [],
   onClose
 }) => {
   const chemistryMetrics = useMemo(() => {
@@ -280,6 +284,16 @@ const ChemistryReport: React.FC<ChemistryReportProps> = ({
             ))}
           </div>
         </div>
+
+        {/* Transcript Timeline */}
+        {transcriptSegments.length > 0 && (
+          <div className="transcript-section">
+            <TranscriptTimeline
+              segments={transcriptSegments}
+              callDuration={callDuration}
+            />
+          </div>
+        )}
 
         <div className="recommendations">
           <h3>💡 Insights</h3>
