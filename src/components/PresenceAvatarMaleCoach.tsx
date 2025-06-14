@@ -6,7 +6,7 @@ import { SkeletonUtils } from 'three-stdlib';
 import { MathUtils } from 'three';
 import type { TrackingData, FacialExpressions } from '../types/tracking';
 
-const DEFAULT_AVATAR_URL = '/avatars/coach_grace.glb';
+const DEFAULT_AVATAR_URL = '/avatars/Douglas.glb'; // NEW: Douglas with full facial blendshapes
 
 interface PresenceAvatarProps {
   avatarUrl?: string;
@@ -117,25 +117,38 @@ const targetWorldMatrix = new THREE.Matrix4();
 const parentInverseWorldMatrix = new THREE.Matrix4();
 const targetLocalMatrix = new THREE.Matrix4();
 
-export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
+export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo(({
   avatarUrl,
   trackingData,
   position = [0, 0, 0],
   scale = 1,
   participantId,
-  animationName = 'idle',
-  emotionalBlendshapes,
+  emotionalBlendshapes = {}, // Fix TypeScript error
+  animationName = 'idle', // Default to idle animation
   audioData
 }) => {
-  // Determine if this is a coach avatar
+  console.log('[DOUGIE MALE COACH AVATAR] Component mounted! Using masculine animations.');
+  
+  const avatarType = participantId?.startsWith('coach') ? 'coach' : 'participant';
   const isCoachAvatar = trackingData === undefined;
-  const avatarType = isCoachAvatar ? 'coach' : 'user';
   
   // Debug: Add unique instance tracking
   const instanceIdRef = useRef(Math.random().toString(36).substr(2, 9));
-  
+  const audioDataRef = useRef<Uint8Array>(new Uint8Array(128));
+  const frameCountRef = useRef(0);
+  const lastDebugLogRef = useRef(0);
+  const scanMeshesRef = useRef(true); // Force mesh scan
+
+  console.log(`[PresenceAvatarMaleCoach-${instanceIdRef.current}] Initializing with props:`, {
+    avatarType,
+    participantId,
+    hasTrackingData: !!trackingData,
+    avatarUrl,
+    timestamp: Date.now()
+  });
+
   useEffect(() => {
-    console.log(`[PresenceAvatar-${instanceIdRef.current}] Mounted:`, {
+    console.log(`[PresenceAvatarMaleCoach-${instanceIdRef.current}] Mounted:`, {
       avatarType,
       participantId,
       hasTrackingData: !!trackingData,
@@ -143,18 +156,18 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       timestamp: Date.now()
     });
     return () => {
-      console.log(`[PresenceAvatar-${instanceIdRef.current}] Unmounted`);
+      console.log(`[PresenceAvatarMaleCoach-${instanceIdRef.current}] Unmounted`);
     };
   }, []);
 
   useEffect(() => {
-    if (isCoachAvatar && emotionalBlendshapes && Object.keys(emotionalBlendshapes).length > 0) {
-      console.log(`[PresenceAvatar-${instanceIdRef.current}] Emotional blendshapes:`, Object.keys(emotionalBlendshapes).length);
+    if (emotionalBlendshapes && Object.keys(emotionalBlendshapes).length > 0) {
+      console.log(`[PresenceAvatarMaleCoach-${instanceIdRef.current}] Emotional blendshapes:`, Object.keys(emotionalBlendshapes).length);
     }
-    if (!isCoachAvatar && trackingData?.facialExpressions) {
-      console.log(`[PresenceAvatar-${instanceIdRef.current}] Tracking data expressions:`, Object.keys(trackingData.facialExpressions).length);
+    if (trackingData?.facialExpressions) {
+      console.log(`[PresenceAvatarMaleCoach-${instanceIdRef.current}] Tracking data expressions:`, Object.keys(trackingData.facialExpressions).length);
     }
-  }, [emotionalBlendshapes, trackingData, isCoachAvatar, avatarType]);
+  }, [emotionalBlendshapes, trackingData, avatarType]);
 
   // All hooks must be called unconditionally at the top
   const groupRef = useRef<THREE.Group>(null!); // Non-null assertion to avoid constant null checks
@@ -166,8 +179,6 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
   const initialHeadLocalQuaternionRef = useRef<THREE.Quaternion | null>(null);
   const initialNeckLocalQuaternionRef = useRef<THREE.Quaternion | null>(null);
   const trackingDataRef = useRef<TrackingData | null>(null);
-  const frameCountRef = useRef(0);
-  const lastDebugLogRef = useRef<number>(0);
   const morphTargetMapping = useRef<{ logged?: boolean }>({});
   const currentInfluences = useRef<Record<string, number>>({});
   const morphTargetsLoggedRef = useRef(false);
@@ -182,18 +193,18 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
   }, [scene]);
 
   // Load basic idle animation - most subtle option
-  const idleAnimationUrl = '/animations/feminine/idle/F_Standing_Idle_001.glb';
+  const idleAnimationUrl = '/animations/M_Standing_Idle_001.glb';
   const { animations: idleAnimations } = useGLTF(idleAnimationUrl);
   useGLTF.preload(idleAnimationUrl);
 
   // Load talking animations
   const talkingAnimationUrls = [
-    '/animations/feminine/talk/F_Talking_Variations_001.glb',
-    '/animations/feminine/talk/F_Talking_Variations_002.glb',
-    '/animations/feminine/talk/F_Talking_Variations_003.glb',
-    '/animations/feminine/talk/F_Talking_Variations_004.glb',
-    '/animations/feminine/talk/F_Talking_Variations_005.glb',
-    '/animations/feminine/talk/F_Talking_Variations_006.glb'
+    '/animations/M_Talking_Variations_001.glb',
+    '/animations/M_Talking_Variations_002.glb',
+    '/animations/M_Talking_Variations_003.glb',
+    '/animations/M_Talking_Variations_004.glb',
+    '/animations/M_Talking_Variations_005.glb',
+    '/animations/M_Talking_Variations_006.glb'
   ];
   
   // Load all talking animations separately
@@ -226,21 +237,21 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
   // Play animations based on animationName prop
   useEffect(() => {
     if (!actions || Object.keys(actions).length === 0) {
-      console.log('[PresenceAvatar] No animation actions available to play.');
+      console.log('[PresenceAvatarMaleCoach] No animation actions available to play.');
       return;
     }
 
-    console.log('[PresenceAvatar] Available animation actions:', Object.keys(actions));
+    console.log('[PresenceAvatarMaleCoach] Available animation actions:', Object.keys(actions));
 
     // Find all talking animations
     const talkingAnimations = Object.keys(actions).filter(name => 
       name.toLowerCase().includes('talk') || 
       name.toLowerCase().includes('speak') ||
-      name.toLowerCase().includes('f_talking')
+      name.toLowerCase().includes('m_talking')
     );
     
     if (talkingAnimations.length > 0) {
-      console.log('[PresenceAvatar] Available talking animations:', talkingAnimations);
+      console.log('[PresenceAvatarMaleCoach] Available talking animations:', talkingAnimations);
     }
 
     let targetActionName = '';
@@ -260,11 +271,11 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       targetActionName = 'idle';
     } else if (Object.keys(actions).length > 0) { // Fallback to the first available animation if 'idle' is not found
         targetActionName = Object.keys(actions)[0];
-        console.warn(`[PresenceAvatar] 'idle' animation not found, falling back to ${targetActionName}`);
+        console.warn(`[PresenceAvatarMaleCoach] 'idle' animation not found, falling back to ${targetActionName}`);
     }
 
     if (!targetActionName || !actions[targetActionName]) {
-        console.error(`[PresenceAvatar] Target animation '${targetActionName}' not found in actions.`);
+        console.error(`[PresenceAvatarMaleCoach] Target animation '${targetActionName}' not found in actions.`);
         return;
     }
 
@@ -273,7 +284,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
     const oldAction = oldActionName ? actions[oldActionName] : null;
 
     if (!newAction) {
-      console.error(`[PresenceAvatar] newAction '${targetActionName}' is unexpectedly null or undefined.`);
+      console.error(`[PresenceAvatarMaleCoach] newAction '${targetActionName}' is unexpectedly null or undefined.`);
       return;
     }
 
@@ -294,7 +305,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
     newAction.fadeIn(0.3).play();
 
     activeActionNameRef.current = targetActionName;
-    console.log(`[PresenceAvatar] Switched animation to: ${targetActionName}`);
+    console.log(`[PresenceAvatarMaleCoach] Switched animation to: ${targetActionName}`);
 
   }, [actions, animationName]);
 
@@ -302,29 +313,84 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
   useEffect(() => {
     if (!clonedScene) return;
 
-    console.log('[PresenceAvatar] useEffect: scene loaded, setting up model...');
+    console.log('[PresenceAvatarMaleCoach] useEffect: scene loaded, setting up model...');
     
     // Set the model root reference
     modelRootRef.current = clonedScene;
     
-    // Find mesh with morph targets
+    let allMeshesWithMorphs: any[] = [];
     clonedScene.traverse((child) => {
-      if (child instanceof THREE.SkinnedMesh && child.morphTargetDictionary && child.morphTargetInfluences) {
-        console.log(`[PresenceAvatar-${instanceIdRef.current}] Found mesh with morph targets:`, {
-          avatarType,
-          meshId: child.uuid,
-          morphTargets: Object.keys(child.morphTargetDictionary).length,
+      if (child instanceof THREE.Mesh && child.morphTargetDictionary && child.morphTargetInfluences) {
+        const morphTargetNames = Object.keys(child.morphTargetDictionary);
+        allMeshesWithMorphs.push({
+          name: child.name,
+          uuid: child.uuid,
+          morphCount: morphTargetNames.length,
+          morphTargets: morphTargetNames,
+          hasFacialMorphs: morphTargetNames.some(name => 
+            name.toLowerCase().includes('mouth') || 
+            name.toLowerCase().includes('jaw') ||
+            name.toLowerCase().includes('lip') ||
+            name.toLowerCase().includes('eye') ||
+            name.toLowerCase().includes('brow') ||
+            name.toLowerCase().includes('cheek')),
           mesh: child
         });
-        meshWithMorphTargets.current = child;
       }
     });
-
+    
+    console.log('[PresenceAvatarMaleCoach] ALL MESHES WITH MORPHS:', allMeshesWithMorphs);
+    
+    // DEBUG: Force detailed logging of each mesh found
+    allMeshesWithMorphs.forEach((meshInfo, index) => {
+      console.log(`[PresenceAvatarMaleCoach] MESH ${index + 1}: ${meshInfo.name}`, {
+        morphCount: meshInfo.morphCount,
+        hasFacialMorphs: meshInfo.hasFacialMorphs,
+        isTeeth: meshInfo.name.toLowerCase().includes('teeth'),
+        morphTargets: meshInfo.morphTargets.slice(0, 10)
+      });
+    });
+    
+    // Find the mesh with the most facial morph targets (likely the face mesh)
+    // EXCLUDE teeth mesh and prioritize head/face meshes
+    const faceMesh = allMeshesWithMorphs
+      .filter(m => !m.name.toLowerCase().includes('teeth') && !m.name.toLowerCase().includes('tooth'))
+      .filter(m => m.hasFacialMorphs || m.name.toLowerCase().includes('head') || m.name.toLowerCase().includes('face'))
+      .sort((a, b) => b.morphCount - a.morphCount)[0]; // Get the one with most morphs
+    
+    if (faceMesh) {
+      console.log('[PresenceAvatarMaleCoach] SELECTED FACE MESH (NOT TEETH):', {
+        name: faceMesh.name,
+        morphCount: faceMesh.morphCount,
+        sampleMorphs: faceMesh.morphTargets.slice(0, 20)
+      });
+      meshWithMorphTargets.current = faceMesh.mesh;
+    } else {
+      // If no clear face mesh, show all available options
+      console.error('[PresenceAvatarMaleCoach] NO FACE MESH FOUND! Available meshes:', 
+        allMeshesWithMorphs.map(m => `${m.name}: ${m.morphCount} morphs`));
+      
+      // Fallback to the mesh with most morphs (excluding teeth)
+      const bestMesh = allMeshesWithMorphs
+        .filter(m => !m.name.toLowerCase().includes('teeth'))
+        .sort((a, b) => b.morphCount - a.morphCount)[0];
+      
+      if (bestMesh) {
+        console.log('[PresenceAvatarMaleCoach] FALLBACK TO BEST NON-TEETH MESH:', {
+          name: bestMesh.name,
+          morphCount: bestMesh.morphCount
+        });
+        meshWithMorphTargets.current = bestMesh.mesh;
+      } else {
+        console.error('[PresenceAvatarMaleCoach] NO MESHES WITH MORPH TARGETS FOUND!');
+      }
+    }
+    
     // Find and configure bones
     const allBones: string[] = [];
     clonedScene.traverse((child) => {
       if (child instanceof THREE.Mesh && child.morphTargetDictionary && child.morphTargetInfluences) {
-        console.log('[PresenceAvatar] Found mesh with morph targets:', child.name);
+        console.log('[PresenceAvatarMaleCoach] Found mesh with morph targets:', child.name);
         meshWithMorphTargets.current = child;
       }
       if (child instanceof THREE.Bone) {
@@ -338,21 +404,21 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
             && !lowerName.includes('jaw')
             && !lowerName.includes('top')  // Exclude HeadTop_End
             && !lowerName.includes('end')) { // Exclude end bones
-          console.log('[PresenceAvatar] Found head bone:', child.name);
+          console.log('[PresenceAvatarMaleCoach] Found head bone:', child.name);
           headBone.current = child;
         }
         
         // Neck bone - check for various naming conventions
         if (lowerName.includes('neck') || lowerName === 'neck' || lowerName.includes('neck_01')) {
-          console.log('[PresenceAvatar] Found neck bone:', child.name);
+          console.log('[PresenceAvatarMaleCoach] Found neck bone:', child.name);
           neckBone.current = child;
         }
       }
     });
     
-    console.log('[PresenceAvatar] All bones found in scene:', allBones);
-    console.log('[PresenceAvatar] Head bone set:', !!headBone.current, headBone.current?.name);
-    console.log('[PresenceAvatar] Neck bone set:', !!neckBone.current, neckBone.current?.name);
+    console.log('[PresenceAvatarMaleCoach] All bones found in scene:', allBones);
+    console.log('[PresenceAvatarMaleCoach] Head bone set:', !!headBone.current, headBone.current?.name);
+    console.log('[PresenceAvatarMaleCoach] Neck bone set:', !!neckBone.current, neckBone.current?.name);
     
     // Fix any default pose issues first
     if (headBone.current) {
@@ -362,7 +428,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       headBone.current.rotation.z = 0;
       // Now store the corrected initial rotation
       initialHeadLocalQuaternionRef.current = headBone.current.quaternion.clone();
-      console.log('[PresenceAvatar] Reset and stored head initial position');
+      console.log('[PresenceAvatarMaleCoach] Reset and stored head initial position');
     }
     
     if (neckBone.current) {
@@ -372,7 +438,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       neckBone.current.rotation.z = 0;
       // Store the corrected initial rotation
       initialNeckLocalQuaternionRef.current = neckBone.current.quaternion.clone();
-      console.log('[PresenceAvatar] Reset and stored neck initial position');
+      console.log('[PresenceAvatarMaleCoach] Reset and stored neck initial position');
     }
 
     // Fix T-pose by adjusting arm positions for more natural idle pose
@@ -385,11 +451,11 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
 
     if (leftUpperArm) {
       leftUpperArm.rotation.z = Math.PI / 4; // Rotate left arm down
-      console.log('[PresenceAvatar] Fixed left upper arm T-pose');
+      console.log('[PresenceAvatarMaleCoach] Fixed left upper arm T-pose');
     }
     if (rightUpperArm) {
       rightUpperArm.rotation.z = -Math.PI / 4; // Rotate right arm down
-      console.log('[PresenceAvatar] Fixed right upper arm T-pose');
+      console.log('[PresenceAvatarMaleCoach] Fixed right upper arm T-pose');
     }
     if (leftForeArm) {
       leftForeArm.rotation.y = Math.PI / 6; // Slight bend in left forearm
@@ -399,7 +465,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
     }
     */
 
-    console.log('[PresenceAvatar] Model setup complete', {
+    console.log('[PresenceAvatarMaleCoach] Model setup complete', {
       hasMorphTargets: !!meshWithMorphTargets.current,
       hasHeadBone: !!headBone.current,
       hasNeckBone: !!neckBone.current
@@ -414,7 +480,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       groupRef.current.add(clonedScene);
     }
 
-    console.log('[PresenceAvatar] Model setup complete', {
+    console.log('[PresenceAvatarMaleCoach] Model setup complete', {
       hasMorphTargets: !!meshWithMorphTargets.current,
       hasHeadBone: !!headBone.current,
       hasNeckBone: !!neckBone.current
@@ -425,7 +491,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
   useEffect(() => {
     if (trackingData) {
       // Track if tracking data is updated - removed to prevent re-renders
-      // console.log('[PresenceAvatar] Tracking data updated:', trackingData);
+      // console.log('[PresenceAvatarMaleCoach] Tracking data updated:', trackingData);
       
       let headRotation: { pitch: number; yaw: number; roll: number; } | undefined;
       
@@ -480,10 +546,10 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       trackingDataRef.current = convertedTrackingData;
       
       if (convertedTrackingData.facialExpressions && Object.keys(convertedTrackingData.facialExpressions).length > 0) {
-        console.log('[PresenceAvatar] Facial expressions:', Object.keys(convertedTrackingData.facialExpressions).length);
+        console.log('[PresenceAvatarMaleCoach] Facial expressions:', Object.keys(convertedTrackingData.facialExpressions).length);
       }
       if (convertedTrackingData.headRotation) {
-        console.log('[PresenceAvatar] Head rotation data present:', convertedTrackingData.headRotation);
+        console.log('[PresenceAvatarMaleCoach] Head rotation data present:', convertedTrackingData.headRotation);
       }
     } else {
       // Keep an empty object instead of null to avoid runtime errors
@@ -553,7 +619,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
     
     // Debug log to verify data is being processed
     if (Object.keys(processed.facialExpressions).length > 0) {
-      console.log('[PresenceAvatar] Processed tracking data with', Object.keys(processed.facialExpressions).length, 'expressions');
+      console.log('[PresenceAvatarMaleCoach] Processed tracking data with', Object.keys(processed.facialExpressions).length, 'expressions');
     }
     
     return processed;
@@ -577,6 +643,98 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
 
   // useFrame hook for real-time updates
   useFrame((state, delta) => {
+    frameCountRef.current += 1;
+    const currentMesh = meshWithMorphTargets.current;
+    const currentTracking = trackingDataRef.current;
+    
+    // 🔍 DEEP MORPH TARGET INVESTIGATION
+    if (modelRootRef.current && frameCountRef.current % 60 === 1) {
+      console.log('[PresenceAvatarMaleCoach] 🔍 DEEP MODEL INVESTIGATION...');
+      
+      let totalMeshes = 0;
+      let meshesWithMorphs = 0;
+      const detailedMeshInfo: any[] = [];
+      
+      modelRootRef.current.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          totalMeshes++;
+          
+          const meshInfo = {
+            name: child.name,
+            type: child.type,
+            hasMorphTargetDict: !!child.morphTargetDictionary,
+            hasMorphTargetInfluences: !!child.morphTargetInfluences,
+            morphDictKeys: child.morphTargetDictionary ? Object.keys(child.morphTargetDictionary) : null,
+            morphInfluencesLength: child.morphTargetInfluences ? child.morphTargetInfluences.length : 0,
+            geometryMorphAttributes: child.geometry ? Object.keys(child.geometry.morphAttributes || {}) : [],
+            hasPosition: !!(child.geometry?.morphAttributes?.position),
+            morphAttributesCount: child.geometry?.morphAttributes?.position?.length || 0
+          };
+          
+          detailedMeshInfo.push(meshInfo);
+          
+          if (child.morphTargetDictionary || child.morphTargetInfluences) {
+            meshesWithMorphs++;
+          }
+        }
+      });
+      
+      console.log('[PresenceAvatarMaleCoach] 🔍 MODEL STATS:', {
+        totalMeshes,
+        meshesWithMorphs,
+        modelLoaded: !!modelRootRef.current,
+        sceneLoaded: !!scene
+      });
+      
+      console.log('[PresenceAvatarMaleCoach] 🔍 DETAILED MESH ANALYSIS:');
+      detailedMeshInfo.forEach((info, index) => {
+        console.log(`  ${index + 1}. ${info.name}:`, info);
+      });
+      
+      // Check if any mesh has proper morph attributes in geometry
+      const meshWithMorphAttribs = detailedMeshInfo.find(m => m.morphAttributesCount > 0);
+      if (meshWithMorphAttribs) {
+        console.log('[PresenceAvatarMaleCoach] 🎯 FOUND MESH WITH MORPH ATTRIBUTES:', meshWithMorphAttribs.name);
+      } else {
+        console.log('[PresenceAvatarMaleCoach] ❌ NO MESHES HAVE MORPH ATTRIBUTES IN GEOMETRY!');
+      }
+    }
+
+    // 🚨 FORCE MESH SCAN EVERY TIME until we see the results
+    if (modelRootRef.current && frameCountRef.current % 60 === 1) {
+      console.log('[PresenceAvatarMaleCoach] 📋 FORCED MESH SCAN (every 60 frames)...');
+      
+      const allMeshes: any[] = [];
+      modelRootRef.current.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.morphTargetDictionary && child.morphTargetInfluences) {
+          const morphTargetNames = Object.keys(child.morphTargetDictionary);
+          allMeshes.push({
+            name: child.name,
+            morphCount: morphTargetNames.length,
+            morphTargets: morphTargetNames,
+            mesh: child
+          });
+        }
+      });
+      
+      console.log('[PresenceAvatarMaleCoach] 📋 ALL MESHES FOUND:', allMeshes.length);
+      allMeshes.forEach((meshInfo, index) => {
+        console.log(`  ${index + 1}. ${meshInfo.name}: ${meshInfo.morphCount} morphs`, meshInfo.morphTargets.slice(0, 15));
+      });
+      
+      console.log('[PresenceAvatarMaleCoach] 🎯 CURRENT MESH:', currentMesh?.name, 'morphs:', currentMesh?.morphTargetDictionary ? Object.keys(currentMesh.morphTargetDictionary).length : 0);
+    }
+
+    // Debug audio data source
+    if (frameCountRef.current % 60 === 1 && audioData) {
+      console.log('[PresenceAvatarMaleCoach] 🎵 AUDIO DEBUG:', {
+        length: audioData.length,
+        first10: Array.from(audioData.slice(0, 10)),
+        last10: Array.from(audioData.slice(-10)),
+        allSame: audioData.every(val => val === audioData[0])
+      });
+    }
+
     if (!modelRootRef.current) return;
 
     const currentFrameCount = state.clock.elapsedTime * 60; // Approximate frame count
@@ -600,13 +758,13 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
         headBone.current.rotation.x = lerp(headBone.current.rotation.x, idleNod, 0.1);
       }
       if (frameCountRef.current % 300 === 0) { // Every 5 seconds at 60fps
-        console.log('[PresenceAvatar useFrame] No tracking data');
+        console.log('[PresenceAvatarMaleCoach useFrame] No tracking data');
       }
       return;
     }
 
     if (frameCountRef.current % 60 === 0) { // Every second at 60fps
-      console.log('[PresenceAvatar useFrame] Processing tracking data:', trackingDataRef.current);
+      console.log('[PresenceAvatarMaleCoach useFrame] Processing tracking data:', trackingDataRef.current);
     }
 
     const mesh = meshWithMorphTargets.current;
@@ -620,153 +778,106 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
     const isCoachAvatar = avatarType === 'coach';
     
     // Lip Sync Override (if talking and audioData is present) - APPLY FIRST
-    if (frameCountRef.current % 30 === 0) {
-      console.log('[PresenceAvatar] Lip sync check:', {
-        animationName,
-        hasMorphTargetDictionary: !!mesh.morphTargetDictionary,
-        morphTargetKeys: mesh.morphTargetDictionary ? Object.keys(mesh.morphTargetDictionary).slice(0, 10) : [],
-        hasAudioData: !!audioData && audioData.length > 0,
-        isCoachAvatar,
-        meshType: mesh.type,
-        meshName: mesh.name
-      });
-    }
-    
-    if (animationName === 'talking' && audioData && audioData.length > 0 && mesh.morphTargetDictionary) {
-      // TEST MODE: Force lip sync movement when talking
-      const testMode = false; // Disable test mode now that we know it works!
+    if (animationName === 'talking' && audioData && audioData.length > 0 && mesh?.morphTargetDictionary) {
+      // Calculate audio amplitude for mouth movement - IMPROVED
+      let sum = 0;
+      let maxValue = 0;
+      for (let i = 0; i < audioData.length; i++) {
+        const normalizedValue = audioData[i] / 255.0;
+        sum += normalizedValue;
+        maxValue = Math.max(maxValue, normalizedValue);
+      }
+      const avgAmplitude = sum / audioData.length;
+      const peakAmplitude = maxValue;
       
-      if (testMode && isCoachAvatar) {
-        // Generate a sine wave for testing mouth movement
-        const time = Date.now() / 1000;
-        const testValue = (Math.sin(time * 5) + 1) * 0.5; // 0 to 1 oscillating value
-        
-        console.log('[PresenceAvatar] TEST MODE - Forcing lip sync:', testValue);
-        
-        // Try to apply to ALL possible mouth/jaw targets
-        const allMouthTargets = [
-          'jawOpen', 'mouthOpen', 'viseme_aa', 'viseme_O', 'mouthSmileLeft', 'mouthSmileRight', 'mouthLeft', 'mouthRight', 
-          'mouthPucker', 'mouthFunnel', 'mouthDimpleLeft', 'mouthDimpleRight',
-          'mouthStretchLeft', 'mouthStretchRight', 'mouthRollLower', 'mouthRollUpper',
-          'mouthShrugLower', 'mouthShrugUpper', 'mouthPressLeft', 'mouthPressRight',
-          'mouthLowerDownLeft', 'mouthLowerDownRight', 'mouthUpperUpLeft', 'mouthUpperUpRight'
-        ];
-        
-        let foundAnyTarget = false;
-        allMouthTargets.forEach(target => {
-          if (mesh.morphTargetDictionary && mesh.morphTargetDictionary[target] !== undefined) {
-            const morphIndex = mesh.morphTargetDictionary[target];
-            if (mesh.morphTargetInfluences && morphIndex !== undefined) {
-              mesh.morphTargetInfluences[morphIndex] = testValue;
-              foundAnyTarget = true;
-              if (frameCountRef.current % 30 === 0) { // Log less frequently
-                console.log(`[PresenceAvatar] TEST MODE - Applied to ${target}:`, testValue);
-              }
-            }
+      // Use combined amplitude for more natural mouth movement
+      const combinedAmplitude = (avgAmplitude * 0.3) + (peakAmplitude * 0.7);
+      const mouthOpenValue = Math.min(combinedAmplitude * 2.5, 0.5); // Reduced max to 0.5 for more natural look
+      
+      // 🔍 Debug available mouth morphs (one-time)
+      if (frameCountRef.current % 180 === 1) {
+        const availableMouthMorphs = Object.keys(mesh.morphTargetDictionary).filter(name => 
+          name.toLowerCase().includes('mouth') || 
+          name.toLowerCase().includes('jaw') ||
+          name.toLowerCase().includes('lips') ||
+          name.toLowerCase().includes('viseme')
+        );
+        console.log('[PresenceAvatarMaleCoach] 👄 AVAILABLE MOUTH MORPHS:', availableMouthMorphs);
+      }
+      
+      // Apply to ALL available mouth opening morphs
+      const mouthMorphs = ['mouthOpen', 'jawOpen', 'mouthWide', 'viseme_aa', 'mouthO'];
+      let appliedToMorph = false;
+      
+      mouthMorphs.forEach(morphName => {
+        const morphIndex = mesh.morphTargetDictionary![morphName];
+        if (morphIndex !== undefined && mesh.morphTargetInfluences) {
+          // Only apply mouth opening if there's actually audio activity
+          if (combinedAmplitude > 0.05) { // Threshold for mouth opening
+            mesh.morphTargetInfluences[morphIndex] = mouthOpenValue;
+            appliedToMorph = true;
+          } else {
+            // Close mouth when audio is very low
+            mesh.morphTargetInfluences[morphIndex] = 0;
+          }
+        }
+      });
+      
+      // Only log every 30 frames to reduce spam
+      if (frameCountRef.current % 30 === 0) {
+        console.log('[PresenceAvatarMaleCoach] 🎤 LIP SYNC - Combined:', combinedAmplitude.toFixed(3), 'Mouth:', mouthOpenValue.toFixed(3), 'Applied:', appliedToMorph);
+      }
+    } else {
+      // ✅ CRITICAL: When NOT talking, aggressively close all mouth morphs
+      if (mesh?.morphTargetDictionary && mesh?.morphTargetInfluences) {
+        const mouthMorphs = ['mouthOpen', 'jawOpen', 'mouthWide', 'viseme_aa', 'mouthO'];
+        mouthMorphs.forEach(morphName => {
+          const morphIndex = mesh.morphTargetDictionary![morphName];
+          if (morphIndex !== undefined && mesh.morphTargetInfluences) {
+            mesh.morphTargetInfluences[morphIndex] = 0; // Ensure mouth is closed when not talking
           }
         });
-        
-        if (!foundAnyTarget && frameCountRef.current % 60 === 0) {
-          console.error('[PresenceAvatar] TEST MODE - No mouth morph targets found! Available targets:', 
-            Object.keys(mesh.morphTargetDictionary || {}));
-        }
-        
-        return; // Skip normal lip sync processing in test mode
-      }
-      
-      // Normal lip sync processing
-      let totalEnergy = 0;
-      const relevantBins = Math.min(64, audioData.length); // Increased to 64 for even wider range
-      let maxEnergy = 0;
-      
-      for (let i = 0; i < relevantBins; i++) {
-        // Weight speech frequencies more heavily (100-1000 Hz range typically bins 2-20)
-        let weight = 1.0;
-        if (i >= 2 && i <= 20) {
-          weight = 2.0; // Double weight for speech frequencies
-        }
-        const binEnergy = audioData[i] * weight;
-        totalEnergy += binEnergy;
-        maxEnergy = Math.max(maxEnergy, audioData[i]);
-      }
-      
-      // Use both average and peak energy for more responsive lip sync
-      const averageEnergy = relevantBins > 0 ? totalEnergy / relevantBins / 255 : 0;
-      const peakEnergy = maxEnergy / 255;
-      const combinedEnergy = Math.max(averageEnergy, peakEnergy * 0.7); // Use whichever is higher
-      
-      // Try multiple possible jaw/mouth morph targets
-      const possibleJawTargets = ['jawOpen', 'mouthOpen', 'viseme_aa', 'viseme_O', '0', '1'];
-      let jawTargetFound = false;
-      
-      for (const target of possibleJawTargets) {
-        if (mesh.morphTargetDictionary && mesh.morphTargetDictionary[target] !== undefined) {
-          // Reduced multiplier for more natural mouth movement
-          const lipSyncValue = MathUtils.clamp(combinedEnergy * 2.0, 0, 0.4); // Reduced from 10.0 to 2.0, max 0.4
-          
-          // Force set the value directly to ensure it's not overridden
-          const morphIndex = mesh.morphTargetDictionary[target];
-          if (mesh.morphTargetInfluences && morphIndex !== undefined) {
-            mesh.morphTargetInfluences[morphIndex] = lipSyncValue;
-          }
-          
-          // Also apply to related mouth shapes for more visible effect
-          if (target === 'jawOpen' || target === 'mouthOpen') {
-            // Apply to other mouth-related morph targets if they exist
-            const relatedTargets = ['mouthSmileLeft', 'mouthSmileRight', 'mouthLeft', 'mouthRight', 'mouthPucker', 'mouthFunnel', 'mouthDimpleLeft', 'mouthDimpleRight'];
-            relatedTargets.forEach(related => {
-              if (mesh.morphTargetDictionary && mesh.morphTargetDictionary[related] !== undefined) {
-                const relatedIndex = mesh.morphTargetDictionary[related];
-                if (mesh.morphTargetInfluences) {
-                  mesh.morphTargetInfluences[relatedIndex] = lipSyncValue * 0.3; // Reduced from 0.7 to 0.3
-                }
-              }
-            });
-          }
-          
-          // For RPM avatars with numbered targets, apply to secondary target
-          if (target === '0' && mesh.morphTargetDictionary && mesh.morphTargetDictionary['1'] !== undefined) {
-            const secondaryIndex = mesh.morphTargetDictionary['1'];
-            if (mesh.morphTargetInfluences && secondaryIndex !== undefined) {
-              mesh.morphTargetInfluences[secondaryIndex] = lipSyncValue * 0.5;
-            }
-          }
-          
-          // Debug lip sync every 30 frames - ALWAYS log when talking
-          if (frameCountRef.current % 30 === 0) {
-            console.log('[PresenceAvatar] Lip sync applied:', { 
-              target, 
-              averageEnergy, 
-              peakEnergy,
-              combinedEnergy,
-              lipSyncValue,
-              morphIndex,
-              totalEnergy,
-              maxEnergy,
-              audioDataLength: audioData.length,
-              audioDataSample: Array.from(audioData.slice(0, 10))
-            });
-          }
-          jawTargetFound = true;
-          break; // Use the first available target
-        }
-      }
-      
-      if (!jawTargetFound) {
-        console.warn('[PresenceAvatar] No jaw/mouth morph target found! Available targets:', Object.keys(mesh.morphTargetDictionary || {}));
       }
     }
-    
+
     // Determine the source of expressions: Hume EVI or ML5 tracking data
     if (hasEmotionalBlendshapes) {
       // Priority 1: Hume EVI emotionalBlendshapes
+      const lipSyncTargets = ['jawOpen', 'mouthOpen', 'viseme_aa', 'viseme_O', 'mouthSmileLeft', 'mouthSmileRight', 'mouthLeft', 'mouthRight', 'mouthPucker'];
+      
       Object.entries(emotionalBlendshapes).forEach(([humeKey, rawValue]) => {
         if (typeof rawValue !== 'number') return;
         const mapping = HUME_TO_RPM_MAPPING[humeKey as keyof typeof HUME_TO_RPM_MAPPING];
         if (mapping) {
+          // CRITICAL: Skip lip sync targets when talking to prevent override
+          if (animationName === 'talking' && lipSyncTargets.includes(mapping.target)) {
+            return; // Don't override lip sync values
+          }
+          
           const amplification = mapping.amplify ?? 1.0;
-          const amplifiedValue = MathUtils.clamp(Number(rawValue) * amplification, 0, 1);
+          const amplifiedValue = Math.min(rawValue * amplification, 1.0); // Amplify for visibility
+          
+          // DEBUG: Log mouth-related values
+          if (mapping.target === 'mouthOpen' && amplifiedValue > 0.1) {
+            console.log(`[PresenceAvatarMaleCoach] HUME ${humeKey} -> ${mapping.target}: ${rawValue} * ${amplification} = ${amplifiedValue} (BLOCKED during talking: ${animationName === 'talking'})`);
+          }
+          
           frameMorphTargetValues[mapping.target] = Math.max(frameMorphTargetValues[mapping.target] || 0, amplifiedValue);
+        } else {
+          // Direct blendshape mapping (not in HUME_TO_RPM_MAPPING)
+          // Skip mouth-related targets when talking
+          if (animationName === 'talking' && lipSyncTargets.includes(humeKey)) {
+            return; // Don't override lip sync values
+          }
+          
+          // Apply direct blendshape
+          const amplifiedValue = Math.min(rawValue * 1.2, 1.0); // Slight amplification
+          
+          if (frameCountRef.current % 60 === 0 && amplifiedValue > 0.1) {
+            console.log(`[PresenceAvatarMaleCoach] DIRECT BLENDSHAPE ${humeKey}: ${amplifiedValue} (BLOCKED during talking: ${animationName === 'talking'})`);
+          }
+          
+          frameMorphTargetValues[humeKey] = Math.max(frameMorphTargetValues[humeKey] || 0, amplifiedValue);
         }
       });
     } else if (tracking?.facialExpressions || tracking?.expressions) {
@@ -783,7 +894,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
             
             // Debug log for high-value expressions
             if (amplifiedValue > 0.3 && (ml5Key.includes('mouth') || ml5Key.includes('smile'))) {
-              console.log(`[PresenceAvatar] Expression: ${ml5Key} = ${amplifiedValue}`);
+              console.log(`[PresenceAvatarMaleCoach] Expression: ${ml5Key} = ${amplifiedValue}`);
             }
             
             mapping.targets.forEach(rpmTargetName => {
@@ -795,11 +906,11 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
     }
 
     // Apply the final frameMorphTargetValues to the actual morph targets with smoothing
-    if (mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
+    if (mesh?.morphTargetDictionary && mesh.morphTargetInfluences) {
       // Track which morph targets were set by lip sync to avoid overriding them
       const lipSyncTargets = ['jawOpen', 'mouthOpen', 'viseme_aa', 'viseme_O', 'mouthSmileLeft', 'mouthSmileRight', 'mouthLeft', 'mouthRight', 'mouthPucker'];
       
-      Object.keys(mesh.morphTargetDictionary).forEach(rpmTargetName => {
+      Object.keys(mesh.morphTargetDictionary || {}).forEach(rpmTargetName => {
         const morphIndex = mesh.morphTargetDictionary![rpmTargetName];
         if (morphIndex !== undefined) {
           // Skip smoothing for lip sync targets when talking
@@ -828,15 +939,58 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
     const now = Date.now();
     if (now - lastDebugLogRef.current > 5000) { // Log every 5 seconds
       let activeBlendshapes = 0;
-      if (mesh.morphTargetInfluences) {
+      if (mesh?.morphTargetInfluences) {
         mesh.morphTargetInfluences.forEach((influence) => {
           if (influence > 0.01) activeBlendshapes++;
         });
       }
       if (activeBlendshapes > 0) {
-        console.log(`[PresenceAvatar] Active blendshapes: ${activeBlendshapes}`);
+        console.log(`[PresenceAvatarMaleCoach] Active blendshapes: ${activeBlendshapes}`);
       }
       lastDebugLogRef.current = now;
+    }
+
+    // ONE-TIME MESH SCAN: Check if we're using wrong mesh and show all options
+    if (scanMeshesRef.current && modelRootRef.current) {
+      scanMeshesRef.current = false; // Only run once
+      
+      console.log('[PresenceAvatarMaleCoach] 📋 FORCED MESH SCAN - Checking all available meshes...');
+      
+      const allMeshes: any[] = [];
+      modelRootRef.current.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.morphTargetDictionary && child.morphTargetInfluences) {
+          const morphTargetNames = Object.keys(child.morphTargetDictionary);
+          allMeshes.push({
+            name: child.name,
+            morphCount: morphTargetNames.length,
+            morphTargets: morphTargetNames,
+            mesh: child
+          });
+        }
+      });
+      
+      console.log('[PresenceAvatarMaleCoach] 📋 ALL AVAILABLE MESHES:');
+      allMeshes.forEach((meshInfo, index) => {
+        console.log(`  ${index + 1}. ${meshInfo.name}: ${meshInfo.morphCount} morphs`, meshInfo.morphTargets);
+      });
+      
+      console.log('[PresenceAvatarMaleCoach] 🎯 CURRENT MESH:', {
+        name: mesh?.name,
+        morphCount: mesh?.morphTargetDictionary ? Object.keys(mesh.morphTargetDictionary).length : 0,
+        morphTargets: mesh?.morphTargetDictionary ? Object.keys(mesh.morphTargetDictionary) : []
+      });
+      
+      // If current mesh has limited morphs, check for better options
+      if (mesh?.morphTargetDictionary) {
+        const currentMorphCount = Object.keys(mesh.morphTargetDictionary).length;
+        if (currentMorphCount < 10) {
+          const betterMesh = allMeshes.find(m => m.morphCount > currentMorphCount);
+          if (betterMesh) {
+            console.log(`[PresenceAvatarMaleCoach] 🔄 FOUND BETTER MESH: ${betterMesh.name} (${betterMesh.morphCount} morphs)`);
+            meshWithMorphTargets.current = betterMesh.mesh;
+          }
+        }
+      }
     }
 
     // Head rotation from tracking data with neck support
@@ -873,16 +1027,38 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       const idleNod = Math.sin(time * 0.5) * 0.02;
       headBone.current.rotation.x = lerp(headBone.current.rotation.x, idleNod, 0.1);
     }
+
+    // ✅ ENABLE EMOTIONAL BLENDSHAPES (was being blocked)
+    // Apply Hume emotional blendshapes when NOT in force test mode
+    if (animationName !== 'talking' && emotionalBlendshapes && mesh?.morphTargetDictionary && mesh?.morphTargetInfluences) {
+      console.log('[PresenceAvatarMaleCoach] 🎭 APPLYING EMOTIONAL BLENDSHAPES:', Object.keys(emotionalBlendshapes).length);
+      
+      Object.entries(emotionalBlendshapes).forEach(([blendshapeName, value]) => {
+        const morphIndex = mesh.morphTargetDictionary![blendshapeName];
+        if (morphIndex !== undefined && typeof value === 'number') {
+          const amplifiedValue = Math.min(value * 2.0, 1.0); // Amplify for visibility
+          mesh.morphTargetInfluences![morphIndex] = amplifiedValue;
+          console.log(`[PresenceAvatarMaleCoach] 🎭 ${blendshapeName}: ${amplifiedValue}`);
+        }
+      });
+      
+      // Force visual update
+      if (mesh.geometry) {
+        (mesh.geometry as THREE.BufferGeometry).attributes.position.needsUpdate = true;
+        (mesh.geometry as THREE.BufferGeometry).computeBoundingSphere();
+      }
+      if (mesh.material) (mesh.material as any).needsUpdate = true;
+    }
   });
 
 // Now check if scene is loaded after all hooks
 if (!clonedScene || !modelRootRef.current) {
   // Removed excessive logging
-  // console.log('[PresenceAvatar] Rendering. Scene:', clonedScene, 'ModelRootRef:', modelRootRef.current);
+  // console.log('[PresenceAvatarMaleCoach] Rendering. Scene:', clonedScene, 'ModelRootRef:', modelRootRef.current);
   return null;
 }
 
-console.log('[PresenceAvatar] Rendering. Scene:', clonedScene, 'ModelRootRef:', modelRootRef.current);
+console.log('[PresenceAvatarMaleCoach] Rendering. Scene:', clonedScene, 'ModelRootRef:', modelRootRef.current);
 return (
   <group ref={groupRef} position={position as [number, number, number]} scale={scale}>
     {modelRootRef.current && <primitive object={modelRootRef.current} dispose={null} />}
@@ -890,4 +1066,4 @@ return (
 );
 });
 
-export default PresenceAvatar;
+export default PresenceAvatarMaleCoach;

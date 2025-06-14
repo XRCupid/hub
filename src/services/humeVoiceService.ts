@@ -59,10 +59,16 @@ export class HumeVoiceService {
   private readonly MAX_RECONNECT_ATTEMPTS = 3; // Reduced from 5 to 3 for safety
   private readonly BASE_RECONNECT_DELAY_MS = 5000; // Increased from 2000 to 5000ms
   private reconnectTimeoutId: NodeJS.Timeout | null = null;
+  private reconnectTimer?: NodeJS.Timeout;
+  private isReconnecting: boolean = false;
+  private connectionPromise?: Promise<void>;
+  private socketReadyPromise?: Promise<void>;
+  private socketReadyResolve?: () => void;
   private client: HumeClient | null = null;
   private socket: any; // Consider typing this more strictly if possible, e.g., ChatSocket from '@humeai/voice/dist/src/socket'
   private isConnected: boolean = false;
   private hasConnectedBefore: boolean = false; // New
+  private isDisconnecting: boolean = false;
   private onAudioCallback?: (audioBlob: Blob) => void;
   private onMessageCallback?: (message: any) => void; // Type changed
   private onEmotionCallback?: (emotions: any[]) => void;
@@ -84,6 +90,8 @@ export class HumeVoiceService {
   private lastProsodyEmotions: { name: string; score: number }[] = [];
   private lastFacialEmotions: { name: string; score: number }[] = [];
   private transcriptHistory: TranscriptSegment[] = [];
+
+  private globalCleanupHandlers?: () => void;
 
   constructor() {
     console.log('[HumeVoiceService] Constructor called');
@@ -231,78 +239,137 @@ export class HumeVoiceService {
       // Connect using the SDK's chat interface
       console.log('[HumeVoiceService] Calling client.empathicVoice.chat.connect...');
       
-      try {
-        // Try without version to see if that helps
-        const connectOptions: any = {
-          configId: configToUse,
-        };
+      const connectOptions: any = {
+        configId: configToUse,
+      };
+      
+      console.log('[HumeVoiceService] Connect options:', connectOptions);
+      
+      this.socket = await this.client.empathicVoice.chat.connect(connectOptions);
+      
+      // Create a promise that resolves when socket is actually ready
+      this.socketReadyPromise = new Promise((resolve) => {
+        this.socketReadyResolve = resolve;
+      });
+      
+      // Set up event handlers immediately after creating socket
+      console.log('[HumeVoiceService] Setting up event handlers');
+      
+      this.socket.on('open', () => {
+        console.log('[HumeVoiceService] 🟢 Socket opened');
+        this.isConnected = true;
+        this.hasConnectedBefore = true;
         
-        console.log('[HumeVoiceService] Connect options:', connectOptions);
+        // Resolve the socket ready promise
+        if (this.socketReadyResolve) {
+          this.socketReadyResolve();
+          this.socketReadyResolve = undefined;
+        }
         
-        this.socket = await this.client.empathicVoice.chat.connect(connectOptions);
-        
-        console.log('[HumeVoiceService] Socket created:', {
-          socket: !!this.socket,
-          socketType: typeof this.socket,
-          hasMethod: typeof this.socket?.sendAudioInput,
-          socketKeys: this.socket ? Object.keys(this.socket) : [],
-          socketPrototype: this.socket ? Object.getPrototypeOf(this.socket).constructor.name : 'N/A'
-        });
-        
-        // Set up event handlers immediately after creating socket
-        console.log('[HumeVoiceService] Setting up event handlers');
-        
-        this.socket.on('open', () => {
-          console.log('[HumeVoiceService] 🟢 Socket opened');
-          this.isConnected = true;
-          this.hasConnectedBefore = true;
-          if (this.onOpenCallback) {
-            this.onOpenCallback();
+        // Set up microphone streaming after connection is established
+        // Add a longer delay to ensure socket is fully ready
+        setTimeout(() => {
+          // Double-check socket is still connected before setting up microphone
+          const underlyingSocket = this.getUnderlyingWebSocket();
+          if (!this.isConnected || !underlyingSocket || underlyingSocket.readyState !== WebSocket.OPEN) {
+            console.warn('[HumeVoiceService] Socket not ready after open event, skipping microphone setup');
+            return;
           }
+          
+          this.setupMicrophoneStreaming().then(() => {
+            console.log('[HumeVoiceService] Microphone streaming setup complete');
+          }).catch(error => {
+            console.error('[HumeVoiceService] Failed to setup microphone after connection:', error);
+          });
+        }, 500); // 500ms delay to ensure socket is fully ready
+        
+        if (this.onOpenCallback) {
+          this.onOpenCallback();
+        }
+      });
+      
+      this.socket.on('message', (message: any) => {
+        console.log('[HumeVoiceService] 📨 Received message:', {
+          type: message.type,
+          hasTranscript: !!message.transcript,
+          hasProsody: !!message.prosody,
+          hasModels: !!message.models,
+          messageKeys: Object.keys(message)
         });
         
-        this.socket.on('message', (message: any) => {
-          console.log('[HumeVoiceService] 📨 Received message:', {
-            type: message.type,
-            hasTranscript: !!message.transcript,
-            hasProsody: !!message.prosody,
-            hasModels: !!message.models,
-            messageKeys: Object.keys(message)
-          });
-          
-          switch (message.type) {
-            case 'audio_output':
-              console.log('[HumeVoiceService] 🎵 Received audio_output');
-              if (message.data && this.onAudioCallback) {
-                try {
-                  // Use Hume SDK's convertBase64ToBlob if available, otherwise fallback
-                  const audioBlob = typeof convertBase64ToBlob === 'function' 
-                    ? convertBase64ToBlob(message.data)
-                    : base64ToBlob(message.data, 'audio/wav');
-                  console.log('[HumeVoiceService] Created audio blob:', audioBlob.size, 'type:', audioBlob.type);
-                  this.onAudioCallback(audioBlob);
-                } catch (error) {
-                  console.error('[HumeVoiceService] Error creating audio blob:', error);
-                }
+        switch (message.type) {
+          case 'audio_output':
+            console.log('[HumeVoiceService] 🎵 Received audio_output');
+            if (message.data && this.onAudioCallback) {
+              try {
+                // Use Hume SDK's convertBase64ToBlob if available, otherwise fallback
+                const audioBlob = typeof convertBase64ToBlob === 'function' 
+                  ? convertBase64ToBlob(message.data)
+                  : base64ToBlob(message.data, 'audio/wav');
+                console.log('[HumeVoiceService] Created audio blob:', audioBlob.size, 'type:', audioBlob.type);
+                this.onAudioCallback(audioBlob);
+              } catch (error) {
+                console.error('[HumeVoiceService] Error creating audio blob:', error);
               }
-              break;
+            }
+            break;
 
-            case 'assistant_message':
-              console.log('[HumeVoiceService] 🤖 Assistant message:', {
-                content: message.message?.content,
-                hasProsody: !!message.models?.prosody
-              });
-              
-              if (message.message?.content && this.onMessageCallback) {
-                this.onMessageCallback?.(message);
+          case 'assistant_message':
+            console.log('[HumeVoiceService] 🤖 Assistant message:', {
+              content: message.message?.content,
+              hasProsody: !!message.models?.prosody
+            });
+            
+            if (message.message?.content && this.onMessageCallback) {
+              this.onMessageCallback?.(message);
+            }
+            
+            // Create transcript segment for assistant
+            if (message.message?.content && this.onTranscriptCallback) {
+              console.log('[HumeVoiceService] 📝 Creating assistant transcript segment');
+              const segment: TranscriptSegment = {
+                timestamp: Date.now(),
+                speaker: 'Assistant',
+                text: message.message.content,
+                emotions: this.lastEmotions || [],
+                prosodyEmotions: this.lastProsodyEmotions || [],
+                facialEmotions: this.lastFacialEmotions || [],
+                dominantEmotion: this.lastEmotions?.[0]?.name,
+                emotionIntensity: this.lastEmotions?.[0]?.score / 100,
+                prosodyData: message.models?.prosody
+              };
+              this.transcriptHistory.push(segment);
+              this.onTranscriptCallback(segment);
+            }
+            
+            // Extract emotion data from prosody scores
+            if (message.models?.prosody?.scores && this.onEmotionCallback) {
+              console.log('[HumeVoiceService] 🎭 Found prosody emotion data');
+              const emotions = this.convertEmotionsToArray(message.models.prosody.scores);
+              console.log('[HumeVoiceService] Converted prosody emotions:', emotions.slice(0, 5));
+              this.lastProsodyEmotions = emotions;
+              this.lastEmotions = emotions;
+              this.onEmotionCallback(emotions);
+            }
+            break;
+
+          case 'user_message':
+            console.log('[HumeVoiceService] 👤 User message:', {
+              content: message.message?.content,
+              hasProsody: !!message.models?.prosody
+            });
+            
+            if (message.message?.content) {
+              if (this.onUserMessageCallback) {
+                this.onUserMessageCallback(message.message.content);
               }
               
-              // Create transcript segment for assistant
-              if (message.message?.content && this.onTranscriptCallback) {
-                console.log('[HumeVoiceService] 📝 Creating assistant transcript segment');
+              // Create transcript segment for user
+              if (this.onTranscriptCallback) {
+                console.log('[HumeVoiceService] 📝 Creating user transcript segment');
                 const segment: TranscriptSegment = {
                   timestamp: Date.now(),
-                  speaker: 'Assistant',
+                  speaker: 'User',
                   text: message.message.content,
                   emotions: this.lastEmotions || [],
                   prosodyEmotions: this.lastProsodyEmotions || [],
@@ -314,138 +381,107 @@ export class HumeVoiceService {
                 this.transcriptHistory.push(segment);
                 this.onTranscriptCallback(segment);
               }
-              
-              // Extract emotion data from prosody scores
-              if (message.models?.prosody?.scores && this.onEmotionCallback) {
-                console.log('[HumeVoiceService] 🎭 Found prosody emotion data');
-                const emotions = this.convertEmotionsToArray(message.models.prosody.scores);
-                console.log('[HumeVoiceService] Converted prosody emotions:', emotions.slice(0, 5));
-                this.lastProsodyEmotions = emotions;
-                this.lastEmotions = emotions;
-                this.onEmotionCallback(emotions);
+            }
+            break;
+
+          case 'user_interruption':
+            console.log('[HumeVoiceService] 🛑 User interruption');
+            if (this.onUserInterruptionCallback) {
+              this.onUserInterruptionCallback();
+            }
+            break;
+
+          case 'emotion_features':
+            console.log('[HumeVoiceService] 🎭 Emotion features received');
+            if (message.models?.prosody?.scores && this.onEmotionCallback) {
+              const emotions = this.convertEmotionsToArray(message.models.prosody.scores);
+              this.lastProsodyEmotions = emotions;
+              this.lastEmotions = emotions;
+              this.onEmotionCallback(emotions);
+            }
+            break;
+
+          case 'error':
+            console.error('[HumeVoiceService] ❌ Error message:', message);
+            if (message.message?.includes('too many active chats')) {
+              console.error('[HumeVoiceService] Too many active chats - consider closing old connections');
+              if (this.onErrorCallback) {
+                this.onErrorCallback(new Error('Too many active chats. Please close other sessions and try again.'));
               }
-              break;
+            }
+            break;
 
-            case 'user_message':
-              console.log('[HumeVoiceService] 👤 User message:', {
-                content: message.message?.content,
-                hasProsody: !!message.models?.prosody
-              });
-              
-              if (message.message?.content) {
-                if (this.onUserMessageCallback) {
-                  this.onUserMessageCallback(message.message.content);
-                }
-                
-                // Create transcript segment for user
-                if (this.onTranscriptCallback) {
-                  console.log('[HumeVoiceService] 📝 Creating user transcript segment');
-                  const segment: TranscriptSegment = {
-                    timestamp: Date.now(),
-                    speaker: 'User',
-                    text: message.message.content,
-                    emotions: this.lastEmotions || [],
-                    prosodyEmotions: this.lastProsodyEmotions || [],
-                    facialEmotions: this.lastFacialEmotions || [],
-                    dominantEmotion: this.lastEmotions?.[0]?.name,
-                    emotionIntensity: this.lastEmotions?.[0]?.score / 100,
-                    prosodyData: message.models?.prosody
-                  };
-                  this.transcriptHistory.push(segment);
-                  this.onTranscriptCallback(segment);
-                }
-              }
-              break;
+          default:
+            console.log('[HumeVoiceService] 🔍 Unknown message type:', message.type);
+        }
+      });
 
-            case 'user_interruption':
-              console.log('[HumeVoiceService] 🛑 User interruption');
-              if (this.onUserInterruptionCallback) {
-                this.onUserInterruptionCallback();
-              }
-              break;
-
-            case 'emotion_features':
-              console.log('[HumeVoiceService] 🎭 Emotion features received');
-              if (message.models?.prosody?.scores && this.onEmotionCallback) {
-                const emotions = this.convertEmotionsToArray(message.models.prosody.scores);
-                this.lastProsodyEmotions = emotions;
-                this.lastEmotions = emotions;
-                this.onEmotionCallback(emotions);
-              }
-              break;
-
-            case 'error':
-              console.error('[HumeVoiceService] ❌ Error message:', message);
-              if (message.message?.includes('too many active chats')) {
-                console.error('[HumeVoiceService] Too many active chats - consider closing old connections');
-                if (this.onErrorCallback) {
-                  this.onErrorCallback(new Error('Too many active chats. Please close other sessions and try again.'));
-                }
-              }
-              break;
-
-            default:
-              console.log('[HumeVoiceService] 🔍 Unknown message type:', message.type);
-          }
-        });
-
-        this.socket.on('error', (error: any) => {
-          console.error('[HumeVoiceService] ❌ Socket error:', error);
-          if (this.onErrorCallback) {
-            this.onErrorCallback(error);
-          }
-        });
-
-        this.socket.on('close', (code: number, reason: Buffer) => {
-          const reasonString = reason ? reason.toString() : 'No reason provided';
-          console.log(`[HumeVoiceService] WebSocket closed. Code: ${code}, Reason: ${reasonString}`);
-          this.isConnected = false;
-          if (this.onCloseCallback) {
-            this.onCloseCallback(code, reasonString);
-          }
-        });
+      this.socket.on('error', (error: any) => {
+        console.error('[HumeVoiceService] ❌ Socket error:', error);
         
-        // Set up microphone streaming
-        console.log('[HumeVoiceService] Setting up microphone streaming...');
-        await this.setupMicrophoneStreaming();
+        // Clear socket ready promise
+        this.socketReadyPromise = undefined;
+        this.socketReadyResolve = undefined;
         
-        // Wait for socket to be ready (the 'open' event will set isConnected = true)
-        let attempts = 0;
-        while (!this.isConnected && attempts < 50) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          attempts++;
+        if (this.onErrorCallback) {
+          this.onErrorCallback(error);
         }
         
-        if (!this.isConnected) {
-          console.warn('[HumeVoiceService] Socket did not reach connected state after 5 seconds');
-        } else {
-          console.log('[HumeVoiceService] Socket is connected and ready');
+        // Auto-cleanup on error
+        if (!this.isDisconnecting) {
+          console.log('[HumeVoiceService] Socket error, cleaning up...');
+          this.cleanup();
         }
-      } catch (error: any) {
-        console.error('[HumeVoiceService] Failed to connect:', {
-          error: error,
-          message: error?.message,
-          stack: error?.stack,
-          name: error?.name
-        });
-        
-        // Set connection state to false
+      });
+
+      this.socket.on('close', (event: any) => {
+        console.log('[HumeVoiceService] 🔴 Socket closed:', event);
         this.isConnected = false;
         
-        // If this is a reconnect attempt, increment the counter
-        if (this.reconnectAttempts > 0) {
-          // The reconnect logic will handle retries
-          throw error;
+        // Clear socket ready promise
+        this.socketReadyPromise = undefined;
+        this.socketReadyResolve = undefined;
+        
+        if (this.onCloseCallback) {
+          this.onCloseCallback(event.code, event.reason);
         }
         
-        throw error;
+        // Auto-cleanup on unexpected close
+        if (!this.isDisconnecting) {
+          console.log('[HumeVoiceService] Unexpected socket close, cleaning up...');
+          this.cleanup();
+        }
+      });
+      
+      // Wait for socket to be ready (the 'open' event will set isConnected = true)
+      let attempts = 0;
+      while (!this.isConnected && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
       }
-    } catch (error: any) {
+      
+      if (!this.isConnected) {
+        console.warn('[HumeVoiceService] Socket did not reach connected state after 5 seconds');
+      } else {
+        console.log('[HumeVoiceService] Socket is connected and ready');
+      }
+      
+      // Add global cleanup handlers
+      this.setupGlobalCleanupHandlers();
+      
+      // Wait for socket to be ready before returning
+      if (this.socketReadyPromise) {
+        console.log('[HumeVoiceService] Waiting for socket to be ready...');
+        await this.socketReadyPromise;
+        console.log('[HumeVoiceService] Socket is ready');
+      }
+      
+    } catch (error) {
       console.error('[HumeVoiceService] Failed to connect:', {
         error: error,
-        message: error?.message,
-        stack: error?.stack,
-        name: error?.name
+        message: (error as any)?.message,
+        stack: (error as any)?.stack,
+        name: (error as any)?.name
       });
       
       // Set connection state to false
@@ -461,6 +497,41 @@ export class HumeVoiceService {
     }
   }
 
+  private setupGlobalCleanupHandlers() {
+    // Cleanup on page unload
+    const handleUnload = () => {
+      console.log('[HumeVoiceService] Page unloading, disconnecting...');
+      this.disconnect();
+    };
+    
+    // Cleanup on navigation
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (this.isConnected) {
+        console.log('[HumeVoiceService] Navigation detected, disconnecting...');
+        this.disconnect();
+      }
+    };
+    
+    // Cleanup on visibility change (tab switch)
+    const handleVisibilityChange = () => {
+      if (document.hidden && this.isConnected) {
+        console.log('[HumeVoiceService] Tab hidden, disconnecting...');
+        this.disconnect();
+      }
+    };
+    
+    window.addEventListener('unload', handleUnload);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Store cleanup function
+    this.globalCleanupHandlers = () => {
+      window.removeEventListener('unload', handleUnload);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }
+  
   private async setupMicrophoneStreaming(): Promise<void> {
     try {
       console.log('[HumeVoiceService] Setting up microphone streaming...');
@@ -484,6 +555,18 @@ export class HumeVoiceService {
       this.mediaRecorder.ondataavailable = async (event) => {
         if (event.data.size > 0 && this.socket && this.isConnected) {
           try {
+            // Wait for socket to be ready before sending
+            if (this.socketReadyPromise) {
+              await this.socketReadyPromise;
+            }
+            
+            // Double-check the socket is ready
+            const underlyingSocket = this.getUnderlyingWebSocket();
+            if (!underlyingSocket || underlyingSocket.readyState !== WebSocket.OPEN) {
+              console.warn('[HumeVoiceService] Socket not ready for audio, skipping chunk');
+              return;
+            }
+            
             console.log('[HumeVoiceService] Sending audio chunk, size:', event.data.size);
             // Convert blob to base64
             const base64Audio = await blobToBase64(event.data);
@@ -505,61 +588,15 @@ export class HumeVoiceService {
     }
   }
 
-  public async reconnect(): Promise<void> {
-    console.log(`[HumeVoiceService] reconnect called. explicitlyClosed: ${this.explicitlyClosed}, attempts: ${this.reconnectAttempts}`);
-    if (this.explicitlyClosed) {
-      console.log('[HumeVoiceService] Reconnect aborted, connection was explicitly closed.');
-      this.reconnectAttempts = 0; // Reset attempts
-      if (this.reconnectTimeoutId) {
-        clearTimeout(this.reconnectTimeoutId);
-        this.reconnectTimeoutId = null;
-      }
-      return;
+  private stopTracking() {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+      this.mediaRecorder = null;
     }
-
-    // Clear any existing timeout just in case reconnect is called manually or from a different path
-    if (this.reconnectTimeoutId) {
-      clearTimeout(this.reconnectTimeoutId);
-      this.reconnectTimeoutId = null;
-    }
-
-    console.log('[HumeVoiceService] Attempting to connect via reconnect method...');
-    if (this.currentConfigId) {
-      try {
-        await this.connect(this.currentConfigId); // connect will reset explicitlyClosed to false
-        // Successful connection will reset reconnectAttempts in 'on.open'
-        console.log('[HumeVoiceService] Connection attempt via reconnect method successful or socket events will handle further.');
-      } catch (error) {
-        console.error('[HumeVoiceService] Connection attempt via reconnect method failed directly:', error);
-        // This catch block handles errors thrown directly by the this.connect call itself (e.g., SDK client error before socket events)
-        // The 'close' event handler (if the socket was ever created and then closed) will manage scheduled retries.
-        // If connect() fails *before* attaching 'close', we need to ensure retry logic is still triggered.
-        if (!this.explicitlyClosed) { // Check again, as connect() might have been interrupted
-          // If reconnectAttempts wasn't incremented by a 'close' event, ensure it's in a state to retry
-          // This path is tricky because 'close' is the main driver for scheduled retries.
-          // If 'connect' fails very early, 'close' might not fire. We might need to manually trigger the retry scheduling from here.
-          console.warn('[HumeVoiceService] connect() threw directly. The on.close handler might not have triggered a retry. Checking if manual retry schedule is needed.');
-          // If no reconnect is scheduled and we haven't hit max attempts, schedule one.
-          // This is a fallback. Ideally, the SDK's socket 'close' or 'error' events should always lead to our 'close' handler.
-          if (!this.reconnectTimeoutId && this.reconnectAttempts < this.MAX_RECONNECT_ATTEMPTS) {
-            const delay = this.BASE_RECONNECT_DELAY_MS * Math.pow(2, this.reconnectAttempts);
-            this.reconnectAttempts++; // Increment here as 'close' didn't
-            console.log(`[HumeVoiceService] Fallback: Scheduling reconnect #${this.reconnectAttempts} in ${delay / 1000}s due to direct connect() error.`);
-            this.reconnectTimeoutId = setTimeout(() => {
-              this.reconnect();
-            }, delay);
-          } else if (!this.reconnectTimeoutId && this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
-            console.error(`[HumeVoiceService] Max reconnect attempts reached after direct connect() failure. No retry scheduled.`);
-            this.onErrorCallback?.(new Error('Max reconnect attempts reached after direct connect failure.'));
-          }
-        }
-        // Do not re-throw the error here if retries are being handled, otherwise it might propagate up and stop further retries.
-        // this.onErrorCallback?.(new Error(`Reconnect failed: ${error instanceof Error ? error.message : String(error)}`));
-      }
-    } else {
-      const errMsg = '[HumeVoiceService] No config ID available to reconnect with.';
-      console.error(errMsg);
-      this.onErrorCallback?.(new Error(errMsg));
+    
+    if (this.audioStream) {
+      this.audioStream.getTracks().forEach(track => track.stop());
+      this.audioStream = null;
     }
   }
 
@@ -620,129 +657,169 @@ export class HumeVoiceService {
     return emotionArray.slice(0, 8);
   }
 
-  public disconnect(): void {
-    console.log('[HumeVoiceService] Disconnect called - cleaning up connection...');
-    
-    // Clear any pending reconnect attempts
+  public async reconnect(): Promise<void> {
+    console.log(`[HumeVoiceService] reconnect called. explicitlyClosed: ${this.explicitlyClosed}, attempts: ${this.reconnectAttempts}`);
+    if (this.explicitlyClosed) {
+      console.log('[HumeVoiceService] Reconnect aborted, connection was explicitly closed.');
+      this.reconnectAttempts = 0; // Reset attempts
+      if (this.reconnectTimeoutId) {
+        clearTimeout(this.reconnectTimeoutId);
+        this.reconnectTimeoutId = null;
+      }
+      return;
+    }
+
+    // Clear any existing timeout just in case reconnect is called manually or from a different path
     if (this.reconnectTimeoutId) {
       clearTimeout(this.reconnectTimeoutId);
       this.reconnectTimeoutId = null;
     }
-    this.reconnectAttempts = 0; // Reset attempts on explicit disconnect
-    console.log('[HumeVoiceService] Disconnecting explicitly...');
-    this.explicitlyClosed = true;
-    
-    // Stop microphone streaming
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
-      this.mediaRecorder = null;
-    }
-    
-    if (this.audioStream) {
-      this.audioStream.getTracks().forEach(track => track.stop());
-      this.audioStream = null;
-    }
-    
-    // Force close the websocket if it exists
-    if (this.socket) {
+
+    console.log('[HumeVoiceService] Attempting to connect via reconnect method...');
+    if (this.currentConfigId) {
       try {
-        // Remove event listeners to prevent any callbacks during close
-        if (typeof this.socket.removeAllListeners === 'function') {
-          this.socket.removeAllListeners();
-        }
-        
-        // Force close with code 1000 (normal closure)
-        if (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING) {
-          this.socket.close(1000, 'User initiated disconnect');
-        }
-        
-        // Set to null to ensure garbage collection
-        this.socket = null;
+        await this.connect(this.currentConfigId); // connect will reset explicitlyClosed to false
+        // Successful connection will reset reconnectAttempts in 'on.open'
+        console.log('[HumeVoiceService] Connection attempt via reconnect method successful or socket events will handle further.');
       } catch (error) {
-        console.error('[HumeVoiceService] Error during socket cleanup:', error);
+        console.error('[HumeVoiceService] Connection attempt via reconnect method failed directly:', error);
+        // This catch block handles errors thrown directly by the this.connect call itself (e.g., SDK client error before socket events)
+        // The 'close' event handler (if the socket was ever created and then closed) will manage scheduled retries.
+        // If connect() fails *before* attaching 'close', we need to ensure retry logic is still triggered.
+        if (!this.explicitlyClosed) { // Check again, as connect() might have been interrupted
+          // If reconnectAttempts wasn't incremented by a 'close' event, ensure it's in a state to retry
+          // This path is tricky because 'close' is the main driver for scheduled retries.
+          // If 'connect' fails very early, 'close' might not fire. We might need to manually trigger the retry scheduling from here.
+          console.warn('[HumeVoiceService] connect() threw directly. The on.close handler might not have triggered a retry. Checking if manual retry schedule is needed.');
+          // If no reconnect is scheduled and we haven't hit max attempts, schedule one.
+          // This is a fallback. Ideally, the SDK's socket 'close' or 'error' events should always lead to our 'close' handler.
+          if (!this.reconnectTimeoutId && this.reconnectAttempts < this.MAX_RECONNECT_ATTEMPTS) {
+            const delay = this.BASE_RECONNECT_DELAY_MS * Math.pow(2, this.reconnectAttempts);
+            this.reconnectAttempts++; // Increment here as 'close' didn't
+            console.log(`[HumeVoiceService] Fallback: Scheduling reconnect #${this.reconnectAttempts} in ${delay / 1000}s due to direct connect() error.`);
+            this.reconnectTimeoutId = setTimeout(() => {
+              this.reconnect();
+            }, delay);
+          } else if (!this.reconnectTimeoutId && this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
+            console.error(`[HumeVoiceService] Max reconnect attempts reached after direct connect failure. No retry scheduled.`);
+            this.onErrorCallback?.(new Error('Max reconnect attempts reached after direct connect failure.'));
+          }
+        }
+        // Do not re-throw the error here if retries are being handled, otherwise it might propagate up and stop further retries.
+        // this.onErrorCallback?.(new Error(`Reconnect failed: ${error instanceof Error ? error.message : String(error)}`));
       }
+    } else {
+      const errMsg = '[HumeVoiceService] No config ID available to reconnect with.';
+      console.error(errMsg);
+      this.onErrorCallback?.(new Error(errMsg));
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    console.log('[HumeVoiceService] Disconnect called');
+    
+    if (this.isDisconnecting) {
+      console.log('[HumeVoiceService] Already disconnecting, skipping');
+      return;
     }
     
-    // Update state
-    this.isConnected = false;
+    this.isDisconnecting = true;
     
-    // Call close callback if set
-    if (this.onCloseCallback) {
-      this.onCloseCallback(1000, 'User initiated disconnect');
+    try {
+      // Stop audio first
+      this.stopTracking();
+      
+      // Close socket if it exists
+      if (this.socket) {
+        console.log('[HumeVoiceService] Closing socket connection');
+        
+        // Try to close gracefully
+        if (typeof this.socket.close === 'function') {
+          this.socket.close();
+        } else if (typeof this.socket.disconnect === 'function') {
+          this.socket.disconnect();
+        } else {
+          // Try to close underlying WebSocket
+          const ws = this.getUnderlyingWebSocket();
+          if (ws && typeof ws.close === 'function') {
+            ws.close();
+          }
+        }
+        
+        this.socket = null;
+      }
+      
+      // Cleanup everything
+      this.cleanup();
+      
+    } catch (error) {
+      console.error('[HumeVoiceService] Error during disconnect:', error);
+    } finally {
+      this.isConnected = false;
+      this.isDisconnecting = false;
     }
     
     console.log('[HumeVoiceService] Disconnect complete');
   }
 
+  private cleanup() {
+    // Remove global handlers
+    if (this.globalCleanupHandlers) {
+      this.globalCleanupHandlers();
+      this.globalCleanupHandlers = undefined;
+    }
+    
+    // Clear timers
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = undefined;
+    }
+    
+    if (this.reconnectTimeoutId) {
+      clearTimeout(this.reconnectTimeoutId);
+      this.reconnectTimeoutId = null;
+    }
+    
+    // Clear promises
+    this.connectionPromise = undefined;
+    this.socketReadyPromise = undefined;
+    this.socketReadyResolve = undefined;
+    
+    // Clear media stream (if not already cleared)
+    if (this.audioStream) {
+      this.audioStream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+      this.audioStream = null;
+    }
+    
+    // Clear media recorder
+    if (this.mediaRecorder) {
+      if (this.mediaRecorder.state !== 'inactive') {
+        this.mediaRecorder.stop();
+      }
+      this.mediaRecorder = null;
+    }
+  }
+
   async sendAudio(audioBlob: Blob): Promise<void> {
     console.log('[HumeVoiceService] sendAudio called with blob size:', audioBlob.size, 'type:', audioBlob.type);
     
+    // Wait for socket to be ready if still connecting
+    if (this.socketReadyPromise) {
+      console.log('[HumeVoiceService] Waiting for socket to be ready before sending audio...');
+      try {
+        await Promise.race([
+          this.socketReadyPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Socket ready timeout')), 5000))
+        ]);
+      } catch (error) {
+        console.error('[HumeVoiceService] Socket ready timeout:', error);
+        return;
+      }
+    }
+    
     if (!this.checkConnection()) {
-      console.error('[HumeVoiceService] Not connected or not ready, socket:', this.socket, 'isConnected:', this.isConnected);
+      console.error('[HumeVoiceService] Not connected or not ready');
       return;
-    }
-
-    // Additional safety check - ensure socket has a sendAudioInput method
-    if (!this.socket || typeof this.socket.sendAudioInput !== 'function') {
-      console.error('[HumeVoiceService] Socket missing sendAudioInput method');
-      return;
-    }
-
-    // Check if the underlying WebSocket is actually open
-    // The Hume SDK socket might have an internal WebSocket we need to check
-    try {
-      // Try to access the socket's state - this might throw if socket is not ready
-      let socketState: number | undefined;
-      
-      // Try multiple ways to get the socket state
-      const possibleSocketProps = ['_socket', 'socket', 'ws', '_ws', 'webSocket', '_webSocket'];
-      for (const prop of possibleSocketProps) {
-        const ws = (this.socket as any)[prop];
-        if (ws && typeof ws.readyState === 'number') {
-          socketState = ws.readyState;
-          break;
-        }
-      }
-      
-      // Fallback to direct readyState
-      if (socketState === undefined && (this.socket as any).readyState !== undefined) {
-        socketState = (this.socket as any).readyState;
-      }
-      
-      console.log('[HumeVoiceService] Socket readyState:', socketState);
-      
-      if (socketState !== undefined && socketState !== 1) { // 1 = WebSocket.OPEN
-        console.error('[HumeVoiceService] Socket is not in OPEN state, readyState:', socketState);
-        
-        // If socket is CONNECTING (0), wait a bit and retry once
-        if (socketState === 0) {
-          console.log('[HumeVoiceService] Socket is CONNECTING, waiting 500ms and retrying...');
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Check again
-          let newSocketState: number | undefined;
-          for (const prop of possibleSocketProps) {
-            const ws = (this.socket as any)[prop];
-            if (ws && typeof ws.readyState === 'number') {
-              newSocketState = ws.readyState;
-              break;
-            }
-          }
-          if (newSocketState === undefined && (this.socket as any).readyState !== undefined) {
-            newSocketState = (this.socket as any).readyState;
-          }
-          
-          if (newSocketState !== 1) {
-            console.error('[HumeVoiceService] Socket still not ready after wait, aborting');
-            return;
-          }
-          console.log('[HumeVoiceService] Socket is now ready after wait');
-        } else {
-          return;
-        }
-      }
-    } catch (e) {
-      console.log('[HumeVoiceService] Could not check socket readyState, proceeding anyway');
     }
 
     let base64Data: string = '';
@@ -763,8 +840,8 @@ export class HumeVoiceService {
       console.log('[HumeVoiceService] Audio sent successfully');
     } catch (error: any) {
       console.error('[HumeVoiceService] Error sending audio:', {
-        message: error?.message || 'Unknown error',
-        stack: error?.stack,
+        message: (error as any)?.message || 'Unknown error',
+        stack: (error as any)?.stack,
         error: error,
         socketConnected: this.checkConnection(),
         base64Length: base64Data?.length
@@ -790,14 +867,45 @@ export class HumeVoiceService {
 
   // Check if the connection is active
   checkConnection(): boolean {
-    const isReady = this.isConnected && this.socket && typeof this.socket.sendAudioInput === 'function';
-    console.log('[HumeVoiceService] Connection check:', {
-      isConnected: this.isConnected,
-      hasSocket: !!this.socket,
-      hasMethod: this.socket ? typeof this.socket.sendAudioInput === 'function' : false,
-      isReady
-    });
-    return isReady;
+    if (!this.socket || !this.isConnected) {
+      console.warn('[HumeVoiceService] Not connected');
+      return false;
+    }
+    
+    // Check if socket has required methods
+    if (typeof this.socket.sendAudioInput !== 'function') {
+      console.error('[HumeVoiceService] Socket missing required methods');
+      return false;
+    }
+    
+    // Additional WebSocket state check
+    const ws = this.getUnderlyingWebSocket();
+    if (ws && ws.readyState !== 1) { // 1 = WebSocket.OPEN
+      console.error('[HumeVoiceService] WebSocket not in OPEN state:', ws.readyState);
+      return false;
+    }
+    
+    return true;
+  }
+  
+  private getUnderlyingWebSocket(): WebSocket | null {
+    if (!this.socket) return null;
+    
+    // Try to find the underlying WebSocket
+    const possibleProps = ['_socket', 'socket', 'ws', '_ws', 'webSocket', '_webSocket'];
+    for (const prop of possibleProps) {
+      const ws = (this.socket as any)[prop];
+      if (ws && typeof ws.readyState === 'number') {
+        return ws;
+      }
+    }
+    
+    // Check if socket itself is a WebSocket
+    if ((this.socket as any).readyState !== undefined) {
+      return this.socket as any;
+    }
+    
+    return null;
   }
 
   getConnectionStatus(): { connected: boolean; configId?: string; hasClient: boolean } {

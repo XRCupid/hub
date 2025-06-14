@@ -182,19 +182,19 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
   }, [scene]);
 
   // Load basic idle animation - most subtle option
-  const idleAnimationUrl = '/animations/feminine/idle/F_Standing_Idle_001.glb';
+  const idleAnimationUrl = '/animations/M_Standing_Idle_Variations_001.glb';
   const { animations: idleAnimations } = useGLTF(idleAnimationUrl);
   useGLTF.preload(idleAnimationUrl);
 
   // Load talking animations
-  const talkingAnimationUrls = [
-    '/animations/feminine/talk/F_Talking_Variations_001.glb',
-    '/animations/feminine/talk/F_Talking_Variations_002.glb',
-    '/animations/feminine/talk/F_Talking_Variations_003.glb',
-    '/animations/feminine/talk/F_Talking_Variations_004.glb',
-    '/animations/feminine/talk/F_Talking_Variations_005.glb',
-    '/animations/feminine/talk/F_Talking_Variations_006.glb'
-  ];
+  const talkingAnimationUrls = useMemo(() => [
+    '/animations/M_Talking_Variations_001.glb',
+    '/animations/M_Talking_Variations_002.glb', 
+    '/animations/M_Talking_Variations_003.glb',
+    '/animations/M_Talking_Variations_004.glb',
+    '/animations/M_Talking_Variations_005.glb',
+    '/animations/M_Talking_Variations_006.glb'
+  ], []);
   
   // Load all talking animations separately
   const { animations: talking1 } = useGLTF(talkingAnimationUrls[0]);
@@ -577,6 +577,8 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
 
   // useFrame hook for real-time updates
   useFrame((state, delta) => {
+    frameCountRef.current++;
+    const morphMesh = meshWithMorphTargets.current;
     if (!modelRootRef.current) return;
 
     const currentFrameCount = state.clock.elapsedTime * 60; // Approximate frame count
@@ -609,7 +611,6 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       console.log('[PresenceAvatar useFrame] Processing tracking data:', trackingDataRef.current);
     }
 
-    const mesh = meshWithMorphTargets.current;
     // Initialize target morph values for this frame
     const frameMorphTargetValues: Record<string, number> = {};
     const expressionLerpFactor = 0.7; // Increased for near 1:1 responsiveness
@@ -623,16 +624,16 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
     if (frameCountRef.current % 30 === 0) {
       console.log('[PresenceAvatar] Lip sync check:', {
         animationName,
-        hasMorphTargetDictionary: !!mesh.morphTargetDictionary,
-        morphTargetKeys: mesh.morphTargetDictionary ? Object.keys(mesh.morphTargetDictionary).slice(0, 10) : [],
+        hasMorphTargetDictionary: !!morphMesh?.morphTargetDictionary,
+        morphTargetKeys: morphMesh?.morphTargetDictionary ? Object.keys(morphMesh.morphTargetDictionary).slice(0, 10) : [],
         hasAudioData: !!audioData && audioData.length > 0,
         isCoachAvatar,
-        meshType: mesh.type,
-        meshName: mesh.name
+        meshType: morphMesh?.type,
+        meshName: morphMesh?.name
       });
     }
     
-    if (animationName === 'talking' && audioData && audioData.length > 0 && mesh.morphTargetDictionary) {
+    if (animationName === 'talking' && audioData && audioData.length > 0 && morphMesh?.morphTargetDictionary) {
       // TEST MODE: Force lip sync movement when talking
       const testMode = false; // Disable test mode now that we know it works!
       
@@ -654,10 +655,10 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
         
         let foundAnyTarget = false;
         allMouthTargets.forEach(target => {
-          if (mesh.morphTargetDictionary && mesh.morphTargetDictionary[target] !== undefined) {
-            const morphIndex = mesh.morphTargetDictionary[target];
-            if (mesh.morphTargetInfluences && morphIndex !== undefined) {
-              mesh.morphTargetInfluences[morphIndex] = testValue;
+          if (morphMesh?.morphTargetDictionary && morphMesh.morphTargetDictionary[target] !== undefined) {
+            const morphIndex = morphMesh.morphTargetDictionary[target];
+            if (morphMesh.morphTargetInfluences && morphIndex !== undefined) {
+              morphMesh.morphTargetInfluences[morphIndex] = testValue;
               foundAnyTarget = true;
               if (frameCountRef.current % 30 === 0) { // Log less frequently
                 console.log(`[PresenceAvatar] TEST MODE - Applied to ${target}:`, testValue);
@@ -668,7 +669,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
         
         if (!foundAnyTarget && frameCountRef.current % 60 === 0) {
           console.error('[PresenceAvatar] TEST MODE - No mouth morph targets found! Available targets:', 
-            Object.keys(mesh.morphTargetDictionary || {}));
+            Object.keys(morphMesh?.morphTargetDictionary || {}));
         }
         
         return; // Skip normal lip sync processing in test mode
@@ -700,14 +701,14 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       let jawTargetFound = false;
       
       for (const target of possibleJawTargets) {
-        if (mesh.morphTargetDictionary && mesh.morphTargetDictionary[target] !== undefined) {
+        if (morphMesh?.morphTargetDictionary && morphMesh.morphTargetDictionary[target] !== undefined) {
           // Reduced multiplier for more natural mouth movement
           const lipSyncValue = MathUtils.clamp(combinedEnergy * 2.0, 0, 0.4); // Reduced from 10.0 to 2.0, max 0.4
           
           // Force set the value directly to ensure it's not overridden
-          const morphIndex = mesh.morphTargetDictionary[target];
-          if (mesh.morphTargetInfluences && morphIndex !== undefined) {
-            mesh.morphTargetInfluences[morphIndex] = lipSyncValue;
+          const morphIndex = morphMesh.morphTargetDictionary[target];
+          if (morphMesh.morphTargetInfluences && morphIndex !== undefined) {
+            morphMesh.morphTargetInfluences[morphIndex] = lipSyncValue;
           }
           
           // Also apply to related mouth shapes for more visible effect
@@ -715,20 +716,20 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
             // Apply to other mouth-related morph targets if they exist
             const relatedTargets = ['mouthSmileLeft', 'mouthSmileRight', 'mouthLeft', 'mouthRight', 'mouthPucker', 'mouthFunnel', 'mouthDimpleLeft', 'mouthDimpleRight'];
             relatedTargets.forEach(related => {
-              if (mesh.morphTargetDictionary && mesh.morphTargetDictionary[related] !== undefined) {
-                const relatedIndex = mesh.morphTargetDictionary[related];
-                if (mesh.morphTargetInfluences) {
-                  mesh.morphTargetInfluences[relatedIndex] = lipSyncValue * 0.3; // Reduced from 0.7 to 0.3
+              if (morphMesh?.morphTargetDictionary && morphMesh.morphTargetDictionary[related] !== undefined) {
+                const relatedIndex = morphMesh.morphTargetDictionary[related];
+                if (morphMesh.morphTargetInfluences) {
+                  morphMesh.morphTargetInfluences[relatedIndex] = lipSyncValue * 0.3; // Reduced from 0.7 to 0.3
                 }
               }
             });
           }
           
           // For RPM avatars with numbered targets, apply to secondary target
-          if (target === '0' && mesh.morphTargetDictionary && mesh.morphTargetDictionary['1'] !== undefined) {
-            const secondaryIndex = mesh.morphTargetDictionary['1'];
-            if (mesh.morphTargetInfluences && secondaryIndex !== undefined) {
-              mesh.morphTargetInfluences[secondaryIndex] = lipSyncValue * 0.5;
+          if (target === '0' && morphMesh?.morphTargetDictionary && morphMesh.morphTargetDictionary['1'] !== undefined) {
+            const secondaryIndex = morphMesh.morphTargetDictionary['1'];
+            if (morphMesh.morphTargetInfluences && secondaryIndex !== undefined) {
+              morphMesh.morphTargetInfluences[secondaryIndex] = lipSyncValue * 0.5;
             }
           }
           
@@ -753,7 +754,7 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       }
       
       if (!jawTargetFound) {
-        console.warn('[PresenceAvatar] No jaw/mouth morph target found! Available targets:', Object.keys(mesh.morphTargetDictionary || {}));
+        console.warn('[PresenceAvatar] No jaw/mouth morph target found! Available targets:', Object.keys(morphMesh?.morphTargetDictionary || {}));
       }
     }
     
@@ -795,41 +796,39 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
     }
 
     // Apply the final frameMorphTargetValues to the actual morph targets with smoothing
-    if (mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
+    if (morphMesh?.morphTargetDictionary && morphMesh?.morphTargetInfluences) {
       // Track which morph targets were set by lip sync to avoid overriding them
       const lipSyncTargets = ['jawOpen', 'mouthOpen', 'viseme_aa', 'viseme_O', 'mouthSmileLeft', 'mouthSmileRight', 'mouthLeft', 'mouthRight', 'mouthPucker'];
       
-      Object.keys(mesh.morphTargetDictionary).forEach(rpmTargetName => {
-        const morphIndex = mesh.morphTargetDictionary![rpmTargetName];
+      Object.keys(morphMesh.morphTargetDictionary).forEach(rpmTargetName => {
+        const morphIndex = morphMesh.morphTargetDictionary![rpmTargetName];
         if (morphIndex !== undefined) {
           // Skip smoothing for lip sync targets when talking
           if (animationName === 'talking' && lipSyncTargets.includes(rpmTargetName)) {
-            // Lip sync values are already set directly, don't override them
-            return;
+            return; // Skip this iteration
           }
           
           const targetValue = frameMorphTargetValues[rpmTargetName] || 0;
-          const currentValue = mesh.morphTargetInfluences![morphIndex] !== undefined ? mesh.morphTargetInfluences![morphIndex] : 0;
+          const currentValue = morphMesh.morphTargetInfluences![morphIndex] !== undefined ? morphMesh.morphTargetInfluences![morphIndex] : 0;
           
           if (Math.abs(currentValue - targetValue) > 0.001) { // Only lerp if there's a change
-            mesh.morphTargetInfluences![morphIndex] = lerp(
+            morphMesh.morphTargetInfluences![morphIndex] = lerp(
               currentValue,
               targetValue,
               expressionLerpFactor
             );
           } else if (targetValue === 0 && currentValue !== 0) {
-             mesh.morphTargetInfluences![morphIndex] = 0; // Snap to 0 if target is 0 and current is not already 0
+             morphMesh.morphTargetInfluences![morphIndex] = 0; // Snap to 0 if target is 0 and current is not already 0
           }
         }
       });
     }
 
-    // Optional: Log active blendshapes count periodically
     const now = Date.now();
     if (now - lastDebugLogRef.current > 5000) { // Log every 5 seconds
       let activeBlendshapes = 0;
-      if (mesh.morphTargetInfluences) {
-        mesh.morphTargetInfluences.forEach((influence) => {
+      if (morphMesh?.morphTargetInfluences) {
+        morphMesh.morphTargetInfluences.forEach((influence) => {
           if (influence > 0.01) activeBlendshapes++;
         });
       }
@@ -837,6 +836,20 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
         console.log(`[PresenceAvatar] Active blendshapes: ${activeBlendshapes}`);
       }
       lastDebugLogRef.current = now;
+    }
+
+    // Log every 60 frames for Dougie
+    if (frameCountRef.current % 60 === 0) {
+      console.log('[PresenceAvatarMasculine/Dougie] Frame update:', {
+        hasMesh: !!morphMesh,
+        morphTargetCount: morphMesh?.morphTargetDictionary ? Object.keys(morphMesh.morphTargetDictionary).length : 0,
+        morphTargets: morphMesh?.morphTargetDictionary ? Object.keys(morphMesh.morphTargetDictionary).slice(0, 5) : [],
+        hasEmotionalBlendshapes: !!emotionalBlendshapes && Object.keys(emotionalBlendshapes).length > 0,
+        emotions: emotionalBlendshapes,
+        animationName,
+        audioDataLength: audioData?.length || 0,
+        participantId
+      });
     }
 
     // Head rotation from tracking data with neck support
@@ -874,6 +887,13 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       headBone.current.rotation.x = lerp(headBone.current.rotation.x, idleNod, 0.1);
     }
   });
+
+  useEffect(() => {
+    console.log('[PresenceAvatarMasculine] Component mounted for Dougie, participantId:', participantId);
+    return () => {
+      console.log('[PresenceAvatarMasculine] Component unmounted');
+    };
+  }, [participantId]);
 
 // Now check if scene is loaded after all hooks
 if (!clonedScene || !modelRootRef.current) {

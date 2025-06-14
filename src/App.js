@@ -117,6 +117,13 @@ import { CupidCursor } from './components/CupidCursor';
 import { TestMicrophone } from './pages/TestMicrophone';
 import { TestPiP } from './pages/TestPiP';
 import EmotionAnalysisShowcase from './components/EmotionAnalysisShowcase';
+import DougieSpeedDate from './components/DougieSpeedDate';
+import DougieSpeedDateSimple from './components/DougieSpeedDateSimple';
+import DougieSpeedDateCoach from './components/DougieSpeedDateCoach';
+import DougieCoachSimple from './components/DougieCoachSimple';
+import DougieCoachWorkingCopy from './components/DougieCoachWorkingCopy';
+import DougieTest from './components/DougieTest';
+import PasswordProtection from './components/PasswordProtection';
 import './App.css';
 
 // Make testBlendshapeCompositor, testRPMIntegration, and testRPMAvatars available globally
@@ -219,6 +226,12 @@ const AppContent = () => {
           <Route path="/test-pip" element={<TestPiP />} />
           <Route path="/emotion-showcase" element={<EmotionAnalysisShowcase />} />
           <Route path="/emotion-analysis" element={<EmotionAnalysisShowcase />} />
+          <Route path="/speed-date-dougie" element={<DougieSpeedDate />} />
+          <Route path="/speed-date-simple" element={<DougieSpeedDateSimple />} />
+          <Route path="/dougie-coach" element={<DougieSpeedDateCoach />} />
+          <Route path="/dougie-coach-simple" element={<DougieCoachSimple />} />
+          <Route path="/dougie-coach-working-copy" element={<DougieCoachWorkingCopy />} />
+          <Route path="/dougie-test" element={<DougieTest />} />
           <Route path="/conference" element={<ConferenceHost />} />
           <Route path="/conference-host" element={<ConferenceHost />} />
           <Route path="/conference-mobile" element={<ConferenceMobile />} />
@@ -275,7 +288,9 @@ function App() {
         }>
           <Router>
             <CupidCursor />
-            <AppContent />
+            <PasswordProtection>
+              <AppContent />
+            </PasswordProtection>
           </Router>
         </Suspense>
       </UserProvider> {/* Closed UserProvider Wrapper */}

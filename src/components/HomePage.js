@@ -80,6 +80,15 @@ const HomePage = () => {
             <h3>Emotion Analysis Lab</h3>
             <p>Real-time facial and voice emotion detection to improve your emotional awareness</p>
           </Link>
+
+          {/* Speed Date with Dougie */}
+          <Link to="/speed-date-dougie" className="feature-card">
+            <div className="feature-icon">
+              <HeartIcon size={40} />
+            </div>
+            <h3>Speed Date with Dougie</h3>
+            <p>Practice your speed dating skills with our charming AI companion in a fun, low-pressure environment</p>
+          </Link>
         </div>
       </section>
 

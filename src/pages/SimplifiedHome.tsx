@@ -97,6 +97,14 @@ const SimplifiedHome: React.FC = () => {
                 Video Practice
               </button>
             </div>
+
+            <div className="feature-card riso-card">
+              <h3>💕 Speed Date with Dougie</h3>
+              <p>Practice speed dating with our charming AI companion</p>
+              <button className="btn-secondary" onClick={() => navigate('/speed-date-dougie')}>
+                Start Speed Date
+              </button>
+            </div>
           </div>
         </div>
 
