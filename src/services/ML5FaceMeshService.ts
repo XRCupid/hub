@@ -190,7 +190,7 @@ export class ML5FaceMeshService implements IFaceTrackingService {
     }
     
     if (!videoElement || !videoElement.videoWidth || !videoElement.videoHeight) {
-      console.error('[ML5FaceMesh] Video element not ready or invalid.');
+      console.warn('[ML5FaceMesh] Video element not ready or invalid.');
       
       // On mobile, wait a bit longer for video to be ready
       if (this.isMobile()) {
@@ -203,10 +203,12 @@ export class ML5FaceMeshService implements IFaceTrackingService {
         }
         
         if (!videoElement.videoWidth || !videoElement.videoHeight) {
-          throw new Error('Video element not ready after mobile wait period.');
+          console.warn('[ML5FaceMesh] Video element not ready after mobile wait period. Skipping face tracking.');
+          return; // Gracefully return instead of throwing
         }
       } else {
-        throw new Error('Video element not ready or invalid.');
+        console.warn('[ML5FaceMesh] Video element not ready or invalid. Skipping face tracking.');
+        return; // Gracefully return instead of throwing
       }
     }
     

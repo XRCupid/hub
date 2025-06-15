@@ -22,10 +22,15 @@ const EMOTION_CONFIG: Record<string, { emoji: string; color: string; description
   admiration: { emoji: '😍', color: '#FF69B4', description: 'Admiring & Impressed' },
   interest: { emoji: '🤔', color: '#A8E6CF', description: 'Interested & Curious' },
   pride: { emoji: '😎', color: '#9370DB', description: 'Proud & Confident' },
+  satisfaction: { emoji: '😊', color: '#90EE90', description: 'Satisfied & Pleased' },
+  relief: { emoji: '😮‍💨', color: '#B0E0E6', description: 'Relief & Release' },
+  ecstasy: { emoji: '🤩', color: '#FF1493', description: 'Ecstatic & Euphoric' },
+  triumph: { emoji: '🏆', color: '#FFD700', description: 'Triumphant & Victorious' },
   
   // Surprise emotions
   surprise: { emoji: '😮', color: '#FFE66D', description: 'Surprised & Shocked' },
   awe: { emoji: '🤯', color: '#FFA500', description: 'In Awe & Wonder' },
+  realization: { emoji: '💡', color: '#FFFF99', description: 'Sudden Understanding' },
   
   // Negative emotions
   confusion: { emoji: '😕', color: '#B4A7D6', description: 'Confused & Puzzled' },
@@ -39,11 +44,34 @@ const EMOTION_CONFIG: Record<string, { emoji: string; color: string; description
   embarrassment: { emoji: '😳', color: '#FFB6C1', description: 'Embarrassed & Shy' },
   shame: { emoji: '😔', color: '#D8BFD8', description: 'Ashamed & Guilty' },
   boredom: { emoji: '😑', color: '#C0C0C0', description: 'Bored & Uninterested' },
+  distress: { emoji: '😣', color: '#CD5C5C', description: 'Distressed & Troubled' },
+  pain: { emoji: '😖', color: '#DC143C', description: 'Physical or Emotional Pain' },
+  guilt: { emoji: '😟', color: '#DDA0DD', description: 'Guilty & Remorseful' },
+  horror: { emoji: '😱', color: '#8B0000', description: 'Horror & Terror' },
+  grief: { emoji: '😭', color: '#4682B4', description: 'Deep Grief & Sorrow' },
+  envy: { emoji: '😒', color: '#9ACD32', description: 'Envious & Jealous' },
   
-  // Neutral
+  // Complex emotions  
+  nostalgia: { emoji: '🥺', color: '#DEB887', description: 'Nostalgic & Wistful' },
+  empathy: { emoji: '🤗', color: '#20B2AA', description: 'Empathetic & Understanding' },
+  sympathy: { emoji: '😔', color: '#7B68EE', description: 'Sympathetic & Caring' },
+  awkwardness: { emoji: '😬', color: '#F0E68C', description: 'Awkward & Uncomfortable' },
+  determination: { emoji: '😤', color: '#FF6347', description: 'Determined & Resolute' },
+  anticipation: { emoji: '😊', color: '#FFA07A', description: 'Anticipation & Expectation' },
+  romantic: { emoji: '😍', color: '#FF69B4', description: 'Romantic & Passionate' },
+  aesthetic_appreciation: { emoji: '😌', color: '#DDA0DD', description: 'Appreciating Beauty' },
+  
+  // Neutral/Calm states
   calmness: { emoji: '😌', color: '#98D8C8', description: 'Calm & Peaceful' },
   concentration: { emoji: '🧐', color: '#87CEEB', description: 'Focused & Concentrated' },
-  neutral: { emoji: '😐', color: '#BDC3C7', description: 'Neutral & Balanced' }
+  contemplation: { emoji: '🤔', color: '#B0C4DE', description: 'Deep Thought' },
+  tiredness: { emoji: '😴', color: '#696969', description: 'Tired & Sleepy' },
+  
+  // Social emotions
+  craving: { emoji: '🤤', color: '#FF7F50', description: 'Craving & Desire' },
+  entrancement: { emoji: '😵‍💫', color: '#9370DB', description: 'Entranced & Mesmerized' },
+  adoration: { emoji: '🥰', color: '#FF1493', description: 'Adoring & Devoted' },
+  desire: { emoji: '😏', color: '#FF6B6B', description: 'Desire & Longing' },
 };
 
 // Generate demo emotions with initial random values

@@ -18,7 +18,7 @@ const DougieSpeedDateCoach: React.FC = () => {
         <p>This feature is temporarily under maintenance.</p>
         <p>Please try the main speed dating feature instead.</p>
         <a 
-          href="/speed-date-dougie" 
+          href="/speed-date-dougie-v2" 
           style={{ 
             color: '#FFD700', 
             textDecoration: 'none',

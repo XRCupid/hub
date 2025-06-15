@@ -18,9 +18,26 @@ import './CoachSession.css';
 const CoachSession: React.FC = () => {
   const { coachId = 'grace' } = useParams<{ coachId: string }>();
   const navigate = useNavigate();
-  
-  // Get coach data
   const coach = getCoachById(coachId);
+
+  // Check WebGL support
+  const [webGLSupported, setWebGLSupported] = useState(true);
+  
+  useEffect(() => {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) {
+        console.warn('[CoachSession] WebGL not supported, using fallback');
+        setWebGLSupported(false);
+      }
+    } catch (e) {
+      console.warn('[CoachSession] WebGL detection failed, using fallback');
+      setWebGLSupported(false);
+    }
+  }, []);
+
+  // Get coach data
   const humeConfig = getHumeCoachConfig(coachId);
   
   // State management
@@ -386,7 +403,7 @@ const CoachSession: React.FC = () => {
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'
         }}>
-          {isConnected && (
+          {isConnected && webGLSupported && (
             <Canvas camera={{ position: [0, 0.8, 3], fov: 35 }}>
               <ambientLight intensity={0.8} />
               <directionalLight position={[0, 1, 2]} intensity={1.2} />
@@ -402,6 +419,43 @@ const CoachSession: React.FC = () => {
               </Suspense>
             </Canvas>
           )}
+          
+          {/* WebGL fallback - show 2D coach representation */}
+          {isConnected && !webGLSupported && coach && (
+            <div className="coach-fallback" style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              color: 'white',
+              textAlign: 'center',
+              padding: '2rem'
+            }}>
+              <div style={{
+                width: '200px',
+                height: '200px',
+                borderRadius: '50%',
+                backgroundColor: coach.color || '#6366f1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '4rem',
+                marginBottom: '1rem',
+                border: '4px solid rgba(255,255,255,0.2)'
+              }}>
+                {coach.name.charAt(0)}
+              </div>
+              <h2>{coach.name}</h2>
+              <p style={{ fontSize: '1.1rem', opacity: 0.8 }}>
+                {isSpeaking ? '🎤 Speaking...' : '👋 Ready to help'}
+              </p>
+              <p style={{ fontSize: '0.9rem', opacity: 0.6, marginTop: '1rem' }}>
+                3D Avatar unavailable (WebGL not supported)
+              </p>
+            </div>
+          )}
+          
           {!isConnected && coach && (
             <div className="coach-preview" style={{
               display: 'flex',

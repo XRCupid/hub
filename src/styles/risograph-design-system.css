@@ -86,7 +86,7 @@ body {
   line-height: 1.5;
   letter-spacing: 0.02em;
   position: relative;
-  overflow-x: hidden;
+  /* overflow-x: hidden; */ /* <--- THIS WAS THE CULPRIT! It was clipping the fixed-position sidebar. */
 }
 
 /* Ethereal Grain Overlay */

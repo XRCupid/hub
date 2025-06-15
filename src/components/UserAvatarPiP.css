@@ -33,18 +33,31 @@
 
 /* Size variants */
 .user-avatar-pip.pip-small {
+  width: 120px !important;
+  height: 120px !important;
+  border-radius: 8px !important;
+}
+
+.user-avatar-pip.pip-small .pip-content {
+  border-radius: 8px !important;
+}
+
+.user-avatar-pip.pip-small .pip-close-button {
+  width: 20px;
+  height: 20px;
+  top: 6px;
+  right: 6px;
+  font-size: 12px;
+}
+
+.user-avatar-pip.pip-medium {
   width: 200px;
   height: 200px;
 }
 
-.user-avatar-pip.pip-medium {
-  width: 300px;
-  height: 300px;
-}
-
 .user-avatar-pip.pip-large {
-  width: 400px;
-  height: 400px;
+  width: 320px;
+  height: 320px;
 }
 
 /* Floating close button */

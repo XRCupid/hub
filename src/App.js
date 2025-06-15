@@ -39,7 +39,6 @@ import { SimpleFaceTrackingDemo } from './components/SimpleFaceTrackingDemo';
 import MorphTargetTest from './components/MorphTargetTest';
 import AvatarInspector from './components/AvatarInspector';
 import { AvatarComparison } from './components/AvatarComparison';
-import TrainingHub from './pages/TrainingHub';
 import AvatarDiagnostic from './components/AvatarDiagnostic';
 import DatingFlow from './components/DatingFlow';
 import SimplifiedHome from './pages/SimplifiedHome';
@@ -93,13 +92,11 @@ import './utils/quickWins'; // Import quick wins utilities
 import './utils/diagnostics'; // Import diagnostics utilities  
 import './utils/offlineMode'; // Import offline mode handler
 import './utils/performanceMonitor'; // Import performance monitor
-import { CurriculumNavigator } from './components/CurriculumNavigator';
+import CurriculumNavigator from './components/CurriculumNavigator';
 import { PerformanceToProgress } from './components/PerformanceToProgress';
 import { CoachingSessionDemo } from './components/CoachingSessionDemo';
-// import InvestmentPitch from './pages/InvestmentPitch';
 import AvatarCreationHub from './pages/AvatarCreationHub';
 import ConferenceDemoLauncher from './components/ConferenceDemoLauncher';
-import { ConversationToolkit } from './components/ConversationToolkit';
 import { SkillTreeDiagram } from './components/SkillTreeDiagram';
 import { InteractiveCurriculumOverview } from './components/InteractiveCurriculumOverview';
 import { InteractiveCurriculumOverviewSimple } from './components/InteractiveCurriculumOverviewSimple';
@@ -111,20 +108,23 @@ import ConferenceBoothDemo from './components/ConferenceBoothDemo'; // Fix impor
 import ConferenceHost from './components/ConferenceHost';
 import ConferenceMobile from './components/ConferenceMobile';
 import ConferenceAudience from './components/ConferenceAudience';
-import DesignShowcase from './pages/DesignShowcase';
 import { HeartIcon, SparkleIcon, RadiatingHeartIcon, WingedHeartIcon } from './components/RisographIcons';
 import { CupidCursor } from './components/CupidCursor';
-import { TestMicrophone } from './pages/TestMicrophone';
-import { TestPiP } from './pages/TestPiP';
+import PasswordProtection from './components/PasswordProtection';
+import './App.css';
+import LiveDemoController from './components/LiveDemoController';
 import EmotionAnalysisShowcase from './components/EmotionAnalysisShowcase';
 import DougieSpeedDate from './components/DougieSpeedDate';
+import DougieSpeedDateV2 from './components/DougieSpeedDateV2';
 import DougieSpeedDateSimple from './components/DougieSpeedDateSimple';
 import DougieSpeedDateCoach from './components/DougieSpeedDateCoach';
 import DougieCoachSimple from './components/DougieCoachSimple';
 import DougieCoachWorkingCopy from './components/DougieCoachWorkingCopy';
 import DougieTest from './components/DougieTest';
-import PasswordProtection from './components/PasswordProtection';
-import './App.css';
+import RealInvestorDemo from './components/RealInvestorDemo';
+import SimpleInvestorDemo from './components/SimpleInvestorDemo';
+import { TestMicrophone } from './pages/TestMicrophone';
+import { TestPiP } from './pages/TestPiP';
 
 // Make testBlendshapeCompositor, testRPMIntegration, and testRPMAvatars available globally
 window.testBlendshapeCompositor = testBlendshapeCompositor;
@@ -222,11 +222,14 @@ const AppContent = () => {
           <Route path="/hume-coach-call" element={<HumeCoachCall />} />
           <Route path="/video-chat" element={<VideoChat />} />
           <Route path="/conference-booth" element={<ConferenceBoothDemo />} />
-          <Route path="/test-mic" element={<TestMicrophone />} />
-          <Route path="/test-pip" element={<TestPiP />} />
+          <Route path="/hume-quick-setup" element={<HumeQuickSetup />} />
+          <Route path="/test-simple" element={<div style={{padding: '2rem', color: 'white'}}>TEST ROUTE WORKS!</div>} />
+          <Route path="/investor-demo" element={<SimpleInvestorDemo />} />
+          <Route path="/million-dollar-demo" element={<SimpleInvestorDemo />} />
           <Route path="/emotion-showcase" element={<EmotionAnalysisShowcase />} />
           <Route path="/emotion-analysis" element={<EmotionAnalysisShowcase />} />
           <Route path="/speed-date-dougie" element={<DougieSpeedDate />} />
+          <Route path="/speed-date-dougie-v2" element={<DougieSpeedDateV2 />} />
           <Route path="/speed-date-simple" element={<DougieSpeedDateSimple />} />
           <Route path="/dougie-coach" element={<DougieSpeedDateCoach />} />
           <Route path="/dougie-coach-simple" element={<DougieCoachSimple />} />
@@ -241,19 +244,12 @@ const AppContent = () => {
           <Route path="/test" element={<TestComponent />} />
           <Route path="/sample-lessons" element={<SampleLessons />} />
           <Route path="/interactive-curriculum-overview" element={<InteractiveCurriculumOverview />} />
-          <Route path="/training-hub" element={<TrainingHub />} />
-          <Route path="/design-showcase" element={<DesignShowcase />} />
-          <Route path="/conversation-toolkit" element={<ConversationToolkit />} />
-          <Route path="/hume-quick-setup" element={<HumeQuickSetup />} />
           {/* Debug Routes */}
           <Route path="/env-check" element={<EnvCheck />} />
           <Route path="/hume-debug" element={<HumeConnectionDebug />} />
           
           {/* Enhanced Coach Sessions */}
           <Route path="/enhanced-coach" element={<EnhancedCoachSession />} />
-          {/* REDIRECTING TO SAFE COACH SESSION TO PREVENT AUTO-CONNECT */}
-          <Route path="/coach-rizzo" element={<CoachSession />} />
-          <Route path="/coach-posie" element={<CoachSession />} />
           <Route path="/coaching-demo" element={<CoachingSessionDemo />} />
           
           {/* Avatar Creation Hub */}
@@ -261,6 +257,9 @@ const AppContent = () => {
           
           {/* Practice Date with NPC */}
           <Route path="/practice-date/:npcId" element={<PracticeDate />} />
+          
+          <Route path="/live-demo-controller" element={<LiveDemoController />} />
+          <Route path="/demo-controller" element={<LiveDemoController />} />
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

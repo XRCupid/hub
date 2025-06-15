@@ -57,6 +57,7 @@ const COMPUTER_VISION_FEATURES: ComputerVisionFeature[] = [
 
 interface ExtendedModule extends CurriculumModule {
   computerVisionFeatures?: string[];
+  coach?: string;
 }
 
 export const InteractiveCurriculumOverview: React.FC = () => {
@@ -65,8 +66,26 @@ export const InteractiveCurriculumOverview: React.FC = () => {
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
   const [selectedLesson, setSelectedLesson] = useState<{lesson: Lesson, moduleTitle: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCVFeatures, setShowCVFeatures] = useState(true);
+  const [showCVFeatures, setShowCVFeatures] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  const [userProgress] = useState({
+    completedModules: ['foundation-conversation', 'foundation-body-language'],
+    completedLessons: new Set(['active-listening', 'confident-posture'])
+  });
+
+  // Since we don't have coach-specific modules in our simplified structure,
+  // let's assign coaches to modules based on their content
+  const assignCoachToModule = (module: CurriculumModule): string => {
+    const titleLower = module.title.toLowerCase();
+    if (titleLower.includes('emotional') || titleLower.includes('empathy')) {
+      return 'grace';
+    } else if (titleLower.includes('confidence') || titleLower.includes('communication')) {
+      return 'rizzo';
+    } else {
+      return 'grace'; // default coach
+    }
+  };
 
   const coachInfo = {
     grace: {
@@ -98,39 +117,21 @@ export const InteractiveCurriculumOverview: React.FC = () => {
   // Get all modules with CV features mapped
   const getAllModules = () => {
     const modules: CurriculumModule[] = [];
-    Object.entries(CURRICULUM_STRUCTURE).forEach(([coach, curriculum]) => {
-      if (curriculum.modules) {
-        ['foundation', 'intermediate', 'advanced'].forEach(level => {
-          const levelModules = curriculum.modules[level as keyof typeof curriculum.modules];
-          if (levelModules && Array.isArray(levelModules)) {
-            levelModules.forEach((module: any) => {
-              // Create a proper CurriculumModule from the simpler structure
-              const lessonObjects: Lesson[] = (module.lessons || []).map((lessonTitle: string, idx: number) => ({
-                id: `${module.id}-lesson-${idx}`,
-                title: lessonTitle,
-                duration: 30,
-                type: 'practice' as const,
-                content: `Learn and practice ${lessonTitle}`,
-                exercises: [],
-                keyTakeaways: []
-              }));
-
-              const fullModule: CurriculumModule = {
-                id: module.id,
-                title: module.title,
-                coach: coach as 'grace' | 'posie' | 'rizzo',
-                level: level as 'foundation' | 'intermediate' | 'advanced',
-                description: `Master ${module.title} with ${curriculum.name}`,
-                lessons: lessonObjects,
-                unlockCriteria: {},
-                ethicsNote: undefined
-              };
-              modules.push(fullModule);
-            });
-          }
+    
+    // Use the simplified structure directly
+    ['foundation', 'intermediate', 'advanced'].forEach(level => {
+      const levelModules = CURRICULUM_STRUCTURE[level as 'foundation' | 'intermediate' | 'advanced'];
+      if (levelModules && Array.isArray(levelModules)) {
+        levelModules.forEach((module: CurriculumModule) => {
+          modules.push({
+            ...module,
+            level,
+            lessons: module.lessons || []
+          });
         });
       }
     });
+    
     return modules;
   };
 
@@ -162,7 +163,8 @@ export const InteractiveCurriculumOverview: React.FC = () => {
       
       return {
         ...module,
-        computerVisionFeatures: cvFeatures
+        computerVisionFeatures: cvFeatures,
+        coach: assignCoachToModule(module)
       };
     });
   };
@@ -355,64 +357,69 @@ export const InteractiveCurriculumOverview: React.FC = () => {
       <div className="curriculum-content">
         {/* Modules Grid */}
         <div className="modules-grid">
-          {filteredModules.map((module) => (
-            <div 
-              key={module.id}
-              className="module-card"
-              style={{ borderColor: coachInfo[module.coach].color }}
-            >
-              <div className="module-header">
-                <span className="coach-badge" style={{ backgroundColor: coachInfo[module.coach].color }}>
-                  {coachInfo[module.coach].icon} {module.coach}
-                </span>
-                <span className="level-badge">
-                  {module.level === 'foundation' ? '🌱' : module.level === 'intermediate' ? '🌿' : '🌳'} {module.level}
-                </span>
-              </div>
-              
-              <h3>{module.title}</h3>
-              <p className="module-description">{module.description || 'Click to view details'}</p>
-              
-              <div className="module-stats">
-                <p className="module-lessons">{module.lessons.length} lessons</p>
-                <p className="module-duration">
-                  {module.lessons.reduce((total, lesson) => total + lesson.duration, 0)} min total
-                </p>
-              </div>
-              
-              {showCVFeatures && module.computerVisionFeatures && module.computerVisionFeatures.length > 0 && (
-                <div className="cv-features-mini">
-                  {module.computerVisionFeatures.slice(0, 3).map((feature: string, idx: number) => (
-                    <span key={idx} className="cv-badge">
-                      {COMPUTER_VISION_FEATURES.find(f => f.name === feature)?.icon} {feature}
-                    </span>
-                  ))}
-                  {module.computerVisionFeatures.length > 3 && (
-                    <span className="cv-badge">+{module.computerVisionFeatures.length - 3} more</span>
-                  )}
+          {filteredModules.map((module) => {
+            const moduleCoach = module.coach || 'grace'; // default coach
+            const coach = coachInfo[moduleCoach as keyof typeof coachInfo] || coachInfo.grace;
+            
+            return (
+              <div 
+                key={module.id}
+                className="module-card"
+                style={{ borderColor: coach.color }}
+              >
+                <div className="module-header">
+                  <span className="coach-badge" style={{ backgroundColor: coach.color }}>
+                    {coach.icon} {moduleCoach}
+                  </span>
+                  <span className="level-badge">
+                    {module.level === 'foundation' ? '🌱' : module.level === 'intermediate' ? '🌿' : '🌳'} {module.level}
+                  </span>
                 </div>
-              )}
-              
-              <div className="lessons">
-                <h4>Lessons:</h4>
-                {module.lessons.map((lesson, idx) => (
-                  <div key={idx} className="lesson-item">
-                    <div 
-                      className="lesson-header"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleLessonClick(lesson, module.title);
-                      }}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <span className="lesson-title">{lesson.title}</span>
-                      <span className="lesson-duration">{lesson.duration}</span>
-                    </div>
+                
+                <h3>{module.title}</h3>
+                <p className="module-description">{module.description || 'Click to view details'}</p>
+                
+                <div className="module-stats">
+                  <p className="module-lessons">{module.lessons.length} lessons</p>
+                  <p className="module-duration">
+                    {module.lessons.reduce((total, lesson) => total + lesson.duration, 0)} min total
+                  </p>
+                </div>
+                
+                {showCVFeatures && module.computerVisionFeatures && module.computerVisionFeatures.length > 0 && (
+                  <div className="cv-features-mini">
+                    {module.computerVisionFeatures.slice(0, 3).map((feature: string, idx: number) => (
+                      <span key={idx} className="cv-badge">
+                        {COMPUTER_VISION_FEATURES.find(f => f.name === feature)?.icon} {feature}
+                      </span>
+                    ))}
+                    {module.computerVisionFeatures.length > 3 && (
+                      <span className="cv-badge">+{module.computerVisionFeatures.length - 3} more</span>
+                    )}
                   </div>
-                ))}
+                )}
+                
+                <div className="lessons">
+                  <h4>Lessons:</h4>
+                  {module.lessons.map((lesson, idx) => (
+                    <div key={idx} className="lesson-item">
+                      <div 
+                        className="lesson-header"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleLessonClick(lesson, module.title);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <span className="lesson-title">{lesson.title}</span>
+                        <span className="lesson-duration">{lesson.duration}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
       {/* Computer Vision Features Overview */}

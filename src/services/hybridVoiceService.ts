@@ -1,11 +1,13 @@
 // Hybrid Voice Service - Combines Hume's emotion tracking with Convai's conversation
 import { HumeVoiceService, EmotionalState } from './humeVoiceService';
 import { ConvaiVoiceServiceV2 } from './convaiVoiceServiceV2';
+import { EventEmitter } from 'events';
 
-export class HybridVoiceService {
+export class HybridVoiceService extends EventEmitter {
   private humeService: HumeVoiceService;
   private convaiService: ConvaiVoiceServiceV2;
   private useHumeForConversation: boolean = true; // Toggle between services
+  private isConnected: boolean = false;
   
   // Callbacks
   private onMessageCallback?: (message: string) => void;
@@ -15,6 +17,7 @@ export class HybridVoiceService {
   private onErrorCallback?: (error: Error) => void;
   
   constructor() {
+    super();
     this.humeService = new HumeVoiceService();
     this.convaiService = new ConvaiVoiceServiceV2();
     
@@ -133,6 +136,8 @@ export class HybridVoiceService {
         this.convaiService.connect(configId) // For conversation
       ]);
     }
+    this.isConnected = true;
+    this.emit('connected');
   }
   
   async disconnect(): Promise<void> {
@@ -140,6 +145,37 @@ export class HybridVoiceService {
       this.humeService.disconnect(),
       this.convaiService.disconnect()
     ]);
+    this.isConnected = false;
+    this.emit('disconnected');
+  }
+  
+  async cleanup(): Promise<void> {
+    console.log('[HybridVoiceService] Performing cleanup...');
+    try {
+      await this.disconnect();
+      this.removeAllListeners();
+      
+      // Clean up individual services if they have public cleanup methods
+      try {
+        if (typeof (this.humeService as any).cleanup === 'function') {
+          await (this.humeService as any).cleanup();
+        }
+      } catch (err) {
+        console.warn('[HybridVoiceService] Hume cleanup failed:', err);
+      }
+      
+      try {
+        if (typeof (this.convaiService as any).cleanup === 'function') {
+          await (this.convaiService as any).cleanup();
+        }
+      } catch (err) {
+        console.warn('[HybridVoiceService] Convai cleanup failed:', err);
+      }
+      
+      console.log('[HybridVoiceService] Cleanup complete');
+    } catch (error) {
+      console.warn('[HybridVoiceService] Error during cleanup:', error);
+    }
   }
   
   // Input methods - matching Hume's API

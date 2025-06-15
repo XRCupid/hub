@@ -3,7 +3,8 @@ import {
   CURRICULUM_STRUCTURE,
   ETHICAL_PRINCIPLES,
   PERFORMANCE_METRICS,
-  CurriculumModule
+  CurriculumModule,
+  Lesson
 } from '../config/curriculumStructure';
 import './CurriculumNavigator.css';
 
@@ -22,9 +23,10 @@ export const CurriculumNavigator: React.FC<CurriculumNavigatorProps> = ({
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [showEthicsPanel, setShowEthicsPanel] = useState(false);
 
-  const curriculum = CURRICULUM_STRUCTURE[selectedCoach];
+  // Use simplified curriculum structure
+  const curriculum = CURRICULUM_STRUCTURE;
 
-  const renderModule = (module: any, level: string) => {
+  const renderModule = (module: CurriculumModule, level: string) => {
     const isCompleted = userProgress.completedModules.includes(module.id);
     const isLocked = level === 'intermediate' && userProgress.completedModules.length < 2 ||
                      level === 'advanced' && userProgress.completedModules.length < 4;
@@ -37,9 +39,10 @@ export const CurriculumNavigator: React.FC<CurriculumNavigatorProps> = ({
       >
         <h4>{module.title}</h4>
         <div className="module-lessons">
-          {module.lessons.map((lesson: string, idx: number) => (
-            <div key={idx} className="lesson-preview">
-              • {lesson}
+          {module.lessons.map((lesson: Lesson, idx: number) => (
+            <div key={lesson.id || idx} className="lesson-preview">
+              <h4>{lesson.title}</h4>
+              <p>{lesson.description}</p>
             </div>
           ))}
         </div>
@@ -49,37 +52,45 @@ export const CurriculumNavigator: React.FC<CurriculumNavigatorProps> = ({
     );
   };
 
-  const renderMetrics = () => {
+  const renderPerformanceBar = (metricName: string, value: number) => {
+    const metric = PERFORMANCE_METRICS[metricName as keyof typeof PERFORMANCE_METRICS];
+    if (!metric || !metric.idealRange) return null;
+
+    const { min, max } = metric.idealRange;
+    const percentage = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+    
     return (
-      <div className="metrics-panel">
-        <h3>Your Performance Metrics</h3>
-        {Object.entries(PERFORMANCE_METRICS).map(([key, metric]) => {
-          const value = userProgress.currentMetrics[key] || 0;
-          const inRange = value >= metric.idealRange[0] && value <= metric.idealRange[1];
-          
-          return (
-            <div key={key} className="metric-item">
-              <div className="metric-header">
-                <span className="metric-name">{metric.name}</span>
-                <span className={`metric-value ${inRange ? 'good' : 'needs-work'}`}>
-                  {(value * 100).toFixed(0)}%
-                </span>
-              </div>
-              <div className="metric-description">{metric.description}</div>
-              <div className="metric-bar">
-                <div className="ideal-range" 
-                     style={{
-                       left: `${metric.idealRange[0] * 100}%`,
-                       width: `${(metric.idealRange[1] - metric.idealRange[0]) * 100}%`
-                     }}
-                />
-                <div className="current-value" 
-                     style={{ left: `${value * 100}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
+      <div className="performance-bar">
+        <div className="bar-track">
+          <div 
+            className="bar-fill"
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+        <span className="bar-value">{value}%</span>
+      </div>
+    );
+  };
+
+  const renderCurrentMetrics = () => {
+    if (!userProgress.currentMetrics || Object.keys(userProgress.currentMetrics).length === 0) {
+      return (
+        <div className="current-metrics">
+          <h4>Current Performance</h4>
+          <p>Complete lessons to see your performance metrics</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="current-metrics">
+        <h4>Current Performance</h4>
+        {Object.entries(userProgress.currentMetrics).map(([key, value]) => (
+          <div key={key} className="metric-item">
+            <span className="metric-name">{PERFORMANCE_METRICS[key as keyof typeof PERFORMANCE_METRICS]?.name || key}</span>
+            {renderPerformanceBar(key, value as number)}
+          </div>
+        ))}
       </div>
     );
   };
@@ -122,15 +133,15 @@ export const CurriculumNavigator: React.FC<CurriculumNavigatorProps> = ({
   return (
     <div className="curriculum-navigator">
       <div className="coach-header">
-        <h2>{curriculum.name}'s Curriculum</h2>
-        <p className="coach-focus">{curriculum.focus}</p>
+        <h2>Curriculum</h2>
+        <p className="coach-focus"></p>
       </div>
 
       <div className="curriculum-levels">
         <div className="level-section">
           <h3>Foundation Level</h3>
           <div className="modules-grid">
-            {curriculum.modules.foundation.map(module => 
+            {curriculum.foundation.map((module: CurriculumModule) => 
               renderModule(module, 'foundation')
             )}
           </div>
@@ -139,7 +150,7 @@ export const CurriculumNavigator: React.FC<CurriculumNavigatorProps> = ({
         <div className="level-section">
           <h3>Intermediate Level</h3>
           <div className="modules-grid">
-            {curriculum.modules.intermediate.map(module => 
+            {curriculum.intermediate.map((module: CurriculumModule) => 
               renderModule(module, 'intermediate')
             )}
           </div>
@@ -148,14 +159,14 @@ export const CurriculumNavigator: React.FC<CurriculumNavigatorProps> = ({
         <div className="level-section">
           <h3>Advanced Level</h3>
           <div className="modules-grid">
-            {curriculum.modules.advanced.map(module => 
+            {curriculum.advanced.map((module: CurriculumModule) => 
               renderModule(module, 'advanced')
             )}
           </div>
         </div>
       </div>
 
-      {renderMetrics()}
+      {renderCurrentMetrics()}
       {renderEthicsPanel()}
 
       <div className="progress-summary">

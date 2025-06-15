@@ -1,0 +1,360 @@
+/* Basic NPC Scenarios Styling */
+
+.basic-npc-scenarios {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Inter', sans-serif;
+}
+
+.basic-npc-scenarios h2 {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 30px;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+/* Scenario Selection Screen */
+.scenario-selection h3 {
+  color: #34495e;
+  margin-bottom: 20px;
+  font-size: 1.3rem;
+  text-align: center;
+}
+
+.scenario-card {
+  background: white;
+  border: 2px solid #e3f2fd;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.scenario-card:hover {
+  border-color: #2196f3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(33, 150, 243, 0.15);
+}
+
+.scenario-card h4 {
+  color: #1976d2;
+  margin: 0 0 10px 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.scenario-card p {
+  color: #555;
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+.difficulty {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin: 10px 10px 0 0;
+}
+
+.difficulty:contains("easy") {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.difficulty:contains("medium") {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.difficulty:contains("hard") {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.objective {
+  color: #666;
+  font-style: italic;
+  margin-top: 10px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #2196f3;
+}
+
+/* Active Scenario Screen */
+.active-scenario {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.scenario-header {
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+}
+
+.scenario-header h3 {
+  color: #1976d2;
+  margin: 0 0 10px 0;
+  font-size: 1.4rem;
+}
+
+.scenario-header p {
+  color: #666;
+  margin: 0;
+  font-style: italic;
+}
+
+.scenario-header button {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  margin-top: 10px;
+  color: #555;
+  transition: all 0.2s ease;
+}
+
+.scenario-header button:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+/* Conversation Area */
+.conversation-area {
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.message {
+  margin-bottom: 15px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.message.user {
+  background: #2196f3;
+  color: white;
+  margin-left: auto;
+  margin-right: 0;
+  text-align: right;
+}
+
+.message.npc {
+  background: white;
+  color: #333;
+  border: 1px solid #e0e0e0;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.message strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* Input Area */
+.input-area {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.input-area input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.input-area input:focus {
+  border-color: #2196f3;
+}
+
+.input-area button {
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+.input-area button:hover {
+  background: #1976d2;
+}
+
+.input-area button:disabled {
+  background: #bbb;
+  cursor: not-allowed;
+}
+
+/* Coaching Hints */
+.coaching-hints {
+  background: #e8f5e8;
+  border: 1px solid #c8e6c9;
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 20px;
+}
+
+.coaching-hints h4 {
+  color: #2e7d32;
+  margin: 0 0 10px 0;
+  font-size: 1.1rem;
+}
+
+.coaching-hints ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #4caf50;
+}
+
+.coaching-hints li {
+  margin-bottom: 5px;
+  line-height: 1.4;
+}
+
+/* Performance Indicators */
+.performance-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: white;
+  border: 2px solid #2196f3;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.performance-indicator h4 {
+  margin: 0 0 10px 0;
+  color: #1976d2;
+  font-size: 1rem;
+}
+
+.performance-metric {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.performance-score {
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .basic-npc-scenarios {
+    padding: 15px;
+  }
+  
+  .scenario-card {
+    padding: 15px;
+  }
+  
+  .conversation-area {
+    padding: 15px;
+    max-height: 300px;
+  }
+  
+  .message {
+    max-width: 90%;
+    padding: 10px 12px;
+  }
+  
+  .input-area {
+    flex-direction: column;
+  }
+  
+  .input-area button {
+    margin-top: 10px;
+  }
+  
+  .performance-indicator {
+    position: relative;
+    top: auto;
+    right: auto;
+    margin: 20px 0;
+  }
+}
+
+/* Animation for messages appearing */
+@keyframes messageAppear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message {
+  animation: messageAppear 0.3s ease-out;
+}
+
+/* Loading state for NPC responses */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #999;
+  font-style: italic;
+  padding: 10px 16px;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  background: #999;
+  border-radius: 50%;
+  animation: typingDots 1.4s infinite ease-in-out both;
+}
+
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typingDots {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

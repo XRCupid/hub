@@ -76,7 +76,7 @@ class WebSocketManager {
             socket.send(JSON.stringify({ type: 'ping' }));
             connection.lastPing = Date.now();
           } catch (error) {
-            console.error(`[WebSocketManager] Error sending ping:`, error);
+            console.warn(`[WebSocketManager] Error sending ping:`, error);
           }
         }
       }, 30000); // Send ping every 30 seconds

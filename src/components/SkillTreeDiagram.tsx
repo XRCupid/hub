@@ -52,16 +52,16 @@ export const SkillTreeDiagram: React.FC = () => {
 
   const renderConnections = (coach: string) => {
     const modules = [
-      ...CURRICULUM_STRUCTURE[coach as keyof typeof CURRICULUM_STRUCTURE].modules.foundation,
-      ...CURRICULUM_STRUCTURE[coach as keyof typeof CURRICULUM_STRUCTURE].modules.intermediate,
-      ...CURRICULUM_STRUCTURE[coach as keyof typeof CURRICULUM_STRUCTURE].modules.advanced
+      ...CURRICULUM_STRUCTURE.foundation,
+      ...CURRICULUM_STRUCTURE.intermediate,
+      ...CURRICULUM_STRUCTURE.advanced
     ];
 
     const connections: JSX.Element[] = [];
     
     // Foundation to Intermediate connections
-    CURRICULUM_STRUCTURE[coach as keyof typeof CURRICULUM_STRUCTURE].modules.foundation.forEach((fModule: any, fIdx: number) => {
-      CURRICULUM_STRUCTURE[coach as keyof typeof CURRICULUM_STRUCTURE].modules.intermediate.forEach((iModule: any, iIdx: number) => {
+    CURRICULUM_STRUCTURE.foundation.forEach((fModule: any, fIdx: number) => {
+      CURRICULUM_STRUCTURE.intermediate.forEach((iModule: any, iIdx: number) => {
         connections.push(
           <line
             key={`${fModule.id}-${iModule.id}`}
@@ -78,8 +78,8 @@ export const SkillTreeDiagram: React.FC = () => {
     });
 
     // Intermediate to Advanced connections
-    CURRICULUM_STRUCTURE[coach as keyof typeof CURRICULUM_STRUCTURE].modules.intermediate.forEach((iModule: any, iIdx: number) => {
-      CURRICULUM_STRUCTURE[coach as keyof typeof CURRICULUM_STRUCTURE].modules.advanced.forEach((aModule: any, aIdx: number) => {
+    CURRICULUM_STRUCTURE.intermediate.forEach((iModule: any, iIdx: number) => {
+      CURRICULUM_STRUCTURE.advanced.forEach((aModule: any, aIdx: number) => {
         connections.push(
           <line
             key={`${iModule.id}-${aModule.id}`}
@@ -99,7 +99,7 @@ export const SkillTreeDiagram: React.FC = () => {
   };
 
   const renderCoachTree = (coach: string, xOffset: number) => {
-    const curriculum = CURRICULUM_STRUCTURE[coach as keyof typeof CURRICULUM_STRUCTURE];
+    const curriculum = CURRICULUM_STRUCTURE;
     
     return (
       <g transform={`translate(${xOffset}, 100)`}>
@@ -131,22 +131,22 @@ export const SkillTreeDiagram: React.FC = () => {
         {renderConnections(coach)}
 
         {/* Modules */}
-        {curriculum.modules.foundation.map((module: any, idx: number) => renderModuleNode(module, coach, 'foundation', idx))}
-        {curriculum.modules.intermediate.map((module: any, idx: number) => renderModuleNode(module, coach, 'intermediate', idx))}
-        {curriculum.modules.advanced.map((module: any, idx: number) => renderModuleNode(module, coach, 'advanced', idx))}
+        {CURRICULUM_STRUCTURE.foundation.map((module: any, idx: number) => renderModuleNode(module, coach, 'foundation', idx))}
+        {CURRICULUM_STRUCTURE.intermediate.map((module: any, idx: number) => renderModuleNode(module, coach, 'intermediate', idx))}
+        {CURRICULUM_STRUCTURE.advanced.map((module: any, idx: number) => renderModuleNode(module, coach, 'advanced', idx))}
       </g>
     );
   };
 
-  const totalModules = Object.values(CURRICULUM_STRUCTURE).reduce((total, coach) => 
-    total + coach.modules.foundation.length + coach.modules.intermediate.length + coach.modules.advanced.length, 0
-  );
+  const totalModules = CURRICULUM_STRUCTURE.foundation.length + 
+    CURRICULUM_STRUCTURE.intermediate.length + 
+    CURRICULUM_STRUCTURE.advanced.length;
 
-  const totalLessons = Object.values(CURRICULUM_STRUCTURE).reduce((total, coach) => {
-    const coachLessons = [...coach.modules.foundation, ...coach.modules.intermediate, ...coach.modules.advanced]
-      .reduce((sum, module) => sum + module.lessons.length, 0);
-    return total + coachLessons;
-  }, 0);
+  const totalLessons = [
+    ...CURRICULUM_STRUCTURE.foundation,
+    ...CURRICULUM_STRUCTURE.intermediate,
+    ...CURRICULUM_STRUCTURE.advanced
+  ].reduce((total, module) => total + module.lessons.length, 0);
 
   return (
     <div className="skill-tree-diagram">

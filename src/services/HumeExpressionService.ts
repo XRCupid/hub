@@ -160,20 +160,27 @@ export class HumeExpressionService {
         
         this.socket.onopen = () => {
           console.log('[HumeExpressionService] WebSocket connected');
-          // Send initial configuration
-          this.socket!.send(JSON.stringify({
-            models: {
-              face: {
-                fps_pred: 3, // 3 predictions per second
-                prob_threshold: 0.1,
-                identify_faces: false,
-                min_face_size: 60
-              }
-            },
-            raw_text: false,
-            data: null
-          }));
-          resolve();
+          // Add small delay to ensure connection is fully established
+          setTimeout(() => {
+            if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+              // Send initial configuration
+              this.socket.send(JSON.stringify({
+                models: {
+                  face: {
+                    fps_pred: 3, // 3 predictions per second
+                    prob_threshold: 0.1,
+                    identify_faces: false,
+                    min_face_size: 60
+                  }
+                },
+                raw_text: false,
+                data: null
+              }));
+              resolve();
+            } else {
+              reject(new Error('WebSocket connection failed'));
+            }
+          }, 100); // 100ms delay
         };
 
         this.socket.onmessage = (event) => {

@@ -1,32 +1,79 @@
 import React from 'react';
-import { DatingPerformance, PERFORMANCE_METRICS } from '../config/curriculumStructure';
+import { DatingPerformance } from '../config/curriculumStructure';
 import './PerformanceToProgress.css';
 
 interface PerformanceToProgressProps {
   lastDatePerformance?: DatingPerformance;
-  overallProgress: {
-    totalDates: number;
-    averageScores: Record<string, number>;
-    unlockedModules: string[];
-    nextUnlocks: Array<{
-      moduleName: string;
-      requirement: string;
-      progress: number;
-    }>;
-  };
+}
+
+interface ProgressTopic {
+  current: number;
+  target: number;
+  trend: number;
+  recommendations: string[];
 }
 
 export const PerformanceToProgress: React.FC<PerformanceToProgressProps> = ({
-  lastDatePerformance,
-  overallProgress
+  lastDatePerformance
 }) => {
-  // Provide default values if overallProgress is not provided
-  const safeOverallProgress = overallProgress || {
-    totalDates: 0,
-    averageScores: {},
-    unlockedModules: [],
-    nextUnlocks: []
+  const getProgressByTopic = (topic: string): ProgressTopic => {
+    if (!lastDatePerformance) {
+      return {
+        current: 0,
+        target: 80,
+        trend: 0,
+        recommendations: [`Start with basic ${topic} skills`]
+      };
+    }
+
+    let current = 0;
+    let recommendations: string[] = [];
+
+    switch (topic) {
+      case 'conversation':
+        current = lastDatePerformance.conversationFlow || 0;
+        if (current < 50) {
+          recommendations.push('Practice active listening techniques');
+          recommendations.push('Work on asking engaging questions');
+        }
+        break;
+      case 'emotional_intelligence':
+        current = lastDatePerformance.emotionalRegulation || 0;
+        if (current < 60) {
+          recommendations.push('Practice emotional awareness exercises');
+          recommendations.push('Learn to recognize emotional cues');
+        }
+        break;
+      case 'chemistry':
+        current = lastDatePerformance.authenticity || 0;
+        if (current < 70) {
+          recommendations.push('Focus on being genuinely yourself');
+          recommendations.push('Work on natural conversation flow');
+        }
+        break;
+      case 'respect':
+        current = lastDatePerformance.boundaryRecognition || 0;
+        if (current < 80) {
+          recommendations.push('Study consent and boundary recognition');
+          recommendations.push('Practice respectful communication');
+        }
+        break;
+      default:
+        current = lastDatePerformance.overallScore || 0;
+        recommendations.push('Continue practicing core dating skills');
+    }
+
+    const trend = current > 70 ? 5 : current > 50 ? 2 : -3;
+
+    return {
+      current,
+      target: 80,
+      trend,
+      recommendations
+    };
   };
+
+  const overallProgress = lastDatePerformance?.overallScore || 0;
 
   const renderLastDateAnalysis = () => {
     if (!lastDatePerformance) return null;
@@ -40,59 +87,52 @@ export const PerformanceToProgress: React.FC<PerformanceToProgressProps> = ({
             <h4>Conversation Skills</h4>
             <div className="skill-breakdown">
               <div className="skill-item">
-                <span>Flow Score</span>
+                <span>Conversation Flow</span>
                 <div className="skill-bar">
                   <div 
                     className="skill-fill"
-                    style={{ width: `${lastDatePerformance.conversationMetrics.flowScore * 100}%` }}
+                    style={{ width: `${lastDatePerformance.conversationFlow * 100}%` }}
                   />
                 </div>
                 <span className="skill-value">
-                  {(lastDatePerformance.conversationMetrics.flowScore * 100).toFixed(0)}%
+                  {(lastDatePerformance.conversationFlow * 100).toFixed(0)}%
                 </span>
-              </div>
-              
-              <div className="skill-item">
-                <span>Listening Ratio</span>
-                <div className="skill-bar">
-                  <div 
-                    className="skill-fill"
-                    style={{ width: `${lastDatePerformance.conversationMetrics.listeningRatio * 100}%` }}
-                  />
-                </div>
-                <span className="skill-value">
-                  {(lastDatePerformance.conversationMetrics.listeningRatio * 100).toFixed(0)}%
-                </span>
-              </div>
-              
-              <div className="skill-feedback">
-                {lastDatePerformance.conversationMetrics.listeningRatio < 0.4 && 
-                  "Try asking more open-ended questions and giving space for responses"}
-                {lastDatePerformance.conversationMetrics.listeningRatio > 0.6 && 
-                  "Share more about yourself to create balance"}
               </div>
             </div>
           </div>
 
           <div className="category">
-            <h4>Chemistry Building</h4>
+            <h4>Emotional Intelligence</h4>
             <div className="skill-breakdown">
               <div className="skill-item">
-                <span>Energy Match</span>
+                <span>Emotional Regulation</span>
                 <div className="skill-bar">
                   <div 
                     className="skill-fill"
-                    style={{ width: `${lastDatePerformance.chemistryMetrics.energyMatch * 100}%` }}
+                    style={{ width: `${lastDatePerformance.emotionalRegulation * 100}%` }}
                   />
                 </div>
                 <span className="skill-value">
-                  {(lastDatePerformance.chemistryMetrics.energyMatch * 100).toFixed(0)}%
+                  {(lastDatePerformance.emotionalRegulation * 100).toFixed(0)}%
                 </span>
               </div>
-              
-              <div className="skill-feedback">
-                {lastDatePerformance.chemistryMetrics.energyMatch < 0.7 && 
-                  "Practice matching their enthusiasm level - not too high, not too low"}
+            </div>
+          </div>
+
+          <div className="category">
+            <h4>Chemistry</h4>
+            <div className="skill-breakdown">
+              <div className="skill-item">
+                <span>Authenticity</span>
+                <div className="skill-bar">
+                  <div 
+                    className="skill-fill"
+                    style={{ width: `${lastDatePerformance.authenticity * 100}%` }}
+                  />
+                </div>
+                <span className="skill-value">
+                  {(lastDatePerformance.authenticity * 100).toFixed(0)}%
+                </span>
               </div>
             </div>
           </div>
@@ -104,39 +144,15 @@ export const PerformanceToProgress: React.FC<PerformanceToProgressProps> = ({
                 <span>Boundary Recognition</span>
                 <div className="skill-bar">
                   <div 
-                    className="skill-fill success"
-                    style={{ width: `${lastDatePerformance.respectMetrics.boundaryRecognition * 100}%` }}
+                    className="skill-fill"
+                    style={{ width: `${lastDatePerformance.boundaryRecognition * 100}%` }}
                   />
                 </div>
                 <span className="skill-value">
-                  {(lastDatePerformance.respectMetrics.boundaryRecognition * 100).toFixed(0)}%
+                  {(lastDatePerformance.boundaryRecognition * 100).toFixed(0)}%
                 </span>
               </div>
-              
-              <div className="skill-feedback positive">
-                {lastDatePerformance.respectMetrics.boundaryRecognition > 0.9 && 
-                  "Excellent boundary awareness! This is the foundation of healthy connections."}
-              </div>
             </div>
-          </div>
-        </div>
-
-        <div className="poker-wisdom">
-          <h4>Strategic Insights (From the Poker Table)</h4>
-          <div className="insight">
-            <span className="insight-icon">♠️</span>
-            <p>
-              {lastDatePerformance.conversationMetrics.flowScore > 0.7 
-                ? "You played your hand well - good balance of showing interest and maintaining mystery."
-                : "Remember: Sometimes the best move is to check and let them lead the action."}
-            </p>
-          </div>
-          <div className="insight">
-            <span className="insight-icon">♥️</span>
-            <p>
-              "In dating, like in poker, reading the table is crucial. But unlike poker, 
-              the goal is for everyone to win."
-            </p>
           </div>
         </div>
       </div>
@@ -144,50 +160,107 @@ export const PerformanceToProgress: React.FC<PerformanceToProgressProps> = ({
   };
 
   const renderProgressToUnlocks = () => {
-    // Check if nextUnlocks exists and has items
-    if (!safeOverallProgress.nextUnlocks || safeOverallProgress.nextUnlocks.length === 0) {
-      return (
-        <div className="progress-to-unlocks">
-          <h3>Your Path to Advanced Training</h3>
-          <p className="no-unlocks">Complete more dates to unlock new training modules!</p>
-        </div>
-      );
-    }
+    const conversationProgress = getProgressByTopic('conversation');
+    const emotionalIntelligenceProgress = getProgressByTopic('emotional_intelligence');
+    const chemistryProgress = getProgressByTopic('chemistry');
+    const respectProgress = getProgressByTopic('respect');
 
     return (
       <div className="progress-to-unlocks">
         <h3>Your Path to Advanced Training</h3>
         
         <div className="unlocks-list">
-          {safeOverallProgress.nextUnlocks.map((unlock, idx) => (
-            <div key={idx} className="unlock-item">
-              <div className="unlock-header">
-                <h4>{unlock.moduleName}</h4>
-                <span className="requirement">{unlock.requirement}</span>
-              </div>
-              <div className="unlock-progress">
-                <div className="progress-bar">
-                  <div 
-                    className="progress-fill"
-                    style={{ width: `${unlock.progress * 100}%` }}
-                  />
-                </div>
-                <span className="progress-text">
-                  {(unlock.progress * 100).toFixed(0)}% Complete
-                </span>
-              </div>
+          <div className="unlock-item">
+            <div className="unlock-header">
+              <h4>Conversation Skills</h4>
+              <span className="requirement">Reach 80% conversation flow</span>
             </div>
-          ))}
-        </div>
+            <div className="unlock-progress">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill"
+                  style={{ width: `${conversationProgress.current}%` }}
+                />
+              </div>
+              <span className="progress-text">
+                {conversationProgress.current}% Complete
+              </span>
+            </div>
+            <div className="unlock-recommendations">
+              {conversationProgress.recommendations.map((recommendation, idx) => (
+                <p key={idx}>{recommendation}</p>
+              ))}
+            </div>
+          </div>
 
-        <div className="motivation-message">
-          <p>
-            {safeOverallProgress.totalDates < 3 
-              ? "Keep practicing! Each date teaches valuable lessons."
-              : safeOverallProgress.totalDates < 10
-              ? "You're building solid foundations. Advanced techniques await!"
-              : "You're mastering the art of connection. Keep refining your skills!"}
-          </p>
+          <div className="unlock-item">
+            <div className="unlock-header">
+              <h4>Emotional Intelligence</h4>
+              <span className="requirement">Reach 80% emotional regulation</span>
+            </div>
+            <div className="unlock-progress">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill"
+                  style={{ width: `${emotionalIntelligenceProgress.current}%` }}
+                />
+              </div>
+              <span className="progress-text">
+                {emotionalIntelligenceProgress.current}% Complete
+              </span>
+            </div>
+            <div className="unlock-recommendations">
+              {emotionalIntelligenceProgress.recommendations.map((recommendation, idx) => (
+                <p key={idx}>{recommendation}</p>
+              ))}
+            </div>
+          </div>
+
+          <div className="unlock-item">
+            <div className="unlock-header">
+              <h4>Chemistry</h4>
+              <span className="requirement">Reach 80% authenticity</span>
+            </div>
+            <div className="unlock-progress">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill"
+                  style={{ width: `${chemistryProgress.current}%` }}
+                />
+              </div>
+              <span className="progress-text">
+                {chemistryProgress.current}% Complete
+              </span>
+            </div>
+            <div className="unlock-recommendations">
+              {chemistryProgress.recommendations.map((recommendation, idx) => (
+                <p key={idx}>{recommendation}</p>
+              ))}
+            </div>
+          </div>
+
+          <div className="unlock-item">
+            <div className="unlock-header">
+              <h4>Respect & Boundaries</h4>
+              <span className="requirement">Reach 80% boundary recognition</span>
+            </div>
+            <div className="unlock-progress">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill"
+                  style={{ width: `${respectProgress.current}%` }}
+                />
+              </div>
+              <span className="progress-text">
+                {respectProgress.current}% Complete
+              </span>
+            </div>
+            <div className="unlock-recommendations">
+              {respectProgress.recommendations.map((recommendation, idx) => (
+                <p key={idx}>{recommendation}</p>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -205,22 +278,7 @@ export const PerformanceToProgress: React.FC<PerformanceToProgressProps> = ({
 
       <div className="overall-stats">
         <div className="stat-card">
-          <span className="stat-number">{safeOverallProgress.totalDates}</span>
-          <span className="stat-label">Practice Dates</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-number">{safeOverallProgress.unlockedModules.length}</span>
-          <span className="stat-label">Modules Unlocked</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-number">
-            {Math.round(
-              Object.keys(safeOverallProgress.averageScores).length > 0
-                ? Object.values(safeOverallProgress.averageScores).reduce((a, b) => a + b, 0) / 
-                  Object.keys(safeOverallProgress.averageScores).length * 100
-                : 0
-            )}%
-          </span>
+          <span className="stat-number">{overallProgress}%</span>
           <span className="stat-label">Overall Mastery</span>
         </div>
       </div>

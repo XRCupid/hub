@@ -514,13 +514,15 @@
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.5rem;
   padding: 0.75rem 1rem;
   border-radius: 12px;
   text-decoration: none;
   color: #4A5568;
   font-size: 0.95rem;
   transition: all 0.2s ease;
+  text-align: center;
 }
 
 .menu-item:hover {
@@ -542,6 +544,14 @@
   height: 28px;
   background: rgba(255, 107, 157, 0.1);
   border-radius: 8px;
+}
+
+.menu-item-description {
+  font-size: 0.8rem;
+  color: #718096;
+  opacity: 0.8;
+  margin-top: 0.25rem;
+  font-weight: 400;
 }
 
 /* Nav Overlay */

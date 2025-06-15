@@ -6,6 +6,8 @@ import TrainingModuleCard from './TrainingModuleCard';
 import TrackingDashboard from './TrackingDashboard';
 import './TrainingHub.css';
 import { useNavigate } from 'react-router-dom';
+import BasicNPCScenarios from './BasicNPCScenarios';
+import { PerformanceAnalytics } from '../utils/performanceAnalytics';
 
 // Mock user progress - in production this would come from a database
 const mockUserProgress: UserProgress[] = [];
@@ -19,6 +21,8 @@ const TrainingHub: React.FC<TrainingHubProps> = ({ onStartModule }) => {
   const [selectedModule, setSelectedModule] = useState<TrainingModule | null>(null);
   const [userProgress, setUserProgress] = useState<UserProgress[]>(mockUserProgress);
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showNPCScenarios, setShowNPCScenarios] = useState(false);
+  const [performanceAnalytics] = useState(new PerformanceAnalytics());
   const navigate = useNavigate();
 
   const handleCoachSelect = (coach: CoachProfile) => {
@@ -98,24 +102,46 @@ const TrainingHub: React.FC<TrainingHubProps> = ({ onStartModule }) => {
           </div>
 
           <div className="training-layout">
-            <div className="modules-section">
-              <h3>Available Training Modules</h3>
-              <div className="modules-grid">
-                {modules.map(module => {
-                  const progress = userProgress.find(p => p.moduleId === module.id);
-                  const unlocked = isModuleUnlocked(module.id, userProgress);
-                  
-                  return (
-                    <TrainingModuleCard
-                      key={module.id}
-                      module={module}
-                      userProgress={progress}
-                      isUnlocked={unlocked}
-                      coachColor={selectedCoach.color}
-                      onStartModule={handleModuleStart}
-                    />
-                  );
-                })}
+            <div className="training-sections">
+              <div 
+                className="training-section modules" 
+                onClick={() => setShowDashboard(true)}
+              >
+                <div className="section-icon">📚</div>
+                <h3>Training Modules</h3>
+                <p>Learn the fundamentals of romance and relationships</p>
+                <div className="section-features">
+                  <span>• Emotional Intelligence</span>
+                  <span>• Communication Skills</span>
+                  <span>• Conflict Resolution</span>
+                </div>
+              </div>
+              <div 
+                className="training-section npc-practice" 
+                onClick={() => setShowNPCScenarios(true)}
+              >
+                <div className="section-icon">🎭</div>
+                <h3>Practice Dating Scenarios</h3>
+                <p>Safe practice with AI dates to build confidence</p>
+                <div className="section-features">
+                  <span>• Rejection handling</span>
+                  <span>• Emotional regulation</span>
+                  <span>• Reading interest levels</span>
+                </div>
+              </div>
+              <div className="training-section analytics">
+                <div className="section-icon">📊</div>
+                <h3>Your Progress</h3>
+                <div className="progress-summary">
+                  <div className="progress-item">
+                    <span>Sessions Completed:</span>
+                    <span>{performanceAnalytics.getUserHistory('current_user').length}</span>
+                  </div>
+                  <div className="progress-item">
+                    <span>Current Level:</span>
+                    <span>Foundation</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -170,6 +196,19 @@ const TrainingHub: React.FC<TrainingHubProps> = ({ onStartModule }) => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {showNPCScenarios && (
+        <div className="modal-overlay" onClick={() => setShowNPCScenarios(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button 
+              className="close-button" 
+              onClick={() => setShowNPCScenarios(false)}
+            >
+              ×
+            </button>
+            <BasicNPCScenarios />
           </div>
         </div>
       )}

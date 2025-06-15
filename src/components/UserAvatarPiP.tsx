@@ -447,8 +447,6 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
     <div 
       className={`user-avatar-pip ${position} ${getSizeClass()} ${isMinimized ? 'minimized' : ''}`}
       style={{
-        width: '400px',
-        height: '400px',
         position: 'fixed',
         bottom: '20px',
         right: '20px',

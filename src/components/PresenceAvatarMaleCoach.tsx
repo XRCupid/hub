@@ -21,31 +21,31 @@ interface PresenceAvatarProps {
 
 // Hume to RPM blendshape mapping with amplification factors
 const HUME_TO_RPM_MAPPING: Record<string, { target: string; amplify?: number }> = {
-  'browInnerUp': { target: 'browInnerUp', amplify: 1.5 },
-  'browDownLeft': { target: 'browDownLeft', amplify: 1.8 },
-  'browDownRight': { target: 'browDownRight', amplify: 1.8 },
-  'browOuterUpLeft': { target: 'browOuterUpLeft', amplify: 1.5 },
-  'browOuterUpRight': { target: 'browOuterUpRight', amplify: 1.5 },
-  'mouthSmileLeft': { target: 'mouthSmileLeft', amplify: 2.5 },
-  'mouthSmileRight': { target: 'mouthSmileRight', amplify: 2.5 },
-  'mouthFrownLeft': { target: 'mouthFrownLeft', amplify: 2.2 },
-  'mouthFrownRight': { target: 'mouthFrownRight', amplify: 2.2 },
-  'mouthOpen': { target: 'mouthOpen', amplify: 1.0 },
-  'mouthPucker': { target: 'mouthPucker', amplify: 1.8 },
-  'mouthLeft': { target: 'mouthLeft', amplify: 1.5 },
-  'mouthRight': { target: 'mouthRight', amplify: 1.5 },
-  'eyeSquintLeft': { target: 'eyeSquintLeft', amplify: 1.4 },
-  'eyeSquintRight': { target: 'eyeSquintRight', amplify: 1.4 },
-  'eyeWideLeft': { target: 'eyeWideLeft', amplify: 1.2 },
-  'eyeWideRight': { target: 'eyeWideRight', amplify: 1.2 },
-  'cheekPuff': { target: 'cheekPuff', amplify: 1.5 },
-  'cheekSquintLeft': { target: 'cheekSquintLeft', amplify: 1.3 },
-  'cheekSquintRight': { target: 'cheekSquintRight', amplify: 1.3 },
-  'noseSneerLeft': { target: 'noseSneerLeft', amplify: 1.5 },
-  'noseSneerRight': { target: 'noseSneerRight', amplify: 1.5 },
-  'jawOpen': { target: 'jawOpen', amplify: 1.0 },
-  'jawLeft': { target: 'jawLeft', amplify: 1.2 },
-  'jawRight': { target: 'jawRight', amplify: 1.2 }
+  'browInnerUp': { target: 'browInnerUp', amplify: 3.5 }, // Increased from 1.5
+  'browDownLeft': { target: 'browDownLeft', amplify: 4.0 }, // Increased from 1.8
+  'browDownRight': { target: 'browDownRight', amplify: 4.0 }, // Increased from 1.8
+  'browOuterUpLeft': { target: 'browOuterUpLeft', amplify: 3.5 }, // Increased from 1.5
+  'browOuterUpRight': { target: 'browOuterUpRight', amplify: 3.5 }, // Increased from 1.5
+  'mouthSmileLeft': { target: 'mouthSmileLeft', amplify: 5.0 }, // Increased from 2.5
+  'mouthSmileRight': { target: 'mouthSmileRight', amplify: 5.0 }, // Increased from 2.5
+  'mouthFrownLeft': { target: 'mouthFrownLeft', amplify: 4.5 }, // Increased from 2.2
+  'mouthFrownRight': { target: 'mouthFrownRight', amplify: 4.5 }, // Increased from 2.2
+  'mouthOpen': { target: 'mouthOpen', amplify: 1.0 }, // Keep at 1.0 for lip sync
+  'mouthPucker': { target: 'mouthPucker', amplify: 3.5 }, // Increased from 1.8
+  'mouthLeft': { target: 'mouthLeft', amplify: 3.0 }, // Increased from 1.5
+  'mouthRight': { target: 'mouthRight', amplify: 3.0 }, // Increased from 1.5
+  'eyeSquintLeft': { target: 'eyeSquintLeft', amplify: 3.5 }, // Increased from 1.4
+  'eyeSquintRight': { target: 'eyeSquintRight', amplify: 3.5 }, // Increased from 1.4
+  'eyeWideLeft': { target: 'eyeWideLeft', amplify: 3.0 }, // Increased from 1.2
+  'eyeWideRight': { target: 'eyeWideRight', amplify: 3.0 }, // Increased from 1.2
+  'cheekPuff': { target: 'cheekPuff', amplify: 3.5 }, // Increased from 1.5
+  'cheekSquintLeft': { target: 'cheekSquintLeft', amplify: 3.0 }, // Increased from 1.3
+  'cheekSquintRight': { target: 'cheekSquintRight', amplify: 3.0 }, // Increased from 1.3
+  'noseSneerLeft': { target: 'noseSneerLeft', amplify: 3.5 }, // Increased from 1.5
+  'noseSneerRight': { target: 'noseSneerRight', amplify: 3.5 }, // Increased from 1.5
+  'jawOpen': { target: 'jawOpen', amplify: 1.0 }, // Keep at 1.0 for lip sync
+  'jawLeft': { target: 'jawLeft', amplify: 2.5 }, // Increased from 1.2
+  'jawRight': { target: 'jawRight', amplify: 2.5 } // Increased from 1.2
 };
 
 const ML5_TO_RPM_MAPPING: Record<string, { targets: string[]; amplify?: number; debug?: boolean }> = {
@@ -779,58 +779,101 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
     
     // Lip Sync Override (if talking and audioData is present) - APPLY FIRST
     if (animationName === 'talking' && audioData && audioData.length > 0 && mesh?.morphTargetDictionary) {
-      // Calculate audio amplitude for mouth movement - IMPROVED
+      // Calculate audio amplitude for mouth movement - ENHANCED SENSITIVITY
       let sum = 0;
       let maxValue = 0;
+      let lowFreqSum = 0; // For vowel sounds
+      let midFreqSum = 0; // For consonants
+      const quarterLength = Math.floor(audioData.length / 4);
+      
       for (let i = 0; i < audioData.length; i++) {
         const normalizedValue = audioData[i] / 255.0;
         sum += normalizedValue;
         maxValue = Math.max(maxValue, normalizedValue);
+        
+        // Separate frequency ranges for different mouth shapes
+        if (i < quarterLength) {
+          lowFreqSum += normalizedValue; // Low frequencies (vowels)
+        } else if (i < quarterLength * 2) {
+          midFreqSum += normalizedValue; // Mid frequencies (consonants)
+        }
       }
+      
       const avgAmplitude = sum / audioData.length;
       const peakAmplitude = maxValue;
+      const lowFreqAvg = lowFreqSum / quarterLength;
+      const midFreqAvg = midFreqSum / quarterLength;
       
-      // Use combined amplitude for more natural mouth movement
-      const combinedAmplitude = (avgAmplitude * 0.3) + (peakAmplitude * 0.7);
-      const mouthOpenValue = Math.min(combinedAmplitude * 2.5, 0.5); // Reduced max to 0.5 for more natural look
+      // Enhanced amplitude calculation with more dynamic response
+      const combinedAmplitude = (avgAmplitude * 0.2) + (peakAmplitude * 0.6) + (lowFreqAvg * 0.2);
+      const sensitivityMultiplier = 2.8; // Reduced from 3.5 to reduce mouth open amplification
+      const mouthOpenValue = Math.min(combinedAmplitude * sensitivityMultiplier, 0.6); // Reduced max from 0.8 to 0.6
       
+      // Calculate dynamic mouth shapes based on frequency content
+      const jawOpenValue = Math.min(lowFreqAvg * 3.2, 0.5); // Slightly reduced from 4.0
+      const mouthWideValue = Math.min(midFreqAvg * 3.0, 0.6); // Keep same
+      const lipsPuckerValue = Math.min((peakAmplitude - avgAmplitude) * 2.0, 0.4); // Keep same
       // 🔍 Debug available mouth morphs (one-time)
       if (frameCountRef.current % 180 === 1) {
         const availableMouthMorphs = Object.keys(mesh.morphTargetDictionary).filter(name => 
           name.toLowerCase().includes('mouth') || 
           name.toLowerCase().includes('jaw') ||
-          name.toLowerCase().includes('lips') ||
+          name.toLowerCase().includes('lip') ||
           name.toLowerCase().includes('viseme')
         );
         console.log('[PresenceAvatarMaleCoach] 👄 AVAILABLE MOUTH MORPHS:', availableMouthMorphs);
       }
       
-      // Apply to ALL available mouth opening morphs
-      const mouthMorphs = ['mouthOpen', 'jawOpen', 'mouthWide', 'viseme_aa', 'mouthO'];
+      // Apply enhanced mouth morphs with dynamic values
+      const morphApplications = [
+        { morphs: ['mouthOpen', 'viseme_aa'], value: mouthOpenValue },
+        { morphs: ['jawOpen'], value: jawOpenValue },
+        { morphs: ['mouthWide', 'mouthSmileLeft', 'mouthSmileRight'], value: mouthWideValue },
+        { morphs: ['mouthPucker', 'mouthO', 'viseme_ou'], value: lipsPuckerValue }
+      ];
+      
       let appliedToMorph = false;
+      const threshold = 0.03; // Lower threshold for more responsive animation
       
-      mouthMorphs.forEach(morphName => {
-        const morphIndex = mesh.morphTargetDictionary![morphName];
-        if (morphIndex !== undefined && mesh.morphTargetInfluences) {
-          // Only apply mouth opening if there's actually audio activity
-          if (combinedAmplitude > 0.05) { // Threshold for mouth opening
-            mesh.morphTargetInfluences[morphIndex] = mouthOpenValue;
-            appliedToMorph = true;
-          } else {
-            // Close mouth when audio is very low
-            mesh.morphTargetInfluences[morphIndex] = 0;
-          }
-        }
-      });
+      if (combinedAmplitude > threshold) {
+        morphApplications.forEach(({ morphs, value }) => {
+          morphs.forEach(morphName => {
+            const morphIndex = mesh.morphTargetDictionary![morphName];
+            if (morphIndex !== undefined && mesh.morphTargetInfluences) {
+              // Apply smoothing for natural movement
+              const currentValue = mesh.morphTargetInfluences[morphIndex] || 0;
+              const targetValue = value;
+              const smoothedValue = currentValue + (targetValue - currentValue) * 0.7; // Smooth transition
+              
+              mesh.morphTargetInfluences[morphIndex] = smoothedValue;
+              appliedToMorph = true;
+            }
+          });
+        });
+      } else {
+        // Gradually close mouth when audio is very low
+        morphApplications.forEach(({ morphs }) => {
+          morphs.forEach(morphName => {
+            const morphIndex = mesh.morphTargetDictionary![morphName];
+            if (morphIndex !== undefined && mesh.morphTargetInfluences) {
+              const currentValue = mesh.morphTargetInfluences[morphIndex] || 0;
+              mesh.morphTargetInfluences[morphIndex] = currentValue * 0.8; // Gradual close
+            }
+          });
+        });
+      }
       
-      // Only log every 30 frames to reduce spam
+      // Enhanced logging every 30 frames
       if (frameCountRef.current % 30 === 0) {
-        console.log('[PresenceAvatarMaleCoach] 🎤 LIP SYNC - Combined:', combinedAmplitude.toFixed(3), 'Mouth:', mouthOpenValue.toFixed(3), 'Applied:', appliedToMorph);
+        console.log('[PresenceAvatarMaleCoach] 🎤 ENHANCED LIP SYNC - Combined:', combinedAmplitude.toFixed(3), 
+                   'Mouth:', mouthOpenValue.toFixed(3), 'Jaw:', jawOpenValue.toFixed(3), 
+                   'Wide:', mouthWideValue.toFixed(3), 'Pucker:', lipsPuckerValue.toFixed(3), 'Applied:', appliedToMorph);
       }
     } else {
       // ✅ CRITICAL: When NOT talking, aggressively close all mouth morphs
       if (mesh?.morphTargetDictionary && mesh?.morphTargetInfluences) {
-        const mouthMorphs = ['mouthOpen', 'jawOpen', 'mouthWide', 'viseme_aa', 'mouthO'];
+        const mouthMorphs = ['mouthOpen', 'jawOpen', 'mouthWide', 'viseme_aa', 'mouthO', 
+                            'mouthSmileLeft', 'mouthSmileRight', 'mouthPucker', 'viseme_ou'];
         mouthMorphs.forEach(morphName => {
           const morphIndex = mesh.morphTargetDictionary![morphName];
           if (morphIndex !== undefined && mesh.morphTargetInfluences) {
@@ -855,7 +898,7 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
           }
           
           const amplification = mapping.amplify ?? 1.0;
-          const amplifiedValue = Math.min(rawValue * amplification, 1.0); // Amplify for visibility
+          const amplifiedValue = Math.min(rawValue * amplification * 1.2, 1.0); // Amplify for visibility and boost by 20%
           
           // DEBUG: Log mouth-related values
           if (mapping.target === 'mouthOpen' && amplifiedValue > 0.1) {
@@ -871,7 +914,7 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
           }
           
           // Apply direct blendshape
-          const amplifiedValue = Math.min(rawValue * 1.2, 1.0); // Slight amplification
+          const amplifiedValue = Math.min(rawValue * 3.0, 1.0); // Amplify for visibility and boost by 25%
           
           if (frameCountRef.current % 60 === 0 && amplifiedValue > 0.1) {
             console.log(`[PresenceAvatarMaleCoach] DIRECT BLENDSHAPE ${humeKey}: ${amplifiedValue} (BLOCKED during talking: ${animationName === 'talking'})`);
@@ -890,7 +933,7 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
           if (mapping) {
             const amplification = mapping.amplify ?? 1.0;
             const numericRawValue = Number(rawValue);
-            const amplifiedValue = MathUtils.clamp(numericRawValue * amplification, 0, 1);
+            const amplifiedValue = MathUtils.clamp(numericRawValue * amplification * 1.2, 0, 1); // Amplify for visibility and boost by 20%
             
             // Debug log for high-value expressions
             if (amplifiedValue > 0.3 && (ml5Key.includes('mouth') || ml5Key.includes('smile'))) {
@@ -1036,7 +1079,7 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
       Object.entries(emotionalBlendshapes).forEach(([blendshapeName, value]) => {
         const morphIndex = mesh.morphTargetDictionary![blendshapeName];
         if (morphIndex !== undefined && typeof value === 'number') {
-          const amplifiedValue = Math.min(value * 2.0, 1.0); // Amplify for visibility
+          const amplifiedValue = Math.min(value * 2.5, 1.0); // Amplify for visibility and boost by 25%
           mesh.morphTargetInfluences![morphIndex] = amplifiedValue;
           console.log(`[PresenceAvatarMaleCoach] 🎭 ${blendshapeName}: ${amplifiedValue}`);
         }

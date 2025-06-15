@@ -10,21 +10,17 @@ export const InteractiveCurriculumOverviewSimple: React.FC = () => {
   const getAllModules = () => {
     const modules: any[] = [];
     console.log('Getting all modules...');
-    Object.entries(CURRICULUM_STRUCTURE).forEach(([coach, curriculum]) => {
-      console.log(`Processing coach ${coach}:`, curriculum);
-      
-      // Check if curriculum has modules property
-      if (curriculum.modules) {
-        ['foundation', 'intermediate', 'advanced'].forEach(level => {
-          const levelModules = curriculum.modules[level as keyof typeof curriculum.modules];
-          if (levelModules && Array.isArray(levelModules)) {
-            levelModules.forEach(module => {
-              modules.push({ ...module, coach, level });
-            });
-          }
+    
+    // Use the simplified structure directly
+    ['foundation', 'intermediate', 'advanced'].forEach(level => {
+      const levelModules = CURRICULUM_STRUCTURE[level as 'foundation' | 'intermediate' | 'advanced'];
+      if (levelModules && Array.isArray(levelModules)) {
+        levelModules.forEach(module => {
+          modules.push({ ...module, level });
         });
       }
     });
+    
     console.log('Total modules found:', modules.length);
     return modules;
   };
@@ -54,7 +50,7 @@ export const InteractiveCurriculumOverviewSimple: React.FC = () => {
           <h2>Modules</h2>
           {allModules.map((module, index) => (
             <div 
-              key={`${module.coach}-${module.id}-${index}`}
+              key={`${module.id}-${index}`}
               onClick={() => setSelectedModule(module)}
               style={{ 
                 padding: '10px', 
@@ -66,7 +62,7 @@ export const InteractiveCurriculumOverviewSimple: React.FC = () => {
             >
               <h3 style={{ margin: 0, color: 'white' }}>{module.title}</h3>
               <p style={{ margin: '5px 0', color: '#ccc' }}>
-                Coach: {module.coach} | Level: {module.level}
+                Level: {module.level}
               </p>
               <p style={{ margin: 0, color: '#999' }}>
                 {module.lessons?.length || 0} lessons
@@ -93,7 +89,7 @@ export const InteractiveCurriculumOverviewSimple: React.FC = () => {
             </button>
             <h2 style={{ color: 'white' }}>{selectedModule.title}</h2>
             <p style={{ color: '#ccc' }}>
-              Coach: {selectedModule.coach} | Level: {selectedModule.level}
+              Level: {selectedModule.level}
             </p>
             {selectedModule.description && (
               <p style={{ color: '#aaa' }}>{selectedModule.description}</p>

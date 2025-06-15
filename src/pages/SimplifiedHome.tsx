@@ -101,7 +101,7 @@ const SimplifiedHome: React.FC = () => {
             <div className="feature-card riso-card">
               <h3>💕 Speed Date with Dougie</h3>
               <p>Practice speed dating with our charming AI companion</p>
-              <button className="btn-secondary" onClick={() => navigate('/speed-date-dougie')}>
+              <button className="btn-secondary" onClick={() => navigate('/speed-date-dougie-v2')}>
                 Start Speed Date
               </button>
             </div>
