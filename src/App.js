@@ -116,6 +116,7 @@ import LiveDemoController from './components/LiveDemoController';
 import EmotionAnalysisShowcase from './components/EmotionAnalysisShowcase';
 import DougieSpeedDate from './components/DougieSpeedDate';
 import DougieSpeedDateV2 from './components/DougieSpeedDateV2';
+import DougieSpeedDateV3 from './components/DougieSpeedDateV3';
 import DougieSpeedDateSimple from './components/DougieSpeedDateSimple';
 import DougieSpeedDateCoach from './components/DougieSpeedDateCoach';
 import DougieCoachSimple from './components/DougieCoachSimple';
@@ -230,6 +231,7 @@ const AppContent = () => {
           <Route path="/emotion-analysis" element={<EmotionAnalysisShowcase />} />
           <Route path="/speed-date-dougie" element={<DougieSpeedDate />} />
           <Route path="/speed-date-dougie-v2" element={<DougieSpeedDateV2 />} />
+          <Route path="/speed-date-dougie-v3" element={<DougieSpeedDateV3 />} />
           <Route path="/speed-date-simple" element={<DougieSpeedDateSimple />} />
           <Route path="/dougie-coach" element={<DougieSpeedDateCoach />} />
           <Route path="/dougie-coach-simple" element={<DougieCoachSimple />} />
