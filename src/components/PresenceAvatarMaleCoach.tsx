@@ -807,12 +807,12 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
       // Enhanced amplitude calculation with more dynamic response
       const combinedAmplitude = (avgAmplitude * 0.2) + (peakAmplitude * 0.6) + (lowFreqAvg * 0.2);
       const sensitivityMultiplier = 2.8; // Reduced from 3.5 to reduce mouth open amplification
-      const mouthOpenValue = Math.min(combinedAmplitude * sensitivityMultiplier, 0.6); // Reduced max from 0.8 to 0.6
+      const mouthOpenValue = Math.min(combinedAmplitude * sensitivityMultiplier, 0.35); // Reduced max from 0.8 to 0.35
       
-      // Calculate dynamic mouth shapes based on frequency content
-      const jawOpenValue = Math.min(lowFreqAvg * 3.2, 0.5); // Slightly reduced from 4.0
-      const mouthWideValue = Math.min(midFreqAvg * 3.0, 0.6); // Keep same
-      const lipsPuckerValue = Math.min((peakAmplitude - avgAmplitude) * 2.0, 0.4); // Keep same
+      // Calculate dynamic mouth shapes based on frequency content - REDUCED FOR NATURAL MOVEMENT
+      const jawOpenValue = Math.min(lowFreqAvg * 1.8, 0.25); // Reduced from 3.2 to 1.8, max from 0.5 to 0.25
+      const mouthWideValue = Math.min(midFreqAvg * 1.5, 0.3); // Reduced from 3.0 to 1.5, max from 0.6 to 0.3
+      const lipsPuckerValue = Math.min((peakAmplitude - avgAmplitude) * 1.2, 0.2); // Reduced from 2.0 to 1.2, max from 0.4 to 0.2
       // 🔍 Debug available mouth morphs (one-time)
       if (frameCountRef.current % 180 === 1) {
         const availableMouthMorphs = Object.keys(mesh.morphTargetDictionary).filter(name => 

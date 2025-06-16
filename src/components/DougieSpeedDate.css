@@ -1205,6 +1205,48 @@ body {
   max-width: 300px;
 }
 
+/* Engagement Indicator - Subtle ambient feedback */
+.engagement-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  margin: 0 4px;
+}
+
+.engagement-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.engagement-dot.excellent {
+  background: #00ff44;
+  box-shadow: 0 0 12px rgba(0, 255, 68, 0.4);
+}
+
+.engagement-dot.good {
+  background: #ffaa00;
+  box-shadow: 0 0 12px rgba(255, 170, 0, 0.4);
+}
+
+.engagement-dot.fair {
+  background: #ff8800;
+  box-shadow: 0 0 12px rgba(255, 136, 0, 0.4);
+}
+
+.engagement-dot.poor {
+  background: #ff4444;
+  box-shadow: 0 0 12px rgba(255, 68, 68, 0.4);
+}
+
+.engagement-dot.unknown {
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
   .left-sidebar-v3 {

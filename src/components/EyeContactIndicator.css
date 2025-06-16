@@ -1,0 +1,250 @@
+/* Eye Contact Indicator Styles */
+.eye-contact-indicator {
+  position: fixed;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 12px;
+  color: white;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 12px;
+  min-width: 180px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* Positioning */
+.eye-contact-indicator.top-left {
+  top: 20px;
+  left: 20px;
+}
+
+.eye-contact-indicator.top-right {
+  top: 20px;
+  right: 20px;
+}
+
+.eye-contact-indicator.bottom-left {
+  bottom: 20px;
+  left: 20px;
+}
+
+.eye-contact-indicator.bottom-right {
+  bottom: 20px;
+  right: 20px;
+}
+
+.eye-contact-indicator.center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Status Circle */
+.status-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.status-icon {
+  font-size: 18px;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.5));
+}
+
+/* Contact Information */
+.contact-info {
+  text-align: center;
+}
+
+.contact-status {
+  margin-bottom: 8px;
+}
+
+.status-text {
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-text.active {
+  color: #00ff44;
+  text-shadow: 0 0 10px rgba(0, 255, 68, 0.3);
+}
+
+.status-text.inactive {
+  color: #ff4444;
+  text-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+}
+
+/* Duration Counter */
+.duration-counter {
+  margin: 6px 0;
+  padding: 4px 8px;
+  background: rgba(0, 255, 68, 0.1);
+  border-radius: 20px;
+  border: 1px solid rgba(0, 255, 68, 0.3);
+}
+
+.duration-text {
+  font-weight: bold;
+  color: #00ff44;
+  font-size: 14px;
+}
+
+/* Contact Statistics */
+.contact-stats {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0;
+  gap: 8px;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+}
+
+.stat-label {
+  display: block;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  display: block;
+  font-weight: bold;
+  font-size: 12px;
+  color: white;
+}
+
+/* Quality Indicator */
+.quality-indicator {
+  margin-top: 10px;
+}
+
+.quality-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.quality-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+.quality-text {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+/* Pulse Animation */
+.pulse-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  border: 2px solid;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Active/Inactive States */
+.eye-contact-indicator.active {
+  transform: scale(1.02);
+  box-shadow: 0 6px 25px rgba(0, 255, 68, 0.2);
+}
+
+.eye-contact-indicator.inactive {
+  opacity: 0.9;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .eye-contact-indicator {
+    min-width: 150px;
+    padding: 10px;
+    font-size: 11px;
+  }
+  
+  .status-circle {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .status-icon {
+    font-size: 16px;
+  }
+  
+  .contact-stats {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+/* Hover Effects */
+.eye-contact-indicator:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .eye-contact-indicator,
+  .status-circle,
+  .quality-fill,
+  .pulse-ring {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .eye-contact-indicator {
+    border: 2px solid white;
+    background: black;
+  }
+  
+  .status-text.active {
+    color: lime;
+  }
+  
+  .status-text.inactive {
+    color: red;
+  }
+}

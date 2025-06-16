@@ -11,7 +11,9 @@ import TranscriptTimeline from './TranscriptTimeline';
 import ChemistryReport from './ChemistryReport';
 import TrackingPreferencesSelector from './TrackingPreferencesSelector';
 import TrackingStatusIndicator from './TrackingStatusIndicator';
+import EngagementDashboard from './EngagementDashboard';
 import { UnifiedTrackingCoordinator, DateTrackingPreferences, SessionContext, TrackingConfiguration } from '../services/UnifiedTrackingCoordinator';
+import { EngagementAnalytics } from '../types/tracking';
 import { FaLock, FaLockOpen, FaCog, FaEye } from 'react-icons/fa';
 import './DougieSpeedDateV2.css';
 import { UserAvatarPiP } from './UserAvatarPiP';
@@ -183,6 +185,9 @@ const DougieSpeedDateV2: React.FC = () => {
   // Real-time analysis state
   const [listeningQuality, setListeningQuality] = useState(0);
 
+  // Engagement analytics state
+  const [engagementAnalytics, setEngagementAnalytics] = useState<EngagementAnalytics | null>(null);
+
   // Service references
   const voiceServiceRef = useRef<HybridVoiceService | null>(null);
   const expressionServiceRef = useRef<HumeExpressionService | null>(null);
@@ -301,7 +306,13 @@ const DougieSpeedDateV2: React.FC = () => {
           });
 
           console.log('[DougieSpeedDateV2] 🎭 Generated emotional blendshapes from prosody:', Object.keys(blendshapes).length, 'emotions');
+          console.log('[DougieSpeedDateV2] 🎭 Sample blendshapes:', Object.entries(blendshapes).slice(0, 3));
           setEmotionalBlendshapes(blendshapes);
+          
+          // ENHANCED: Verify state update
+          setTimeout(() => {
+            console.log('[DougieSpeedDateV2] 🎭 Emotional blendshapes state updated');
+          }, 100);
         });
 
         voiceServiceRef.current.onMessage((message: any) => {
@@ -309,24 +320,24 @@ const DougieSpeedDateV2: React.FC = () => {
           const messageText = typeof message === 'string' ? message :
                             (message?.message?.content || JSON.stringify(message));
 
-          // Add to transcript
+          // Add to transcript WITH current emotion data
           const newSegment: TranscriptSegment = {
             timestamp: Date.now(),
             speaker: 'assistant',
             text: messageText,
-            emotions: [] // Will be filled by emotion tracking
+            emotions: [...dougieEmotions] // Use actual Dougie emotions from prosody
           };
           setTranscriptSegments(prev => [...prev, newSegment]);
         });
 
         voiceServiceRef.current.onUserMessage((message: string) => {
           console.log('[DougieSpeedDateV2] User message:', message);
-          // Add to transcript
+          // Add to transcript WITH current user emotion data
           const newSegment: TranscriptSegment = {
             timestamp: Date.now(),
             speaker: 'user',
             text: message,
-            emotions: [] // Will be filled by emotion tracking
+            emotions: [...userFacialEmotions] // Use actual user emotions from face tracking
           };
           setTranscriptSegments(prev => [...prev, newSegment]);
         });
@@ -433,6 +444,12 @@ const DougieSpeedDateV2: React.FC = () => {
     const audioId = Date.now() + Math.random();
     console.log(`[DougieSpeedDateV2] Starting audio playback ${audioId}, blob size:`, audioBlob.size);
 
+    // ENHANCED: Validate audio blob before playing
+    if (!audioBlob || audioBlob.size === 0) {
+      console.warn('[DougieSpeedDateV2] Invalid or empty audio blob received');
+      return;
+    }
+
     // Create URL for the audio blob
     const audioUrl = URL.createObjectURL(audioBlob);
     audioPlayerRef.current.src = audioUrl;
@@ -446,7 +463,7 @@ const DougieSpeedDateV2: React.FC = () => {
         }
 
         if (audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume();
+          await audioContextRef.current.resume();
           console.log('[DougieSpeedDateV2] Resumed AudioContext');
         }
 
@@ -467,27 +484,37 @@ const DougieSpeedDateV2: React.FC = () => {
     // Use a local flag for the animation loop
     let isPlaying = true;
 
-    // Play the audio
-    audioPlayerRef.current.play()
-      .then(() => {
-        console.log('[DougieSpeedDateV2] Audio playing successfully');
+    // ENHANCED: Add timeout to prevent indefinite waiting
+    const playPromise = audioPlayerRef.current.play();
+    
+    // ENHANCED: Better error handling and timeout
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Audio play timeout')), 10000);
+    });
 
-        // Start lip sync animation
-        const updateLipSync = () => {
-          if (!isPlaying || !analyserRef.current) return;
+    try {
+      await Promise.race([playPromise, timeoutPromise]);
+      console.log('[DougieSpeedDateV2] Audio playing successfully');
 
-          const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-          analyserRef.current.getByteFrequencyData(dataArray);
-          setAudioData(new Uint8Array(dataArray)); // Create a copy to trigger re-render
+      // Start lip sync animation
+      const updateLipSync = () => {
+        if (!isPlaying || !analyserRef.current) return;
 
-          requestAnimationFrame(updateLipSync);
-        };
-        updateLipSync();
-      })
-      .catch(e => {
-        console.error('[DougieSpeedDateV2] Error playing audio:', e);
-        isPlaying = false;
-      });
+        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+        analyserRef.current.getByteFrequencyData(dataArray);
+        setAudioData(new Uint8Array(dataArray)); // Create a copy to trigger re-render
+
+        requestAnimationFrame(updateLipSync);
+      };
+      updateLipSync();
+    } catch (e) {
+      console.error('[DougieSpeedDateV2] Error playing audio:', e);
+      isPlaying = false;
+      // Clean up on error
+      URL.revokeObjectURL(audioUrl);
+      setIsSpeaking(false);
+      setAnimationName('idle');
+    }
 
     // Handle audio end
     audioPlayerRef.current.onended = () => {
@@ -496,6 +523,15 @@ const DougieSpeedDateV2: React.FC = () => {
       isPlaying = false;
       // Reset audio data and animation
       setAudioData(new Uint8Array(128));
+      setIsSpeaking(false);
+      setAnimationName('idle');
+    };
+
+    // ENHANCED: Add error handler for audio element
+    audioPlayerRef.current.onerror = (error) => {
+      console.error('[DougieSpeedDateV2] Audio element error:', error);
+      URL.revokeObjectURL(audioUrl);
+      isPlaying = false;
       setIsSpeaking(false);
       setAnimationName('idle');
     };
@@ -551,6 +587,16 @@ const DougieSpeedDateV2: React.FC = () => {
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
+
+  useEffect(() => {
+    console.log('[DougieSpeedDateV2] 🎭 Avatar Props:', {
+      animationName,
+      hasAudioData: !!audioData && audioData.length > 0,
+      emotionalBlendshapesCount: Object.keys(emotionalBlendshapes).length,
+      sampleBlendshapes: Object.entries(emotionalBlendshapes).slice(0, 3),
+      dougieEmotionsCount: dougieEmotions.length
+    });
+  }, [animationName, audioData, emotionalBlendshapes, dougieEmotions]);
 
   return (
     <div className="dougie-speed-date-v2">

@@ -11,8 +11,10 @@ import TranscriptTimeline from './TranscriptTimeline';
 import ChemistryReport from './ChemistryReport';
 import TrackingPreferencesSelector from './TrackingPreferencesSelector';
 import TrackingStatusIndicator from './TrackingStatusIndicator';
+import EngagementDashboard from './EngagementDashboard';
 import { UnifiedTrackingCoordinator, DateTrackingPreferences, SessionContext, TrackingConfiguration } from '../services/UnifiedTrackingCoordinator';
 import { PostureTrackingService } from '../services/PostureTrackingService';
+import { EngagementAnalytics } from '../types/tracking';
 import { FaLock, FaLockOpen, FaCog, FaEye, FaUser, FaEyeSlash, FaRunning, FaBars, FaComments, FaChartLine } from 'react-icons/fa';
 import './DougieSpeedDateV3.css';
 import { UserAvatarPiP } from './UserAvatarPiP';
@@ -31,7 +33,7 @@ interface CVAnalyticsData {
     shoulderAlignment: number;
     headPosition: { x: number; y: number };
     bodyOpenness: number;
-    leaning: 'forward' | 'backward' | 'neutral';
+    leaning: 'neutral' | 'forward' | 'backward';
     confidenceScore: number;
   };
 }
@@ -118,12 +120,6 @@ interface PerformanceMetrics {
   };
 }
 
-interface EmotionSnapshot {
-  timestamp: number;
-  participant1Emotions: { name: string; score: number }[];
-  participant2Emotions: { name: string; score: number }[];
-}
-
 const SPEED_DATE_DURATION = 300; // 5 minutes in seconds
 
 const DOUGIE_CONFIG = {
@@ -147,7 +143,7 @@ const DougieSpeedDateV3: React.FC = () => {
   const [dateEnded, setDateEnded] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(SPEED_DATE_DURATION);
   const [conversationSegments, setConversationSegments] = useState<ConversationSegment[]>([]);
-  const [emotionHistory, setEmotionHistory] = useState<EmotionSnapshot[]>([]);
+  const [emotionHistory, setEmotionHistory] = useState<any[]>([]);
   const [currentEngagementLevel, setCurrentEngagementLevel] = useState(0);
   const [conversationFlow, setConversationFlow] = useState(0);
   const [showReport, setShowReport] = useState(false);
@@ -161,6 +157,8 @@ const DougieSpeedDateV3: React.FC = () => {
   const [showPiP, setShowPiP] = useState(true);
   const [pipSize, setPipSize] = useState<'small' | 'medium' | 'large' | 'hidden'>('medium'); // Default to medium for better visibility
   const [showControls, setShowControls] = useState(true);
+  const [showEngagementDashboard, setShowEngagementDashboard] = useState(false);
+  const [practiceMode, setPracticeMode] = useState(false); // New practice mode toggle
 
   // Tracking system state
   const [showTrackingPreferences, setShowTrackingPreferences] = useState(false);
@@ -184,6 +182,29 @@ const DougieSpeedDateV3: React.FC = () => {
   const [animationName, setAnimationName] = useState('idle');
   const [emotionalBlendshapes, setEmotionalBlendshapes] = useState<Record<string, number>>({});
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Audio analysis refs (from V2)
+  const audioPlayerRef = useRef<HTMLAudioElement>(new Audio());
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioSourceCreatedRef = useRef<boolean>(false);
+
+  // Mic analyzer refs
+  const micAnalyserRef = useRef<AnalyserNode | null>(null);
+  const micAudioContextRef = useRef<AudioContext | null>(null);
+
+  // Debug audioData changes
+  useEffect(() => {
+    const maxValue = Math.max(...Array.from(audioData));
+    const nonZeroCount = Array.from(audioData).filter(val => val > 0).length;
+    console.log('[DougieSpeedDateV3] 🎵 AudioData updated:', {
+      maxValue,
+      nonZeroCount,
+      isSpeaking,
+      animationName,
+      firstFewValues: Array.from(audioData.slice(0, 8))
+    });
+  }, [audioData, isSpeaking, animationName]);
 
   // Timing
   const [dateStartTime, setDateStartTime] = useState<number>(0);
@@ -218,6 +239,9 @@ const DougieSpeedDateV3: React.FC = () => {
   // Real-time analysis state
   const [listeningQuality, setListeningQuality] = useState(0);
 
+  // Engagement analytics state
+  const [engagementAnalytics, setEngagementAnalytics] = useState<EngagementAnalytics | null>(null);
+
   // CV Analytics State
   const [cvAnalyticsMode, setCvAnalyticsMode] = useState<CVAnalyticsMode>('none');
   const [cvAnalyticsData, setCvAnalyticsData] = useState<CVAnalyticsData | null>(null);
@@ -232,13 +256,6 @@ const DougieSpeedDateV3: React.FC = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const emotionSnapshotRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Audio context and analyser
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const audioPlayerRef = useRef<HTMLAudioElement>(new Audio());
-  const audioSourceCreatedRef = useRef<boolean>(false);
-
-  // ---------------------------------------------------------------------------
   // SAFETY-NET: ensure connections close even if user closes tab or navigates
   // ---------------------------------------------------------------------------
   const safeCleanup = useCallback(() => {
@@ -296,8 +313,45 @@ const DougieSpeedDateV3: React.FC = () => {
     const setupServices = async () => {
       try {
         // Initialize voice service
+        console.log('[DougieSpeedDateV3] Initializing voice service...');
         voiceServiceRef.current = new HybridVoiceService();
-
+        
+        console.log('[DougieSpeedDateV3] Voice service created, setting up callbacks...');
+        
+        if (voiceServiceRef.current) {
+          console.log('[HUME-DEBUG] 🔍 Voice service exists, registering callbacks...');
+          
+          // Setup voice service callbacks
+          voiceServiceRef.current.onAudio((audioBlob: Blob) => {
+            console.log('[DougieSpeedDateV3] 🎵 Audio received from Hume, size:', audioBlob.size, 'type:', audioBlob.type);
+            
+            if (audioBlob.size > 0) {
+              console.log('[DougieSpeedDateV3] ✅ Valid audio blob, starting playback...');
+              playAudio(audioBlob);
+            } else {
+              console.warn('[DougieSpeedDateV3] ⚠️ Empty audio blob received from Hume');
+            }
+          });
+          
+          console.log('[HUME-DEBUG] ✅ Audio callback registered');
+          
+          // Also register message callback to see if Hume is working at all
+          voiceServiceRef.current.onMessage((message: any) => {
+            console.log('[HUME-DEBUG] 📨 Message received from Hume:', message);
+          });
+          
+          console.log('[HUME-DEBUG] ✅ Message callback registered');
+          
+          // Register error callback
+          voiceServiceRef.current.onError((error: any) => {
+            console.log('[HUME-DEBUG] ❌ Hume error:', error);
+          });
+          
+          console.log('[HUME-DEBUG] ✅ Error callback registered');
+        } else {
+          console.log('[HUME-DEBUG] ❌ Voice service is null!');
+        }
+        
         // Initialize expression service
         expressionServiceRef.current = new HumeExpressionService();
 
@@ -318,72 +372,36 @@ const DougieSpeedDateV3: React.FC = () => {
   // Connection handlers
   const handleConnectClick = async () => {
     try {
+      console.log('[DougieSpeedDateV3] 🚀 CONNECT BUTTON CLICKED - Starting connection...');
+      
       if (voiceServiceRef.current) {
-        // Setup voice service callbacks
-        voiceServiceRef.current.onAudio((audioBlob: Blob) => {
-          console.log('[DougieSpeedDateV3] Audio received, size:', audioBlob.size);
-          if (audioBlob.size > 0) {
-            setIsSpeaking(true);
-            setAnimationName('talking');
-            playAudio(audioBlob);
-          }
-        });
-
-        // CRITICAL: Add Hume prosody emotion callback for Dougie's emotions
-        voiceServiceRef.current.onEmotion((emotions: { name: string; score: number }[]) => {
-          console.log('[DougieSpeedDateV3] 🎭 Prosody emotions received for Dougie:', emotions.slice(0, 5));
-          setDougieEmotions(emotions);
-
-          // Convert Hume prosody emotions to blendshapes for avatar animation
-          const blendshapes: Record<string, number> = {};
-          emotions.forEach(emotion => {
-            if (emotion.score > 0.1) { // Only include emotions with meaningful scores
-              blendshapes[emotion.name] = emotion.score;
-            }
-          });
-
-          console.log('[DougieSpeedDateV3] 🎭 Generated emotional blendshapes from prosody:', Object.keys(blendshapes).length, 'emotions');
-          setEmotionalBlendshapes(blendshapes);
-        });
-
-        voiceServiceRef.current.onMessage((message: any) => {
-          console.log('[DougieSpeedDateV3] Message received:', message);
-          const messageText = typeof message === 'string' ? message :
-                            (message?.message?.content || JSON.stringify(message));
-
-          // Add to transcript
-          const newSegment: TranscriptSegment = {
-            timestamp: Date.now(),
-            speaker: 'assistant',
-            text: messageText,
-            emotions: [] // Will be filled by emotion tracking
-          };
-          setTranscriptSegments(prev => [...prev, newSegment]);
-        });
-
-        voiceServiceRef.current.onUserMessage((message: string) => {
-          console.log('[DougieSpeedDateV3] User message:', message);
-          // Add to transcript
-          const newSegment: TranscriptSegment = {
-            timestamp: Date.now(),
-            speaker: 'user',
-            text: message,
-            emotions: [] // Will be filled by emotion tracking
-          };
-          setTranscriptSegments(prev => [...prev, newSegment]);
-        });
-
-        voiceServiceRef.current.onError((error: Error) => {
-          console.error('[DougieSpeedDateV3] Voice service error:', error);
-        });
-
+        console.log('[DougieSpeedDateV3] Voice service exists, attempting to connect...');
+        
         // Connect to the service
+        console.log('[DougieSpeedDateV3] Calling voiceService.connect() with config:', DOUGIE_CONFIG.humeConfigId);
         await voiceServiceRef.current.connect(DOUGIE_CONFIG.humeConfigId);
+        
+        console.log('[DougieSpeedDateV3] ✅ Voice service connected successfully!');
         setIsConnected(true);
-        console.log('[DougieSpeedDateV3] Voice service connected');
+        setDateStarted(true);
+        setDateStartTime(Date.now());
+        
+        console.log('[DougieSpeedDateV3] 🎤 Testing voice service - sending test message...');
+        
+        // Send a test message to trigger audio
+        setTimeout(() => {
+          console.log('[DougieSpeedDateV3] 📤 Sending test message to Hume...');
+          if (voiceServiceRef.current) {
+            voiceServiceRef.current.sendMessage("Hello, this is a test message to generate audio");
+          }
+        }, 2000);
+        
+      } else {
+        console.error('[DougieSpeedDateV3] ❌ Voice service is null!');
       }
     } catch (error) {
-      console.error('[DougieSpeedDateV3] Failed to connect:', error);
+      console.error('[DougieSpeedDateV3] ❌ Connection failed:', error);
+      setIsConnected(false);
     }
   };
 
@@ -408,7 +426,23 @@ const DougieSpeedDateV3: React.FC = () => {
       if (trackingConfiguration) {
         try {
           await trackingCoordinator.initializeTracking(trackingConfiguration);
+          // Enable engagement analytics for enhanced user feedback
+          trackingCoordinator.setEngagementAnalytics(true);
+          // Reset engagement analytics for new session
+          trackingCoordinator.resetEngagementTracking();
           console.log('[DougieSpeedDateV3] Tracking system initialized successfully');
+          
+          // Initialize CV analytics in combined mode for engagement tracking
+          if (cvAnalyticsMode === 'none') {
+            console.log('[DougieSpeedDateV3] Auto-enabling combined CV analytics mode for engagement tracking');
+            setCvAnalyticsMode('combined');
+            try {
+              await initializeCVAnalytics('combined');
+              console.log('[DougieSpeedDateV3] ✅ CV analytics initialized successfully');
+            } catch (error) {
+              console.error('[DougieSpeedDateV3] ❌ Failed to initialize CV analytics:', error);
+            }
+          }
         } catch (trackingError) {
           console.warn('[DougieSpeedDateV3] Tracking initialization failed, continuing without:', trackingError);
         }
@@ -423,22 +457,166 @@ const DougieSpeedDateV3: React.FC = () => {
       setDateStarted(true);
       setDateStartTime(Date.now());
 
+      // Ensure camera is ready for facial expression tracking
+      if (cvAnalyticsMode === 'none') {
+        console.log('[DougieSpeedDateV3] Initializing camera for facial emotion tracking...');
+        try {
+          await initializeCVAnalytics('combined');
+          console.log('[DougieSpeedDateV3] ✅ Camera initialized successfully for facial tracking');
+          
+          // Verify camera is working
+          if (cvVideoRef.current) {
+            console.log('[DougieSpeedDateV3] Camera verification:', {
+              videoWidth: cvVideoRef.current.videoWidth,
+              videoHeight: cvVideoRef.current.videoHeight,
+              readyState: cvVideoRef.current.readyState,
+              paused: cvVideoRef.current.paused,
+              srcObject: !!cvVideoRef.current.srcObject
+            });
+          }
+        } catch (error) {
+          console.error('[DougieSpeedDateV3] Failed to initialize camera for facial tracking:', error);
+        }
+      }
+
+      // Small delay to ensure camera is fully initialized
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Initialize microphone for user audio analysis
+      console.log('[DougieSpeedDateV3] Initializing microphone for user audio analysis...');
+      try {
+        const micStream = await navigator.mediaDevices.getUserMedia({ 
+          audio: { 
+            echoCancellation: true, 
+            noiseSuppression: true,
+            sampleRate: 44100 
+          } 
+        });
+        
+        // Create audio context for microphone analysis
+        const micAudioContext = new AudioContext();
+        const micSource = micAudioContext.createMediaStreamSource(micStream);
+        const micAnalyser = micAudioContext.createAnalyser();
+        micAnalyser.fftSize = 512;
+        micAnalyser.smoothingTimeConstant = 0.3;
+        
+        micSource.connect(micAnalyser);
+        
+        // Store microphone analysis setup
+        micAnalyserRef.current = micAnalyser;
+        micAudioContextRef.current = micAudioContext;
+        
+        console.log('[DougieSpeedDateV3] Microphone audio analysis initialized');
+        
+        // Test microphone analysis
+        setTimeout(() => {
+          if (micAnalyserRef.current) {
+            const testArray = new Uint8Array(micAnalyserRef.current.frequencyBinCount);
+            micAnalyserRef.current.getByteFrequencyData(testArray);
+            console.log('[DougieSpeedDateV3] Microphone test - First 10 values:', Array.from(testArray.slice(0, 10)));
+          }
+        }, 1000);
+        
+      } catch (micError) {
+        console.error('[DougieSpeedDateV3] Failed to initialize microphone:', micError);
+      }
+
       // Start facial expression tracking
-      if (videoRef.current) {
-        await expressionServiceRef.current!.startTracking(videoRef.current);
+      console.log('[DougieSpeedDateV3] Initializing user facial expression tracking...');
+      console.log('[DougieSpeedDateV3] Video element available (cvVideoRef):', !!cvVideoRef.current);
+      console.log('[DougieSpeedDateV3] Expression service available:', !!expressionServiceRef.current);
+      
+      if (cvVideoRef.current && expressionServiceRef.current) {
+        console.log('[DougieSpeedDateV3] Starting facial expression tracking...');
+        await expressionServiceRef.current!.startTracking(cvVideoRef.current);
+        console.log('[DougieSpeedDateV3] Facial expression tracking started successfully');
+        
         expressionServiceRef.current!.setOnEmotionCallback((emotions: any[]) => {
+          console.log('[DougieSpeedDateV3] Raw user emotions received:', emotions);
+          
           const formattedEmotions = emotions.map(e => ({ 
             name: 'emotion' in e ? (e as any).emotion : e.name, 
             score: e.score 
           }));
+          console.log('[DougieSpeedDateV3] Formatted user emotions:', formattedEmotions);
           setUserFacialEmotions(formattedEmotions);
+          
+          // Update the most recent user transcript segment with facial emotions
+          setTranscriptSegments(prev => {
+            console.log('[DougieSpeedDateV3] Current transcript segments:', prev.length);
+            
+            if (prev.length > 0) {
+              const lastSegment = prev[prev.length - 1];
+              console.log('[DougieSpeedDateV3] Last segment:', lastSegment.speaker, 'emotions:', lastSegment.emotions?.length || 0);
+              
+              if (lastSegment.speaker === 'user' && (!lastSegment.emotions || lastSegment.emotions.length === 0)) {
+                console.log('[DougieSpeedDateV3] Adding user facial emotions to existing transcript segment');
+                const updatedSegments = [...prev];
+                updatedSegments[updatedSegments.length - 1] = {
+                  ...lastSegment,
+                  emotions: formattedEmotions,
+                  facialEmotions: formattedEmotions
+                };
+                return updatedSegments;
+              }
+            }
+            
+            // If no suitable segment exists, create a new user segment with emotions
+            console.log('[DougieSpeedDateV3] Creating new user transcript segment for emotions');
+            const newUserSegment = {
+              id: `user-emotions-${Date.now()}`,
+              speaker: 'user' as const,
+              text: '[User facial expressions detected]',
+              timestamp: Date.now(),
+              emotions: formattedEmotions,
+              facialEmotions: formattedEmotions,
+              audioUrl: null
+            };
+            
+            return [...prev, newUserSegment];
+          });
+          
+          // Process engagement analytics if enabled
+          const currentEngagement = trackingCoordinator.getCurrentEngagement();
+          if (currentEngagement) {
+            console.log('[DougieSpeedDateV3] Engagement analytics updated:', currentEngagement);
+            setEngagementAnalytics(currentEngagement);
+          } else {
+            console.log('[DougieSpeedDateV3] No engagement analytics available from tracking coordinator');
+            
+            // If tracking coordinator doesn't have data, try to generate engagement from current data
+            const avgEmotionScore = formattedEmotions.reduce((sum, e) => sum + e.score, 0) / formattedEmotions.length;
+            console.log('[DougieSpeedDateV3] Average emotion score:', avgEmotionScore, 'from', formattedEmotions.length, 'emotions');
+            console.log('[DougieSpeedDateV3] Sample emotion scores:', formattedEmotions.slice(0, 5).map(e => ({ name: e.name, score: e.score })));
+            
+            // Normalize emotion scores - they appear to be 0-100 already, not 0-1
+            const normalizedScore = Math.max(0, Math.min(100, avgEmotionScore));
+            
+            const directEngagement: any = {
+              overall: Math.round(normalizedScore),
+              emotional: Math.round(normalizedScore),
+              eyeContact: cvAnalyticsData?.eyeContact?.percentage || 0,
+              posture: cvAnalyticsData?.posture?.confidenceScore || 0
+            };
+            console.log('[DougieSpeedDateV3] Generated direct engagement from emotions:', directEngagement);
+            setEngagementAnalytics(directEngagement);
+          }
         });
+      } else {
+        console.error('[DougieSpeedDateV3] Cannot start facial expression tracking - missing video or expression service');
       }
 
       // Start the date
       setTimeout(() => {
         console.log('[DougieSpeedDateV3] Sending initial greeting to trigger conversation');
-        voiceServiceRef.current!.sendMessage("Hi!");
+        if (voiceServiceRef.current && isConnected) {
+          console.log('[DougieSpeedDateV3] 📤 Sending initial greeting to start conversation...');
+          setTimeout(() => {
+            voiceServiceRef.current?.sendMessage("Hi Dougie! I'm ready to start our speed date conversation. Please introduce yourself and ask me a question.");
+          }, 1000);
+        } else {
+          console.warn('[DougieSpeedDateV3] ⚠️ Cannot send initial message - voice service not connected');
+        }
 
         // Start timer
         timerRef.current = setInterval(() => {
@@ -453,7 +631,7 @@ const DougieSpeedDateV3: React.FC = () => {
 
         // Start emotion snapshot collection
         emotionSnapshotRef.current = setInterval(() => {
-          const snapshot: EmotionSnapshot = {
+          const snapshot: any = {
             timestamp: (Date.now() - dateStartTime) / 1000,
             participant1Emotions: [...userFacialEmotions],
             participant2Emotions: [...dougieEmotions]
@@ -469,11 +647,17 @@ const DougieSpeedDateV3: React.FC = () => {
     }
   };
 
-  // Play audio with lip sync analysis
+  // Play audio with lip sync analysis - RESTORED FROM V2 (WORKING VERSION)
   const playAudio = async (audioBlob: Blob) => {
     // Add unique ID to track this audio playback
     const audioId = Date.now() + Math.random();
     console.log(`[DougieSpeedDateV3] Starting audio playback ${audioId}, blob size:`, audioBlob.size);
+
+    // ENHANCED: Validate audio blob before playing
+    if (!audioBlob || audioBlob.size === 0) {
+      console.warn('[DougieSpeedDateV3] Invalid or empty audio blob received');
+      return;
+    }
 
     // Create URL for the audio blob
     const audioUrl = URL.createObjectURL(audioBlob);
@@ -484,19 +668,22 @@ const DougieSpeedDateV3: React.FC = () => {
       try {
         if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
           audioContextRef.current = new AudioContext();
-          console.log('[DougieSpeedDateV3] Created new AudioContext');
+          console.log('[DougieSpeedDateV3] Created new AudioContext, state:', audioContextRef.current.state);
         }
 
         if (audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume();
-          console.log('[DougieSpeedDateV3] Resumed AudioContext');
+          await audioContextRef.current.resume();
+          console.log('[DougieSpeedDateV3] Resumed AudioContext, new state:', audioContextRef.current.state);
         }
 
         const analyser = audioContextRef.current.createAnalyser();
         analyser.fftSize = 256;
+        console.log('[DougieSpeedDateV3] Created analyser, frequencyBinCount:', analyser.frequencyBinCount);
+        
         const source = audioContextRef.current.createMediaElementSource(audioPlayerRef.current);
         source.connect(analyser);
         analyser.connect(audioContextRef.current.destination);
+        console.log('[DougieSpeedDateV3] Audio analyzer connected successfully');
 
         analyserRef.current = analyser;
         audioSourceCreatedRef.current = true;
@@ -509,38 +696,62 @@ const DougieSpeedDateV3: React.FC = () => {
     // Use a local flag for the animation loop
     let isPlaying = true;
 
-    // Play the audio
-    audioPlayerRef.current.play()
-      .then(() => {
-        console.log('[DougieSpeedDateV3] Audio playing successfully');
+    // ENHANCED: Add timeout to prevent indefinite waiting
+    const playPromise = audioPlayerRef.current.play();
+    
+    // ENHANCED: Better error handling and timeout
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Audio play timeout')), 10000);
+    });
 
-        // Start lip sync animation
-        const updateLipSync = () => {
-          if (!isPlaying || !analyserRef.current) return;
+    try {
+      await Promise.race([playPromise, timeoutPromise]);
+      console.log('[DougieSpeedDateV3] Audio playing successfully');
 
-          const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-          analyserRef.current.getByteFrequencyData(dataArray);
+      // Start lip sync animation
+      const updateLipSync = () => {
+        if (!isPlaying || !analyserRef.current) return;
+
+        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+        analyserRef.current.getByteFrequencyData(dataArray);
+        
+        // Ensure we have real audio data before setting
+        const maxValue = Math.max(...dataArray);
+        const nonZeroCount = dataArray.filter(val => val > 0).length;
+        
+        console.log(`[DougieSpeedDateV3] Audio analysis: max=${maxValue}, nonZero=${nonZeroCount}, playing=${isPlaying}`);
+        
+        if (maxValue > 0) {
           setAudioData(new Uint8Array(dataArray)); // Create a copy to trigger re-render
+        } else {
+          console.warn('[DougieSpeedDateV3] No audio frequency data detected');
+        }
 
-          requestAnimationFrame(updateLipSync);
-        };
-        updateLipSync();
-      })
-      .catch(e => {
-        console.error('[DougieSpeedDateV3] Error playing audio:', e);
-        isPlaying = false;
-      });
+        requestAnimationFrame(updateLipSync);
+      };
+      updateLipSync();
+    } catch (e) {
+      console.error('[DougieSpeedDateV3] Error playing audio:', e);
+      isPlaying = false;
+      // Clean up on error
+      URL.revokeObjectURL(audioUrl);
+      setIsSpeaking(false);
+      setAnimationName('idle');
+    }
 
     // Handle audio end
     audioPlayerRef.current.onended = () => {
       console.log('[DougieSpeedDateV3] Audio playback ended');
-      URL.revokeObjectURL(audioUrl);
       isPlaying = false;
-      // Reset audio data and animation
-      setAudioData(new Uint8Array(128));
+      URL.revokeObjectURL(audioUrl);
       setIsSpeaking(false);
       setAnimationName('idle');
+      setAudioData(new Uint8Array(128)); // Reset to silence
     };
+
+    // Start talking animation
+    setIsSpeaking(true);
+    setAnimationName('talking');
   };
 
   // End the date
@@ -579,6 +790,10 @@ const DougieSpeedDateV3: React.FC = () => {
       audioContextRef.current.close();
     }
     stopCVAnalytics();
+    
+    // Reset engagement analytics
+    trackingCoordinator.resetEngagementTracking();
+    setEngagementAnalytics(null);
   };
 
   // Emergency reset
@@ -595,6 +810,12 @@ const DougieSpeedDateV3: React.FC = () => {
     try {
       if (mode === 'none') {
         await stopCVAnalytics();
+        return;
+      }
+
+      // Don't re-initialize if we're already in the same mode
+      if (cvAnalyticsMode === mode && eyeTrackingRef.current) {
+        console.log('[DougieSpeedDateV3] CV Analytics already running in mode:', mode);
         return;
       }
 
@@ -641,12 +862,31 @@ const DougieSpeedDateV3: React.FC = () => {
 
   const initializeEyeTracking = async () => {
     try {
+      console.log('[DougieSpeedDateV3] Checking WebGazer availability...');
+      console.log('window.webgazer:', typeof window.webgazer);
+      
       // Initialize WebGazer
       if (window.webgazer) {
         console.log('[DougieSpeedDateV3] Initializing WebGazer...');
         
         const webgazer = window.webgazer;
+        webgazerRef.current = webgazer;
+        
+        // Check if WebGazer is already initialized
+        if (eyeTrackingRef.current) {
+          console.log('[DougieSpeedDateV3] WebGazer already initialized, skipping...');
+          return;
+        }
+        
         eyeTrackingRef.current = webgazer;
+        
+        // Ensure WebGazer is properly stopped before starting
+        try {
+          await webgazer.end();
+        } catch (e) {
+          // Ignore errors from ending a non-started WebGazer
+          console.log('[DougieSpeedDateV3] WebGazer end() called on non-initialized instance (expected)');
+        }
         
         await webgazer.setRegression('ridge')
           .setTracker('clmtrackr')
@@ -658,12 +898,33 @@ const DougieSpeedDateV3: React.FC = () => {
         
         // Start gaze prediction
         webgazer.setGazeListener((data: any) => {
-          if (data && cvAnalyticsData) {
+          if (data) {
+            console.log('[DougieSpeedDateV3] WEBGAZER DATA RECEIVED:', {
+              x: data.x?.toFixed(2),
+              y: data.y?.toFixed(2),
+              timestamp: Date.now()
+            });
             updateEyeContactAnalytics(data);
+          } else {
+            console.log('[DougieSpeedDateV3] WebGazer data is null/undefined');
           }
         });
         
+        // Test WebGazer after initialization
+        setTimeout(() => {
+          console.log('[DougieSpeedDateV3] Testing WebGazer status...');
+          console.log('[DougieSpeedDateV3] WebGazer ready:', webgazer.isReady());
+          const video = cvVideoRef.current;
+          console.log('[DougieSpeedDateV3] Video element dimensions:', {
+            width: video?.videoWidth,
+            height: video?.videoHeight,
+            playing: !video?.paused
+          });
+        }, 2000);
+        
         console.log('[DougieSpeedDateV3] WebGazer initialized successfully');
+      } else {
+        console.error('[DougieSpeedDateV3] WebGazer not available - make sure it\'s loaded in index.html');
       }
     } catch (error) {
       console.error('[DougieSpeedDateV3] Eye tracking initialization failed:', error);
@@ -672,28 +933,112 @@ const DougieSpeedDateV3: React.FC = () => {
 
   const initializePostureTracking = async () => {
     try {
-      if (!postureServiceRef.current) {
-        postureServiceRef.current = new PostureTrackingService();
-        await postureServiceRef.current.initialize();
+      console.log('[DougieSpeedDateV3] Initializing ML5 posture tracking directly...');
+      
+      // Check if ML5 is available
+      if (typeof window.ml5 === 'undefined') {
+        console.error('[DougieSpeedDateV3] ML5 is not loaded! Check index.html');
+        return;
       }
       
-      const videoElement = cvVideoRef.current as HTMLVideoElement;
-      if (videoElement) {
-        // Set up the callback before starting tracking
-        postureServiceRef.current.onResults((postureData: any) => {
-          updatePostureAnalytics(postureData);
+      console.log('[DougieSpeedDateV3] ML5 is available, version:', window.ml5?.version || 'unknown');
+      
+      const videoElement = cvVideoRef.current;
+      if (!videoElement) {
+        console.error('[DougieSpeedDateV3] No video element available for posture tracking');
+        return;
+      }
+      
+      console.log('[DougieSpeedDateV3] Video element ready:', {
+        videoWidth: videoElement.videoWidth,
+        videoHeight: videoElement.videoHeight,
+        readyState: videoElement.readyState,
+        paused: videoElement.paused,
+        srcObject: !!videoElement.srcObject
+      });
+      
+      // Wait for video to be ready
+      if (videoElement.readyState < 2) {
+        console.log('[DougieSpeedDateV3] Waiting for video to load metadata...');
+        await new Promise((resolve) => {
+          videoElement.onloadedmetadata = resolve;
         });
-        
-        await postureServiceRef.current.startTracking(videoElement);
       }
       
-      console.log('[DougieSpeedDateV3] Posture tracking initialized successfully');
+      console.log('[DougieSpeedDateV3] Creating ML5 poseNet with video:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+      
+      // Create ML5 poseNet directly
+      console.log('[DougieSpeedDateV3] Creating ML5 poseNet...');
+      const poseNet = window.ml5.poseNet(videoElement, {
+        architecture: 'MobileNetV1',
+        outputStride: 16,
+        inputResolution: 513,
+        multiplier: 0.75
+      }, () => {
+        console.log('[DougieSpeedDateV3] ML5 poseNet model loaded successfully!');
+        console.log('[DougieSpeedDateV3] Video dimensions:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+      });
+      
+      // Add error handling for poseNet
+      poseNet.on('error', (error: any) => {
+        console.error('[DougieSpeedDateV3] ML5 poseNet error:', error);
+      });
+      
+      // Listen for pose predictions with enhanced debugging
+      poseNet.on('pose', (results: any[]) => {
+        console.log('[DougieSpeedDateV3] ML5 pose callback triggered, results:', results?.length || 0);
+        
+        if (results && results.length > 0) {
+          const pose = results[0];
+          console.log('[DougieSpeedDateV3] POSE DETECTED!', {
+            confidence: pose.pose.score,
+            keypoints: pose.pose.keypoints?.length || 0,
+            hasNose: !!pose.pose.keypoints?.find((kp: any) => kp.part === 'nose'),
+            hasShoulders: !!pose.pose.keypoints?.find((kp: any) => kp.part === 'leftShoulder')
+          });
+          
+          // Process posture data for engagement analytics
+          updatePostureAnalytics(pose.pose);
+          
+          // Update engagement analytics directly
+          const engagementData = calculateEngagementFromPose(pose.pose);
+          if (engagementData) {
+            console.log('[DougieSpeedDateV3] ENGAGEMENT DATA CALCULATED:', engagementData);
+            setEngagementAnalytics(engagementData as any);
+          } else {
+            console.log('[DougieSpeedDateV3] Failed to calculate engagement from pose');
+          }
+        } else {
+          console.log('[DougieSpeedDateV3] No poses detected in current frame');
+        }
+      });
+      
+      // Test pose detection after a delay
+      setTimeout(() => {
+        console.log('[DougieSpeedDateV3] Testing pose detection after 3 seconds...');
+        console.log('[DougieSpeedDateV3] Video playing:', !videoElement.paused);
+        console.log('[DougieSpeedDateV3] Video time:', videoElement.currentTime);
+      }, 3000);
+      
+      // Store poseNet reference with proper cleanup
+      postureServiceRef.current = { 
+        poseNet, 
+        dispose: () => {
+          console.log('[DougieSpeedDateV3] Disposing ML5 poseNet...');
+          poseNet?.dispose();
+        }
+      } as any;
+      
+      console.log('[DougieSpeedDateV3] ML5 posture tracking initialized successfully');
+      
     } catch (error) {
-      console.error('[DougieSpeedDateV3] Posture tracking initialization failed:', error);
+      console.error('[DougieSpeedDateV3] ML5 posture tracking initialization failed:', error);
     }
   };
 
   const updateEyeContactAnalytics = (gazeData: any) => {
+    console.log('[DougieSpeedDateV3] Updating eye contact analytics with data:', gazeData);
+    
     // Simple eye contact detection (looking at center area of screen)
     const screenCenter = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     const tolerance = 100;
@@ -702,9 +1047,11 @@ const DougieSpeedDateV3: React.FC = () => {
       Math.abs(gazeData.x - screenCenter.x) < tolerance &&
       Math.abs(gazeData.y - screenCenter.y) < tolerance;
     
+    console.log('[DougieSpeedDateV3] Eye contact detected:', isLookingAtCenter, 'Screen center:', screenCenter, 'Gaze:', { x: gazeData.x, y: gazeData.y });
+    
     setCvAnalyticsData(prev => {
       if (!prev) {
-        return {
+        const newData: CVAnalyticsData = {
           eyeContact: {
             percentage: isLookingAtCenter ? 100 : 0,
             gazeOnTarget: isLookingAtCenter,
@@ -719,9 +1066,11 @@ const DougieSpeedDateV3: React.FC = () => {
             confidenceScore: 0
           }
         };
+        console.log('[DougieSpeedDateV3] Initializing CV analytics data:', newData);
+        return newData;
       }
       
-      return {
+      const updatedData = {
         ...prev,
         eyeContact: {
           ...prev.eyeContact,
@@ -729,6 +1078,8 @@ const DougieSpeedDateV3: React.FC = () => {
           percentage: isLookingAtCenter ? Math.min(100, prev.eyeContact.percentage + 2) : Math.max(0, prev.eyeContact.percentage - 1)
         }
       };
+      console.log('[DougieSpeedDateV3] Updated CV analytics data:', updatedData);
+      return updatedData;
     });
   };
 
@@ -742,7 +1093,7 @@ const DougieSpeedDateV3: React.FC = () => {
     
     let shoulderAlignment = 50; // Default neutral
     let bodyOpenness = 50;
-    let leaning: 'forward' | 'backward' | 'neutral' = 'neutral';
+    let leaning: 'neutral' | 'forward' | 'backward' = 'neutral';
     let confidenceScore = 50;
     
     if (leftShoulder && rightShoulder && nose) {
@@ -797,34 +1148,63 @@ const DougieSpeedDateV3: React.FC = () => {
     });
   };
 
+  const calculateEngagementFromPose = (pose: any) => {
+    if (!pose.keypoints || pose.keypoints.length === 0) return null;
+    
+    // Find key landmarks
+    const nose = pose.keypoints.find((kp: any) => kp.part === 'nose');
+    const leftShoulder = pose.keypoints.find((kp: any) => kp.part === 'leftShoulder');
+    const rightShoulder = pose.keypoints.find((kp: any) => kp.part === 'rightShoulder');
+    
+    if (!nose || !leftShoulder || !rightShoulder) return null;
+    
+    // Calculate posture metrics
+    const shoulderWidth = Math.abs(rightShoulder.position.x - leftShoulder.position.x);
+    const shoulderCenter = (leftShoulder.position.x + rightShoulder.position.x) / 2;
+    const headAlignment = Math.abs(nose.position.x - shoulderCenter);
+    
+    // Calculate engagement score (0-100)
+    const postureScore = Math.max(0, 100 - (headAlignment / shoulderWidth) * 100);
+    const overallEngagement = Math.min(100, postureScore + (cvAnalyticsData?.eyeContact?.percentage || 0)) / 2;
+    
+    return {
+      nodding: { frequency: 0, confidence: 0 },
+      posture: { score: postureScore, confidence: pose.score || 0 },
+      eyeContact: { percentage: cvAnalyticsData?.eyeContact?.percentage || 0, duration: 0 },
+      overallEngagement,
+      engagementTrend: 'stable',
+      lastUpdate: Date.now()
+    };
+  };
+
   const stopCVAnalytics = async () => {
-    try {
-      // Stop eye tracking
-      if (eyeTrackingRef.current && window.webgazer) {
-        window.webgazer.end();
+    console.log('[DougieSpeedDateV3] Stopping CV Analytics...');
+    
+    // Stop eye tracking
+    if (eyeTrackingRef.current) {
+      try {
+        await eyeTrackingRef.current.end();
+        eyeTrackingRef.current = null;
+        console.log('[DougieSpeedDateV3] WebGazer stopped successfully');
+      } catch (error) {
+        console.warn('[DougieSpeedDateV3] Error stopping WebGazer (might already be stopped):', error);
         eyeTrackingRef.current = null;
       }
-      
-      // Stop posture tracking
-      if (postureServiceRef.current) {
-        postureServiceRef.current.stopTracking();
-        postureServiceRef.current = null;
-      }
-      
-      // Stop video stream
-      if (cvVideoRef.current && cvVideoRef.current.srcObject) {
-        const stream = cvVideoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-        cvVideoRef.current.srcObject = null;
-      }
-      
-      setCvAnalyticsData(null);
-      setCvAnalyticsMode('none');
-      
-      console.log('[DougieSpeedDateV3] CV Analytics stopped');
-    } catch (error) {
-      console.error('[DougieSpeedDateV3] Error stopping CV Analytics:', error);
     }
+    
+    // Stop posture tracking
+    if (postureServiceRef.current) {
+      try {
+        (postureServiceRef.current as any).dispose();
+        postureServiceRef.current = null;
+      } catch (error) {
+        console.warn('[DougieSpeedDateV3] Error stopping posture tracking:', error);
+      }
+    }
+    
+    // Reset analytics data
+    setCvAnalyticsData(null);
+    setCvAnalyticsMode('none');
   };
 
   const setCameraForEyeTracking = (enabled: boolean) => {
@@ -858,108 +1238,19 @@ const DougieSpeedDateV3: React.FC = () => {
     isLookingAtAvatarRef.current = isLookingAtAvatar;
   }, [isLookingAtAvatar]);
 
-  // Eye tracking initialization
   useEffect(() => {
-    const initializeEyeTracking = async () => {
-      if (!isEyeTrackingEnabled || !window.webgazer) return;
-      
-      try {
-        console.log('[EyeTracking] Initializing WebGazer for avatar interaction...');
-        
-        webgazerRef.current = window.webgazer;
-        await webgazerRef.current
-          .setRegression('ridge')
-          .setTracker('clmtrackr')
-          .showVideo(false)
-          .showPredictionPoints(false)
-          .applyKalmanFilter(true)
-          .begin();
-        
-        // Set up avatar bounds detection - target the 3D canvas area
-        const updateAvatarBounds = () => {
-          const canvas = canvasRef.current || document.querySelector('.three-canvas');
-          if (canvas) {
-            const rect = canvas.getBoundingClientRect();
-            // Focus on center area where avatar face typically appears
-            const faceArea = {
-              x: rect.left + rect.width * 0.3,
-              y: rect.top + rect.height * 0.2,
-              width: rect.width * 0.4,
-              height: rect.height * 0.5
-            };
-            avatarBoundsRef.current = faceArea;
-            console.log('[EyeTracking] Avatar face bounds updated:', faceArea);
-          }
-        };
-        
-        updateAvatarBounds();
-        window.addEventListener('resize', updateAvatarBounds);
-        
-        // Set up gaze listener for avatar interaction
-        webgazerRef.current.setGazeListener((data: any) => {
-          if (!data || !isEyeTrackingEnabled) return;
-          
-          const bounds = avatarBoundsRef.current;
-          const isLookingAtFace = 
-            data.x >= bounds.x && 
-            data.x <= bounds.x + bounds.width &&
-            data.y >= bounds.y && 
-            data.y <= bounds.y + bounds.height;
-          
-          gazeDataRef.current.totalSamples++;
-          if (isLookingAtFace) {
-            gazeDataRef.current.onTargetSamples++;
-            if (!isLookingAtAvatarRef.current) {
-              setIsLookingAtAvatar(true);
-            }
-          } else {
-            if (isLookingAtAvatarRef.current) {
-              setIsLookingAtAvatar(false);
-            }
-          }
-          
-          // Update eye contact percentage
-          const percentage = gazeDataRef.current.totalSamples > 0 
-            ? (gazeDataRef.current.onTargetSamples / gazeDataRef.current.totalSamples) * 100 
-            : 0;
-          setEyeContactPercentage(Math.round(percentage));
-        });
-        
-        setGazeCalibrated(true);
-        console.log('[EyeTracking] WebGazer initialized for avatar interaction');
-        
-        return () => {
-          window.removeEventListener('resize', updateAvatarBounds);
-        };
-        
-      } catch (error) {
-        console.error('[EyeTracking] Failed to initialize:', error);
-        setIsEyeTrackingEnabled(false);
-      }
-    };
-
-    if (isEyeTrackingEnabled) {
-      initializeEyeTracking();
-    } else if (webgazerRef.current) {
-      webgazerRef.current.end();
-      setGazeCalibrated(false);
-      setIsLookingAtAvatar(false);
-      setEyeContactPercentage(0);
-      gazeDataRef.current = { totalSamples: 0, onTargetSamples: 0 };
-    }
-
     return () => {
-      if (webgazerRef.current && isEyeTrackingEnabled) {
+      console.log('[DougieSpeedDateV3] Component unmounting, cleaning up WebGazer...');
+      if (eyeTrackingRef.current) {
         try {
-          webgazerRef.current.end();
+          eyeTrackingRef.current.end();
         } catch (error) {
-          console.warn('[EyeTracking] Cleanup error:', error);
+          console.warn('[DougieSpeedDateV3] WebGazer cleanup error on unmount:', error);
         }
       }
     };
-  }, [isEyeTrackingEnabled]);
+  }, []);
 
-  // Set actual viewport height to eliminate browser chrome deadspace
   useEffect(() => {
     const setViewportHeight = () => {
       const vh = window.innerHeight * 0.01;
@@ -977,6 +1268,103 @@ const DougieSpeedDateV3: React.FC = () => {
     
     return () => window.removeEventListener('resize', setViewportHeight);
   }, []);
+
+  // Add periodic CV analytics update
+  useEffect(() => {
+    if (cvAnalyticsMode !== 'none' && dateStarted) {
+      console.log('[DougieSpeedDateV3] Starting periodic engagement analytics updates...');
+      
+      const interval = setInterval(() => {
+        console.log('[DougieSpeedDateV3] Checking engagement analytics...');
+        console.log('[DougieSpeedDateV3] Tracking coordinator available:', !!trackingCoordinator);
+        
+        // Update engagement analytics periodically
+        const currentEngagement = trackingCoordinator.getCurrentEngagement();
+        console.log('[DougieSpeedDateV3] Current engagement data:', currentEngagement);
+        
+        if (currentEngagement) {
+          console.log('[DougieSpeedDateV3] Periodic engagement analytics update:', currentEngagement);
+          setEngagementAnalytics(currentEngagement);
+        } else {
+          console.log('[DougieSpeedDateV3] No engagement analytics available from tracking coordinator');
+        }
+      }, 2000); // Update every 2 seconds
+
+      return () => {
+        console.log('[DougieSpeedDateV3] Stopping periodic engagement analytics updates');
+        clearInterval(interval);
+      };
+    }
+  }, [cvAnalyticsMode, dateStarted]);
+
+  // Helper functions for engagement indicator
+  const getEngagementLevel = (score: number): string => {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Good';  
+    if (score >= 40) return 'Fair';
+    return 'Needs Focus';
+  };
+
+  const getEngagementColor = (score: number): string => {
+    if (score >= 80) return 'excellent'; // Green
+    if (score >= 60) return 'good';      // Yellow
+    if (score >= 40) return 'fair';      // Orange
+    return 'poor';                       // Red
+  };
+
+  // Fix function placement and use correct property name from EngagementAnalytics interface
+  const getEngagementLevelFromAnalytics = (analytics: EngagementAnalytics | null): string => {
+    if (!analytics) return 'Unknown';
+    return getEngagementLevel(analytics.overallEngagement);
+  };
+
+  const getEngagementColorFromAnalytics = (analytics: EngagementAnalytics | null): string => {
+    if (!analytics) return 'unknown';
+    return getEngagementColor(analytics.overallEngagement);
+  };
+
+  useEffect(() => {
+    let lipSyncInterval: NodeJS.Timeout | null = null;
+    
+    if (isSpeaking && audioData.every(val => val === 0)) {
+      console.log('[DougieSpeedDateV3] 🎭 Starting fallback lip sync - no audio data available');
+      
+      // Create dynamic fallback lip sync
+      const createFallbackLipSync = () => {
+        const data = new Uint8Array(128);
+        const intensity = 60 + Math.random() * 80; // 60-140 intensity
+        
+        // Jaw movement (first 64 bytes)
+        for (let i = 0; i < 64; i++) {
+          data[i] = intensity + Math.sin(Date.now() * 0.01 + i * 0.1) * 20;
+        }
+        
+        // Mouth shapes (next 64 bytes)  
+        for (let i = 64; i < 128; i++) {
+          data[i] = intensity * 0.8 + Math.cos(Date.now() * 0.008 + i * 0.05) * 15;
+        }
+        
+        return data;
+      };
+      
+      lipSyncInterval = setInterval(() => {
+        if (isSpeaking) {
+          setAudioData(createFallbackLipSync());
+        }
+      }, 80); // Update every 80ms for smooth animation
+      
+    } else if (!isSpeaking && lipSyncInterval) {
+      console.log('[DougieSpeedDateV3] 🔇 Stopping fallback lip sync');
+      clearInterval(lipSyncInterval);
+      setAudioData(new Uint8Array(128)); // Reset to silence
+    }
+
+    return () => {
+      if (lipSyncInterval) {
+        clearInterval(lipSyncInterval);
+      }
+    };
+  }, [isSpeaking, audioData]);
 
   return (
     <div className="dougie-speed-date-v3">
@@ -1017,23 +1405,29 @@ const DougieSpeedDateV3: React.FC = () => {
             👤 PiP View
           </button>
           <button 
-            className={`toggle-btn ${showControls ? 'active' : ''}`}
-            onClick={() => setShowControls(!showControls)}
-            title="Toggle Analytics"
+            className={`toggle-btn ${practiceMode ? 'active' : ''}`}
+            onClick={() => setPracticeMode(!practiceMode)}
+            title="Practice Mode - Enable detailed analytics for learning"
           >
-            <FaChartLine /> Analytics
+            🎯 Practice
           </button>
-          <button 
-            className={`toggle-btn camera-btn ${cameraZoomedIn ? 'active' : ''}`}
-            onClick={() => {
-              const newZoomed = !cameraZoomedIn;
-              setCameraZoomedIn(newZoomed);
-              setCameraForEyeTracking(newZoomed);
-            }}
-            title="Toggle Face Close-up"
+          <div 
+            className="engagement-indicator"
+            title={`Engagement: ${getEngagementLevelFromAnalytics(engagementAnalytics)}`}
           >
-            {cameraZoomedIn ? '🔍 Zoomed' : '🔍 Face Zoom'}
-          </button>
+            <div 
+              className={`engagement-dot ${getEngagementColorFromAnalytics(engagementAnalytics)}`}
+            />
+          </div>
+          {practiceMode && (
+            <button 
+              className={`toggle-btn ${showEngagementDashboard ? 'active' : ''}`}
+              onClick={() => setShowEngagementDashboard(!showEngagementDashboard)}
+              title="Toggle Detailed Engagement Dashboard (Practice Mode)"
+            >
+              📊 Details
+            </button>
+          )}
         </div>
       </div>
 
@@ -1315,7 +1709,7 @@ const DougieSpeedDateV3: React.FC = () => {
             </div>
             
             <div className="cv-mode-selector">
-              <h5>Tracking Mode</h5>
+              <h5>Tracking Mode {cvAnalyticsMode !== 'none' && <span className="status-indicator">🟢 Active</span>}</h5>
               <div className="cv-mode-buttons">
                 <button
                   onClick={() => initializeCVAnalytics('none')}
@@ -1512,6 +1906,7 @@ const DougieSpeedDateV3: React.FC = () => {
             <ambientLight intensity={0.5} />
             <directionalLight position={[5, 5, 5]} />
             <PresenceAvatarMaleCoach 
+              key="stable-dougie-avatar"
               avatarUrl="/avatars/DougieG.glb"
               animationName={animationName}
               audioData={audioData}
@@ -1569,6 +1964,13 @@ const DougieSpeedDateV3: React.FC = () => {
             />
           </div>
         </div>
+      )}
+      {showEngagementDashboard && practiceMode && (
+        <EngagementDashboard
+          engagementData={engagementAnalytics}
+          isVisible={showEngagementDashboard}
+          onToggleMinimize={() => setShowEngagementDashboard(false)}
+        />
       )}
     </div>
   );

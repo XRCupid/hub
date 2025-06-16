@@ -1,8 +1,8 @@
 import React from 'react';
-import DougieSpeedDate from '../components/DougieSpeedDate';
+import DougieSpeedDateV3 from '../components/DougieSpeedDateV3';
 
 const DougieSpeedDatePage: React.FC = () => {
-  return <DougieSpeedDate />;
+  return <DougieSpeedDateV3 />;
 };
 
 export default DougieSpeedDatePage;

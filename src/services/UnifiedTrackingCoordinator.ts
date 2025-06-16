@@ -1,6 +1,7 @@
 import { CoachProfile } from '../config/coachConfig';
 import { NPCPersonality } from '../config/NPCPersonalities';
-import { FacialExpressions, PostureData } from '../types/tracking';
+import { FacialExpressions, PostureData, TrackingData, EngagementAnalytics } from '../types/tracking';
+import { EngagementDetectionService } from './EngagementDetectionService';
 
 // Core interfaces for dynamic tracking selection
 export interface SessionContext {
@@ -11,6 +12,8 @@ export interface SessionContext {
   userPreferences: DateTrackingPreferences;
   deviceCapabilities: DeviceInfo;
   currentModule?: string;
+  trackingMode?: TrackingMode; // New: explicit mode selection
+  enableEngagementAnalytics?: boolean; // New: engagement analytics flag
 }
 
 export interface DateTrackingPreferences {
@@ -33,12 +36,14 @@ export interface DeviceInfo {
 }
 
 export interface TrackingConfiguration {
+  mode: TrackingMode; // New: explicit mode reference
   models: {
     face: TrackingModel | null;
     eyes: TrackingModel | null;
     pose: TrackingModel | null;
     hands: TrackingModel | null;
   };
+  activeModelCount: number; // New: enforce 2-model max
   processingMode: 'real-time' | 'batch' | 'selective';
   updateFrequency: number; // Hz
   analyticsDepth: 'basic' | 'detailed' | 'comprehensive';
@@ -52,6 +57,67 @@ export interface TrackingModel {
   accuracy: 'basic' | 'standard' | 'high';
   privacyLevel: 'local' | 'hybrid' | 'cloud';
 }
+
+// New: Tracking mode definitions with 2-model maximum
+export interface TrackingMode {
+  id: 'casual' | 'eye-contact' | 'presence' | 'expression' | 'custom';
+  displayName: string;
+  description: string;
+  primary: 'emotions'; // Always facial emotions
+  secondary: 'pip-view' | 'eye-gaze' | 'posture' | 'gestures';
+  disables?: string[]; // What gets turned off
+  focusArea: string;
+  batteryImpact: 'low' | 'medium' | 'high';
+  recommendedDuration: number; // minutes
+}
+
+// Predefined tracking modes with 2-model maximum
+export const TRACKING_MODES: Record<string, TrackingMode> = {
+  casual: {
+    id: 'casual',
+    displayName: 'Casual Dating',
+    description: 'See yourself while building natural chemistry',
+    primary: 'emotions',
+    secondary: 'pip-view',
+    focusArea: 'Natural conversation and chemistry building',
+    batteryImpact: 'medium',
+    recommendedDuration: 15
+  },
+  
+  'eye-contact': {
+    id: 'eye-contact',
+    displayName: 'Eye Contact Training',
+    description: 'Focus on maintaining confident eye contact',
+    primary: 'emotions',
+    secondary: 'eye-gaze',
+    disables: ['pip-view'], // No visual distraction!
+    focusArea: 'Direct eye contact and gaze patterns',
+    batteryImpact: 'medium',
+    recommendedDuration: 10
+  },
+  
+  presence: {
+    id: 'presence',
+    displayName: 'Physical Presence',
+    description: 'Work on posture and confident body language',
+    primary: 'emotions',
+    secondary: 'posture',
+    focusArea: 'Body language, posture, and physical confidence',
+    batteryImpact: 'high',
+    recommendedDuration: 12
+  },
+  
+  expression: {
+    id: 'expression',
+    displayName: 'Expressiveness',
+    description: 'Practice natural hand gestures and expression',
+    primary: 'emotions',
+    secondary: 'gestures',
+    focusArea: 'Hand gestures and expressive communication',
+    batteryImpact: 'medium',
+    recommendedDuration: 8
+  }
+};
 
 // Coach-specific tracking requirements
 export interface CoachTrackingProfile {
@@ -125,6 +191,7 @@ export class UnifiedTrackingCoordinator {
   private currentContext: SessionContext | null = null;
   private performanceMonitor: PerformanceMonitor;
   private modelPool: ModelPool;
+  private engagementDetectionService: EngagementDetectionService;
   
   // Tracking service instances
   private trackingServices: Map<string, any> = new Map();
@@ -138,6 +205,7 @@ export class UnifiedTrackingCoordinator {
   constructor() {
     this.performanceMonitor = new PerformanceMonitor();
     this.modelPool = new ModelPool();
+    this.engagementDetectionService = new EngagementDetectionService();
     this.initializeCoachProfiles();
     this.initializeNPCRequirements();
   }
@@ -164,7 +232,8 @@ export class UnifiedTrackingCoordinator {
       deviceConstraints,
       userPreferences: context.userPreferences,
       lessonObjectives: context.lessonObjectives,
-      activityType: context.activityType
+      activityType: context.activityType,
+      trackingMode: context.trackingMode
     });
 
     console.log('✅ [UnifiedTrackingCoordinator] Selected configuration:', configuration);
@@ -217,15 +286,21 @@ export class UnifiedTrackingCoordinator {
     userPreferences: DateTrackingPreferences;
     lessonObjectives: string[];
     activityType: string;
+    trackingMode?: TrackingMode;
   }): TrackingConfiguration {
     
+    // Use default casual mode if none specified
+    const mode = factors.trackingMode || TRACKING_MODES.casual;
+    
     const config: TrackingConfiguration = {
+      mode: mode,
       models: {
         face: null,
         eyes: null,
         pose: null,
         hands: null
       },
+      activeModelCount: 0,
       processingMode: 'real-time',
       updateFrequency: 30,
       analyticsDepth: 'detailed',
@@ -251,7 +326,84 @@ export class UnifiedTrackingCoordinator {
     // Apply lesson-specific requirements
     this.applyLessonRequirements(config, factors.lessonObjectives);
 
+    // Apply tracking mode
+    this.applyTrackingMode(config, mode);
+
     return config;
+  }
+
+  /**
+   * Process tracking data and add engagement analytics
+   */
+  public processTrackingData(trackingData: TrackingData): TrackingData {
+    // Only add engagement analytics if enabled
+    if (this.currentContext?.enableEngagementAnalytics) {
+      const engagementAnalytics = this.engagementDetectionService.analyzeEngagement(trackingData);
+      
+      return {
+        ...trackingData,
+        engagement: engagementAnalytics
+      };
+    }
+    
+    return trackingData;
+  }
+
+  /**
+   * Get current engagement analytics
+   */
+  public getCurrentEngagement(): EngagementAnalytics | null {
+    if (!this.currentContext?.enableEngagementAnalytics) {
+      return null;
+    }
+    
+    // Return a default engagement state if no data is available
+    return {
+      nodding: {
+        isNodding: false,
+        noddingIntensity: 0,
+        noddingFrequency: 0,
+        lastNoddingTime: 0,
+        noddingPattern: 'neutral',
+        engagementScore: 0
+      },
+      posture: {
+        isLeaningIn: false,
+        leanAngle: 0,
+        proximityChange: 0,
+        engagementLevel: 'neutral',
+        shoulderPosition: { left: 0.5, right: 0.5 },
+        bodyLanguageScore: 0.5
+      },
+      eyeContact: {
+        hasEyeContact: false,
+        eyeContactDuration: 0,
+        eyeContactPercentage: 0,
+        gazeDirection: { x: 0, y: 0 },
+        contactQuality: 'poor',
+        lastContactTime: 0,
+        totalContactTime: 0
+      },
+      overallEngagement: 0,
+      engagementTrend: 'stable',
+      lastUpdate: Date.now()
+    };
+  }
+
+  /**
+   * Reset engagement tracking for new conversation
+   */
+  public resetEngagementTracking(): void {
+    this.engagementDetectionService.reset();
+  }
+
+  /**
+   * Enable/disable engagement analytics
+   */
+  public setEngagementAnalytics(enabled: boolean): void {
+    if (this.currentContext) {
+      this.currentContext.enableEngagementAnalytics = enabled;
+    }
   }
 
   /**
@@ -461,6 +613,84 @@ export class UnifiedTrackingCoordinator {
 
   private applyLessonRequirements(config: TrackingConfiguration, objectives: string[]): void {
     // Implementation will be added in next steps
+  }
+
+  private applyTrackingMode(config: TrackingConfiguration, mode: TrackingMode): void {
+    // Always enable facial emotions (primary model)
+    config.models.face = {
+      type: 'mediapipe-face',
+      priority: 'critical',
+      processingLoad: 6,
+      accuracy: 'standard',
+      privacyLevel: 'local'
+    };
+    config.activeModelCount = 1;
+
+    // Enable secondary model based on mode
+    switch (mode.secondary) {
+      case 'pip-view':
+        // PiP uses the face model for display, so no additional model needed
+        // Just enable the display functionality
+        break;
+        
+      case 'eye-gaze':
+        config.models.eyes = {
+          type: 'webgazer',
+          priority: 'important',
+          processingLoad: 5,
+          accuracy: 'basic',
+          privacyLevel: 'local'
+        };
+        config.activeModelCount = 2;
+        break;
+        
+      case 'posture':
+        config.models.pose = {
+          type: 'mediapipe-pose',
+          priority: 'important',
+          processingLoad: 7,
+          accuracy: 'high',
+          privacyLevel: 'local'
+        };
+        config.activeModelCount = 2;
+        break;
+        
+      case 'gestures':
+        config.models.hands = {
+          type: 'mediapipe-hands',
+          priority: 'important',
+          processingLoad: 6,
+          accuracy: 'standard',
+          privacyLevel: 'local'
+        };
+        config.activeModelCount = 2;
+        break;
+    }
+
+    // Disable conflicting models if specified
+    if (mode.disables) {
+      mode.disables.forEach(disabled => {
+        if (disabled === 'pip-view') {
+          // PiP view disabled - handled in UI layer
+        }
+      });
+    }
+
+    // Adjust performance based on battery impact
+    switch (mode.batteryImpact) {
+      case 'low':
+        config.updateFrequency = 20;
+        config.analyticsDepth = 'basic';
+        break;
+      case 'medium':
+        config.updateFrequency = 25;
+        config.analyticsDepth = 'detailed';
+        break;
+      case 'high':
+        config.updateFrequency = 30;
+        config.analyticsDepth = 'comprehensive';
+        break;
+    }
   }
 
   private analyzeDeviceConstraints(capabilities: DeviceInfo): DeviceConstraints {
