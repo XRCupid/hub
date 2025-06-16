@@ -263,6 +263,7 @@ const DougieSpeedDateV3: React.FC = () => {
   // CV Analytics State
   const [cvAnalyticsMode, setCvAnalyticsMode] = useState<CVAnalyticsMode>('none');
   const [cvAnalyticsData, setCvAnalyticsData] = useState<CVAnalyticsData | null>(null);
+  const [showCVPanel, setShowCVPanel] = useState(false);
 
   // Service references
   const voiceServiceRef = useRef<HybridVoiceService | null>(null);
@@ -452,28 +453,6 @@ const DougieSpeedDateV3: React.FC = () => {
           // Reset engagement analytics for new session
           trackingCoordinator.resetEngagementTracking();
           console.log('[DougieSpeedDateV3] Tracking system initialized successfully');
-          
-          // Initialize CV analytics in posture-only mode for engagement tracking
-          console.log('[DougieSpeedDateV3] CURRENT CV ANALYTICS MODE:', cvAnalyticsMode);
-          if (cvAnalyticsMode === 'none') {
-            console.log('[DougieSpeedDateV3] FORCING POSTURE-ONLY MODE (not combined)');
-            setCvAnalyticsMode('posture'); // Force posture-only, not combined
-            try {
-              await initializeCVAnalytics('posture'); // Force posture-only
-              console.log('[DougieSpeedDateV3] POSTURE-ONLY analytics initialized successfully');
-            } catch (error) {
-              console.error('[DougieSpeedDateV3] Failed to initialize POSTURE-ONLY analytics:', error);
-            }
-          } else {
-            console.log('[DougieSpeedDateV3] CV Analytics mode is NOT none, forcing POSTURE-ONLY anyway...');
-            setCvAnalyticsMode('posture'); // Force posture-only
-            try {
-              await initializeCVAnalytics('posture'); // Force posture-only
-              console.log('[DougieSpeedDateV3] FORCED POSTURE-ONLY analytics initialized successfully');
-            } catch (error) {
-              console.error('[DougieSpeedDateV3] FORCED POSTURE-ONLY analytics failed:', error);
-            }
-          }
         } catch (trackingError) {
           console.warn('[DougieSpeedDateV3] Tracking initialization failed, continuing without:', trackingError);
         }
@@ -488,156 +467,11 @@ const DougieSpeedDateV3: React.FC = () => {
       setDateStarted(true);
       setDateStartTime(Date.now());
 
-      // Ensure camera is ready for facial expression tracking
-      if (cvAnalyticsMode === 'none') {
-        console.log('[DougieSpeedDateV3] Initializing camera for facial emotion tracking...');
-        try {
-          await initializeCVAnalytics('combined');
-          console.log('[DougieSpeedDateV3] Camera initialized successfully for facial tracking');
-          
-          // Verify camera is working
-          if (cvVideoRef.current) {
-            console.log('[DougieSpeedDateV3] Camera verification:', {
-              videoWidth: cvVideoRef.current.videoWidth,
-              videoHeight: cvVideoRef.current.videoHeight,
-              readyState: cvVideoRef.current.readyState,
-              paused: cvVideoRef.current.paused,
-              srcObject: !!cvVideoRef.current.srcObject
-            });
-          }
-        } catch (error) {
-          console.error('[DougieSpeedDateV3] Failed to initialize camera for facial tracking:', error);
-        }
-      }
+      // CV Analytics initialization is now handled via CV panel only
+      console.log('[DougieSpeedDateV3] Date started - CV Analytics mode:', cvAnalyticsMode);
+      console.log('[DougieSpeedDateV3] Use CV Panel to enable face or posture tracking');
 
-      // Small delay to ensure camera is fully initialized
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Initialize microphone for user audio analysis
-      console.log('[DougieSpeedDateV3] Initializing microphone for user audio analysis...');
-      try {
-        const micStream = await navigator.mediaDevices.getUserMedia({ 
-          audio: { 
-            echoCancellation: true, 
-            noiseSuppression: true,
-            sampleRate: 44100 
-          } 
-        });
-        
-        // Create audio context for microphone analysis
-        const micAudioContext = new AudioContext();
-        const micSource = micAudioContext.createMediaStreamSource(micStream);
-        const micAnalyser = micAudioContext.createAnalyser();
-        micAnalyser.fftSize = 512;
-        micAnalyser.smoothingTimeConstant = 0.3;
-        
-        micSource.connect(micAnalyser);
-        
-        // Store microphone analysis setup
-        micAnalyserRef.current = micAnalyser;
-        micAudioContextRef.current = micAudioContext;
-        
-        console.log('[DougieSpeedDateV3] Microphone audio analysis initialized');
-        
-        // Test microphone analysis
-        setTimeout(() => {
-          if (micAnalyserRef.current) {
-            const testArray = new Uint8Array(micAnalyserRef.current.frequencyBinCount);
-            micAnalyserRef.current.getByteFrequencyData(testArray);
-            console.log('[DougieSpeedDateV3] Microphone test - First 10 values:', Array.from(testArray.slice(0, 10)));
-          }
-        }, 1000);
-        
-      } catch (micError) {
-        console.error('[DougieSpeedDateV3] Failed to initialize microphone:', micError);
-      }
-
-      // Start facial expression tracking
-      console.log('[DougieSpeedDateV3] Initializing user facial expression tracking...');
-      console.log('[DougieSpeedDateV3] Video element available (cvVideoRef):', !!cvVideoRef.current);
-      console.log('[DougieSpeedDateV3] Expression service available:', !!expressionServiceRef.current);
-      
-      if (cvVideoRef.current && expressionServiceRef.current) {
-        console.log('[DougieSpeedDateV3] Starting facial expression tracking...');
-        await expressionServiceRef.current!.startTracking(cvVideoRef.current);
-        console.log('[DougieSpeedDateV3] Facial expression tracking started successfully');
-        
-        expressionServiceRef.current!.setOnEmotionCallback((emotions: any[]) => {
-          console.log('[DougieSpeedDateV3] Raw user emotions received:', emotions);
-          
-          const formattedEmotions = emotions.map(e => ({ 
-            name: 'emotion' in e ? (e as any).emotion : e.name, 
-            score: e.score 
-          }));
-          console.log('[DougieSpeedDateV3] Formatted user emotions:', formattedEmotions);
-          setUserFacialEmotions(formattedEmotions);
-          
-          // Update the most recent user transcript segment with facial emotions
-          setTranscriptSegments(prev => {
-            console.log('[DougieSpeedDateV3] Current transcript segments:', prev.length);
-            
-            if (prev.length > 0) {
-              const lastSegment = prev[prev.length - 1];
-              console.log('[DougieSpeedDateV3] Last segment:', lastSegment.speaker, 'emotions:', lastSegment.emotions?.length || 0);
-              
-              if (lastSegment.speaker === 'user' && (!lastSegment.emotions || lastSegment.emotions.length === 0)) {
-                console.log('[DougieSpeedDateV3] Adding user facial emotions to existing transcript segment');
-                const updatedSegments = [...prev];
-                updatedSegments[updatedSegments.length - 1] = {
-                  ...lastSegment,
-                  emotions: formattedEmotions,
-                  facialEmotions: formattedEmotions
-                };
-                return updatedSegments;
-              }
-            }
-            
-            // If no suitable segment exists, create a new user segment with emotions
-            console.log('[DougieSpeedDateV3] Creating new user transcript segment for emotions');
-            const newUserSegment = {
-              id: `user-emotions-${Date.now()}`,
-              speaker: 'user' as const,
-              text: '[User facial expressions detected]',
-              timestamp: Date.now(),
-              emotions: formattedEmotions,
-              facialEmotions: formattedEmotions,
-              audioUrl: null
-            };
-            
-            return [...prev, newUserSegment];
-          });
-          
-          // Process engagement analytics if enabled
-          const currentEngagement = trackingCoordinator.getCurrentEngagement();
-          if (currentEngagement) {
-            console.log('[DougieSpeedDateV3] Engagement analytics updated:', currentEngagement);
-            setEngagementAnalytics(currentEngagement);
-          } else {
-            console.log('[DougieSpeedDateV3] No engagement analytics available from tracking coordinator');
-            
-            // If tracking coordinator doesn't have data, try to generate engagement from current data
-            const avgEmotionScore = formattedEmotions.reduce((sum, e) => sum + e.score, 0) / formattedEmotions.length;
-            console.log('[DougieSpeedDateV3] Average emotion score:', avgEmotionScore, 'from', formattedEmotions.length, 'emotions');
-            console.log('[DougieSpeedDateV3] Sample emotion scores:', formattedEmotions.slice(0, 5).map(e => ({ name: e.name, score: e.score })));
-            
-            // Normalize emotion scores - they appear to be 0-100 already, not 0-1
-            const normalizedScore = Math.max(0, Math.min(100, avgEmotionScore));
-            
-            const directEngagement: any = {
-              overall: Math.round(normalizedScore),
-              emotional: Math.round(normalizedScore),
-              eyeContact: cvAnalyticsData?.eyeContact?.percentage || 0,
-              posture: cvAnalyticsData?.posture?.confidenceScore || 0
-            };
-            console.log('[DougieSpeedDateV3] Generated direct engagement from emotions:', directEngagement);
-            setEngagementAnalytics(directEngagement);
-          }
-        });
-      } else {
-        console.error('[DougieSpeedDateV3] Cannot start facial expression tracking - missing video or expression service');
-      }
-
-      // Start the date
+      // Transition to conversation phase immediately
       setTimeout(() => {
         console.log('[DougieSpeedDateV3] Sending initial greeting to trigger conversation');
         if (voiceServiceRef.current && isConnected) {
@@ -1139,22 +973,9 @@ const DougieSpeedDateV3: React.FC = () => {
     return () => window.removeEventListener('resize', setViewportHeight);
   }, []);
 
-  // Auto-initialize CV analytics when component mounts
-  useEffect(() => {
-    console.log('[DougieSpeedDateV3] COMPONENT MOUNTED - AUTO INITIALIZING POSTURE-ONLY MODE');
-    const autoInit = async () => {
-      try {
-        console.log('[DougieSpeedDateV3] AUTO-INIT: Starting POSTURE-ONLY analytics...');
-        await initializeCVAnalytics('posture'); // Use posture-only mode
-        console.log('[DougieSpeedDateV3] AUTO-INIT: POSTURE-ONLY analytics successful');
-      } catch (error) {
-        console.error('[DougieSpeedDateV3] AUTO-INIT: POSTURE-ONLY analytics failed:', error);
-      }
-    };
-    
-    // Delay to ensure video elements are ready
-    setTimeout(autoInit, 2000);
-  }, []);
+  // Don't auto-initialize posture tracking - user controls via CV panel
+  console.log('[DougieSpeedDateV3] Skipping auto-posture init - user must select via CV panel');
+  console.log('[DougieSpeedDateV3] Current CV mode:', cvAnalyticsMode);
 
   useEffect(() => {
     // Add periodic CV analytics update
@@ -1440,9 +1261,8 @@ const DougieSpeedDateV3: React.FC = () => {
     }
     setActiveLeftTab('analytics');
     
-    // Force posture tracking initialization
-    console.log('FORCING POSTURE TRACKING INIT');
-    initializeCVAnalytics('posture');
+    // User must select tracking mode via CV panel
+    console.log('[DougieSpeedDateV3] Analytics opened - use CV panel to select tracking mode');
   };
 
   return (
@@ -1500,7 +1320,7 @@ const DougieSpeedDateV3: React.FC = () => {
           )}
           <button 
             className={`toggle-btn ${cvAnalyticsData ? 'active' : ''}`}
-            onClick={handleCVPanelToggle}
+            onClick={() => setShowCVPanel(!showCVPanel)}
             title="Toggle CV Analytics Panel"
           >
             👁️ CV Panel
@@ -1519,7 +1339,7 @@ const DougieSpeedDateV3: React.FC = () => {
               {showPiP && (
                 <select 
                   value={pipSize} 
-                  onChange={(e) => setPipSize(e.target.value as 'small' | 'medium' | 'large' | 'hidden')}
+                  onChange={(e) => setPipSize(e.target.value as 'small' | 'medium' | 'large')}
                   className="pip-size-select"
                 >
                   <option value="small">S</option>
@@ -1897,14 +1717,19 @@ const DougieSpeedDateV3: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                {showPiP && pipSize !== 'hidden' && (
+                {showPiP && (
                   <UserAvatarPiP
-                    size={pipSize as 'small' | 'medium' | 'large'}
-                    position={'bottom-right'}
-                    className={`user-avatar-pip user-avatar-${pipSize}`}
-                    enableOwnTracking={true} // Enable internal face tracking for PiP
-                    cameraStream={streamRef.current} // Share the same camera stream
-                    postureData={cvAnalyticsData?.posture} // Add posture data for camera responsiveness
+                    avatarUrl="/avatars/user_avatar.glb"
+                    position="bottom-right"
+                    size="medium"
+                    style={{ zIndex: 1000 }}
+                    cameraStream={streamRef.current}
+                    postureData={(() => {
+                      console.log('[DougieSpeedDateV3] PiP PostureData:', cvAnalyticsData?.posture);
+                      return cvAnalyticsData?.posture;
+                    })()} // Add posture data for camera responsiveness
+                    trackingData={null} // Let PiP handle its own tracking
+                    enableOwnTracking={true} // Enable PiP's own face tracking
                     onClose={() => setShowPiP(false)}
                   />
                 )}
@@ -2018,6 +1843,49 @@ const DougieSpeedDateV3: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* CV Analytics Panel */}
+      {showCVPanel && (
+        <div className="cv-panel">
+          <div className="panel-header">
+            <h3>🎯 CV Analytics</h3>
+            <button 
+              className="panel-toggle" 
+              onClick={() => setShowCVPanel(false)}
+              title="Close CV Panel"
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div className="cv-controls">
+            <div className="cv-mode-selector">
+              <label>Tracking Mode:</label>
+              <select 
+                value={cvAnalyticsMode} 
+                onChange={(e) => {
+                  const mode = e.target.value as CVAnalyticsMode;
+                  setCvAnalyticsMode(mode);
+                  if (mode !== 'none') {
+                    initializeCVAnalytics(mode);
+                  }
+                }}
+              >
+                <option value="none">None</option>
+                <option value="eye-contact">Face Tracking</option>
+                <option value="posture">Posture Only</option>
+                <option value="combined">Combined (Face + Posture)</option>
+              </select>
+            </div>
+            
+            <div className="cv-status">
+              <div>Mode: <strong>{cvAnalyticsMode}</strong></div>
+              <div>Face Data: {userFacialEmotions.length > 0 ? '✅ Active' : '❌ None'}</div>
+              <div>Posture Data: {cvAnalyticsData?.posture ? '✅ Active' : '❌ None'}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Chemistry Report Modal */}
       {showReport && (

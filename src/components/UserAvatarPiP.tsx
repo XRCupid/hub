@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect, Suspense, useCallback } from 'react';
-import { Canvas } from '@react-three/fiber';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';
 import { PresenceAvatar } from './PresenceAvatar';
+import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';
 import { FacialExpressions } from '../types/tracking';
 import './UserAvatarPiP.css';
 
@@ -60,41 +60,33 @@ const AvatarCanvas = ({
   console.log('[AvatarCanvas] Rendering with:', { avatarUrl, hasTrackingData: !!trackingData });
   
   // Calculate camera position based on posture data
-  const getCameraPosition = () => {
-    if (!postureData) return [0, 1.5, 2.0];
+  const getCameraPosition = (): [number, number, number] => {
+    if (!postureData) return [0, 1.2, 2.6];
     
-    const { bodyOpenness = 50, shoulderAlignment = 0.5, leaning = 'none' } = postureData;
+    const { bodyOpenness = 50, shoulderAlignment = 0.5 } = postureData;
     
     // Base position
     let x = 0;
-    let y = 1.5;
-    let z = 2.0;
+    let y = 1.2;
+    let z = 2.6;
     
-    // Leaning affects camera tilt (x position)
-    if (leaning === 'left') x = -0.2;
-    else if (leaning === 'right') x = 0.2;
-    
-    // Body openness affects camera distance (z position)
-    const opennessFactor = bodyOpenness / 100; // 0-1
-    z = 1.8 + (opennessFactor * 0.4); // 1.8-2.2 range
-    
-    // Shoulder alignment affects camera height slightly
-    y = 1.4 + (shoulderAlignment * 0.2); // 1.4-1.6 range
+    // VERY subtle vertical orbit based on posture quality
+    const postureQuality = (bodyOpenness + (shoulderAlignment * 100)) / 2; // 0-100
+    const heightOffset = (postureQuality - 50) / 500; // -0.1 to +0.1 (very subtle)
+    y = 1.2 + heightOffset; // 1.1 to 1.3 range (subtle)
     
     return [x, y, z];
   };
   
-  const getControlsTarget = () => {
-    if (!postureData) return [0, 1.5, 0];
+  const getControlsTarget = (): [number, number, number] => {
+    if (!postureData) return [0, 1.6, 0];
     
-    const { leaning = 'none' } = postureData;
+    const { bodyOpenness = 50, shoulderAlignment = 0.5 } = postureData;
+    const postureQuality = (bodyOpenness + (shoulderAlignment * 100)) / 2; // 0-100
+    const targetOffset = (postureQuality - 50) / 1000; // -0.05 to +0.05 (very subtle)
+    const targetY = 1.6 + targetOffset; // 1.55 to 1.65 range (subtle)
     
-    // Adjust target based on leaning
-    let x = 0;
-    if (leaning === 'left') x = -0.1;
-    else if (leaning === 'right') x = 0.1;
-    
-    return [x, 1.5, 0];
+    return [0, targetY, 0];
   };
   
   // Add a test to ensure canvas doesn't lose context
@@ -183,33 +175,45 @@ const MemoizedAvatarCanvas = React.memo(AvatarCanvas, arePropsEqual);
 
 interface UserAvatarPiPProps {
   avatarUrl?: string;
-  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   size?: 'small' | 'medium' | 'large';
-  trackingData?: any;
-  onClose?: () => void;
+  position?: 'bottom-right' | 'top-left' | 'top-right' | 'bottom-left';
   className?: string;
+  style?: React.CSSProperties;
+  cameraStream?: MediaStream | null; // Allow null values
   enableOwnTracking?: boolean;
-  cameraStream?: MediaStream | null;
+  trackingData?: any; // Face tracking data
   postureData?: {
     bodyOpenness?: number;
     confidenceScore?: number;
     shoulderAlignment?: number;
     leaning?: string;
-  }; // For camera responsiveness
+  }; 
+  onClose?: () => void;
+  onTogglePiP?: () => void;
 }
 
 export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({ 
-  avatarUrl = '/avatars/user_avatar.glb',
+  avatarUrl = "/avatars/user_avatar.glb",
+  size = 'medium',
   position = 'bottom-right',
-  size = 'large',
-  trackingData,
-  onClose,
+  style,
   className,
   enableOwnTracking = false,
   cameraStream,
-  postureData
+  trackingData,
+  postureData,
+  onClose,
+  onTogglePiP
 }) => {
-  console.log('[UserAvatarPiP] Component rendering with props:', { avatarUrl, position, size, hasTrackingData: !!trackingData });
+  console.log('[UserAvatarPiP] Component rendering with props:', { 
+    avatarUrl, 
+    position, 
+    size, 
+    hasTrackingData: !!trackingData,
+    trackingData: trackingData,
+    hasPostureData: !!postureData,
+    postureData: postureData
+  });
   
   const [isTracking, setIsTracking] = useState(false);
   const [trackingDataState, setTrackingData] = useState<{
@@ -254,9 +258,9 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
     }
   }, [trackingData]);
 
-  // Camera position for face framing
-  const cameraPosition: [number, number, number] = [0, 1.5, 2.0];
-  const cameraTarget: [number, number, number] = [0, 1.5, 0];
+  // Camera position for face framing - simple close-up portrait
+  const cameraPosition: [number, number, number] = [0, 1.6, 1.8];
+  const cameraTarget: [number, number, number] = [0, 1.6, 0];
 
   // Log state changes
   React.useEffect(() => {
@@ -495,6 +499,49 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
     };
   }, [enableOwnTracking, cameraStream]);
 
+  // Camera controller component for dynamic pitch adjustment
+  const CameraController: React.FC<{ postureData?: any }> = ({ postureData }) => {
+    const { camera } = useThree();
+    const frameCount = useRef(0);
+    const lastPostureRef = useRef<any>(null);
+    
+    useFrame(() => {
+      frameCount.current++;
+      
+      // Always log posture data status
+      if (frameCount.current % 120 === 0) { // Every 2 seconds
+        console.log('[PiP CameraController] PostureData received:', !!postureData, postureData);
+      }
+      
+      if (postureData && (postureData.bodyOpenness !== undefined || postureData.shoulderAlignment !== undefined)) {
+        const { bodyOpenness = 50, shoulderAlignment = 0.5 } = postureData;
+        
+        // Calculate pitch adjustment based on posture quality
+        const postureQuality = Math.max(10, Math.min(90, (bodyOpenness + (shoulderAlignment * 100)) / 2));
+        const pitchAdjustment = (postureQuality - 50) / 150; // Increased sensitivity: ±0.33 radians (±19 degrees)
+        
+        // Apply camera pitch rotation
+        camera.rotation.x = pitchAdjustment;
+        camera.updateProjectionMatrix();
+        
+        // Only log when posture changes
+        if (JSON.stringify(postureData) !== JSON.stringify(lastPostureRef.current)) {
+          console.log('[PiP Camera] ACTIVE - Posture Quality:', postureQuality.toFixed(1), 
+                     'Pitch:', (pitchAdjustment * 180 / Math.PI).toFixed(1), '°', 
+                     'BodyOpenness:', bodyOpenness, 'ShoulderAlignment:', shoulderAlignment);
+          lastPostureRef.current = postureData;
+        }
+      } else {
+        // Log when no posture data
+        if (frameCount.current % 120 === 0) {
+          console.log('[PiP Camera] NO POSTURE DATA - Camera static');
+        }
+      }
+    });
+    
+    return null;
+  };
+
   return (
     <div 
       className={`user-avatar-pip ${position} ${getSizeClass()} ${isMinimized ? 'minimized' : ''}`}
@@ -502,7 +549,8 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
         position: 'fixed',
         bottom: '20px',
         right: '20px',
-        zIndex: 9999
+        zIndex: 9999,
+        ...style
       }}
     >
       {/* Hidden video element for camera feed */}
@@ -543,42 +591,15 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
             <Canvas
               key={`canvas-${attemptReload}`}
               camera={{ 
-                position: (() => {
-                  // Calculate camera position based on posture data
-                  if (!postureData) return [0, 1.2, 0.9];
-                  
-                  const { bodyOpenness = 50, shoulderAlignment = 0.5, leaning = 'none' } = postureData;
-                  
-                  // Base position
-                  let x = 0;
-                  let y = 1.2;
-                  let z = 0.9;
-                  
-                  // Leaning affects camera tilt (x position)
-                  if (leaning === 'left') x = -0.15;
-                  else if (leaning === 'right') x = 0.15;
-                  
-                  // Body openness affects camera distance (z position)
-                  const opennessFactor = bodyOpenness / 100; // 0-1
-                  z = 0.8 + (opennessFactor * 0.2); // 0.8-1.0 range
-                  
-                  // Shoulder alignment affects camera height slightly
-                  y = 1.1 + (shoulderAlignment * 0.2); // 1.1-1.3 range
-                  
-                  return [x, y, z];
-                })(),
-                fov: 35,
+                position: cameraPosition, 
+                fov: 38, // Matches AnimatedAvatarDemo for optimal face framing
                 near: 0.01,
                 far: 100
               }}
               gl={{ 
                 antialias: true, 
                 alpha: true,
-                preserveDrawingBuffer: true,
                 powerPreference: 'high-performance'
-              }}
-              onCreated={({ gl }) => {
-                console.log('[UserAvatarPiP] Canvas created, WebGL context:', gl);
               }}
               onError={(error: any) => {
                 console.error('[UserAvatarPiP] Canvas error:', error);
@@ -597,9 +618,13 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
               }>
                 <PresenceAvatar
                   avatarUrl={avatarUrl}
-                  trackingData={trackingData || trackingDataRef.current}
-                  position={[0, -0.6, 0]}
-                  scale={1}
+                  trackingData={(() => {
+                    const data = trackingData || trackingDataRef.current;
+                    console.log('[UserAvatarPiP] Passing tracking data to PresenceAvatar:', data);
+                    return data;
+                  })()}
+                  position={[0, -0.8, 0]} // Move avatar down to show head/shoulders
+                  scale={1.8} // Larger scale to fill the canvas
                 />
               </Suspense>
               
@@ -607,18 +632,9 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
                 enablePan={false}
                 enableZoom={false}
                 enableRotate={false}
-                target={(() => {
-                  // Adjust target based on leaning
-                  if (!postureData) return [0, 1.0, 0];
-                  
-                  const { leaning = 'none' } = postureData;
-                  let x = 0;
-                  if (leaning === 'left') x = -0.08;
-                  else if (leaning === 'right') x = 0.08;
-                  
-                  return [x, 1.0, 0];
-                })()}
+                target={cameraTarget} // Adjusted target for better framing
               />
+              <CameraController postureData={postureData} />
             </Canvas>
           </Suspense>
         )}

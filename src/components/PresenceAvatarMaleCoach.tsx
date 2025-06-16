@@ -911,7 +911,7 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
           }
           
           const amplification = mapping.amplify ?? 1.0;
-          const amplifiedValue = Math.min(rawValue * amplification * 1.2, 1.0); // Amplify for visibility and boost by 20%
+          const amplifiedValue = Math.min(rawValue * amplification * 0.1, 1.0); // VERY subtle expressions
           
           // DEBUG: Log mouth-related values
           if (mapping.target === 'mouthOpen' && amplifiedValue > 0.1) {
@@ -927,7 +927,7 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
           }
           
           // Apply direct blendshape
-          const amplifiedValue = Math.min(rawValue * 3.0, 1.0); // Amplify for visibility and boost by 25%
+          const amplifiedValue = Math.min(rawValue * 0.2, 1.0); // VERY subtle expressions
           
           if (frameCountRef.current % 60 === 0 && amplifiedValue > 0.1) {
             console.log(`[PresenceAvatarMaleCoach] DIRECT BLENDSHAPE ${humeKey}: ${amplifiedValue} (BLOCKED during talking: ${animationName === 'talking'})`);
@@ -946,7 +946,7 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
           if (mapping) {
             const amplification = mapping.amplify ?? 1.0;
             const numericRawValue = Number(rawValue);
-            const amplifiedValue = MathUtils.clamp(numericRawValue * amplification * 1.2, 0, 1); // Amplify for visibility and boost by 20%
+            const amplifiedValue = MathUtils.clamp(numericRawValue * amplification * 0.2, 0, 1); // VERY subtle expressions
             
             // Debug log for high-value expressions
             if (amplifiedValue > 0.3 && (ml5Key.includes('mouth') || ml5Key.includes('smile'))) {
@@ -1129,7 +1129,7 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
       Object.entries(emotionalBlendshapes).forEach(([blendshapeName, value]) => {
         const morphIndex = mesh.morphTargetDictionary![blendshapeName];
         if (morphIndex !== undefined && typeof value === 'number') {
-          const amplifiedValue = Math.min(value * 2.5, 1.0); // Amplify for visibility and boost by 25%
+          const amplifiedValue = Math.min(value * 1.5, 1.0); // Amplify for visibility and boost by 25%
           mesh.morphTargetInfluences![morphIndex] = amplifiedValue;
           console.log(`[PresenceAvatarMaleCoach] 🎭 ${blendshapeName}: ${amplifiedValue}`);
         }
