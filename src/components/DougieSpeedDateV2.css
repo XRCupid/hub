@@ -99,7 +99,7 @@
   left: 0;
   top: 195px;
   bottom: 0;
-  width: 320px;
+  width: 250px;
   background: linear-gradient(180deg, rgba(25, 25, 30, 0.98), rgba(20, 20, 25, 0.98));
   border-right: 2px solid rgba(76, 175, 80, 0.2);
   backdrop-filter: blur(15px);
@@ -387,7 +387,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 120px;
+  height: 80px;
   background: linear-gradient(180deg, rgba(25, 25, 35, 0.98), rgba(20, 20, 30, 0.98));
   border-top: 2px solid rgba(76, 175, 80, 0.3);
   backdrop-filter: blur(15px);
@@ -419,10 +419,10 @@
 /* Main Content Area - Adjusted for new layout */
 .main-content-v2 {
   position: fixed;
-  left: 320px;
+  left: 250px;
   right: 0;
   top: 195px;
-  bottom: 120px;
+  bottom: 80px;
   background: linear-gradient(135deg, rgba(35, 35, 55, 0.8), rgba(25, 25, 45, 0.8));
   backdrop-filter: blur(20px);
   display: flex;
@@ -460,8 +460,9 @@
 /* Enhanced Hume Controls Zone - Corner Positioned */
 .hume-controls-zone {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: linear-gradient(135deg, rgba(220, 20, 60, 0.95), rgba(178, 34, 34, 0.95));
   border: 2px solid rgba(220, 20, 60, 0.8);
   border-radius: 16px;

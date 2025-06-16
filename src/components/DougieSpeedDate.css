@@ -615,7 +615,10 @@
 /* =================================================================== */
 
 /* CSS Reset for DougieSpeedDate */
-html, body, #root, .App {
+.dougie-speed-date html, 
+.dougie-speed-date body, 
+.dougie-speed-date #root, 
+.dougie-speed-date .App {
   margin: 0 !important;
   padding: 0 !important;
   height: 100dvh !important; /* Use dynamic viewport height */
@@ -624,7 +627,7 @@ html, body, #root, .App {
   position: relative !important;
 }
 
-body {
+.dougie-speed-date body {
   width: 100vw !important;
   height: 100dvh !important; /* Use dynamic viewport height */
   position: fixed !important;

@@ -48,6 +48,15 @@
         if (typeof ml5 !== 'undefined') {
           console.log('[index.html] ML5 is available:', ml5.version);
           console.log('[index.html] ML5 facemesh available:', typeof ml5.facemesh === 'function');
+          console.log('[index.html] ML5 poseNet available:', typeof ml5.poseNet === 'function');
+          
+          // If poseNet is not available, try to debug why
+          if (typeof ml5.poseNet !== 'function') {
+            console.error('[index.html] ML5 poseNet is NOT available!');
+            console.log('[index.html] Available ML5 methods:', Object.keys(ml5));
+          } else {
+            console.log('[index.html] ML5 poseNet is available!');
+          }
         } else {
           console.error('[index.html] ML5 not available!');
         }

@@ -183,6 +183,12 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
   const currentInfluences = useRef<Record<string, number>>({});
   const morphTargetsLoggedRef = useRef(false);
   
+  // Natural blinking system
+  const blinkTimer = useRef<number>(0);
+  const blinkDuration = useRef<number>(0);
+  const isBlinking = useRef<boolean>(false);
+  const nextBlinkTime = useRef<number>(Math.random() * 5 + 2); // 2-7 seconds until next blink
+
   const { scene } = useGLTF(avatarUrl || DEFAULT_AVATAR_URL);
   
   // Clone the scene using useMemo to prevent re-cloning on every render
@@ -1091,6 +1097,39 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
         (mesh.geometry as THREE.BufferGeometry).computeBoundingSphere();
       }
       if (mesh.material) (mesh.material as any).needsUpdate = true;
+    }
+
+    // Natural blinking system
+    blinkTimer.current += delta;
+    
+    if (!isBlinking.current) {
+      // Check if it's time to blink
+      if (blinkTimer.current >= nextBlinkTime.current) {
+        isBlinking.current = true;
+        blinkDuration.current = Math.random() * 0.2 + 0.1; // 0.1-0.3 seconds
+        blinkTimer.current = 0; // Reset timer for blink duration
+      }
+    } else {
+      // Currently blinking - check if blink is done
+      if (blinkTimer.current >= blinkDuration.current) {
+        isBlinking.current = false;
+        nextBlinkTime.current = Math.random() * 3 + 2; // 2-5 seconds until next blink
+        blinkTimer.current = 0; // Reset timer for next blink interval
+      }
+    }
+    
+    // Apply blinking to morph targets
+    if (mesh?.morphTargetDictionary && mesh.morphTargetInfluences) {
+      const possibleBlinkTargets = ['eyeBlink', 'eyeBlinkLeft', 'eyeBlinkRight', 'eyeLidClosed', 'eyesClosed'];
+      const blinkIntensity = isBlinking.current ? 
+        Math.sin((blinkTimer.current / blinkDuration.current) * Math.PI) : 0; // Smooth sine wave blink
+      
+      possibleBlinkTargets.forEach(targetName => {
+        const morphIndex = mesh.morphTargetDictionary![targetName];
+        if (morphIndex !== undefined) {
+          mesh.morphTargetInfluences![morphIndex] = blinkIntensity;
+        }
+      });
     }
   });
 

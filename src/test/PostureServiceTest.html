@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PostureTrackingService Test</title>
+    <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
+    <!-- Try older version that definitely has poseNet -->
+</head>
+<body>
+    <h1>🎭 PostureTrackingService Isolation Test</h1>
+    
+    <video id="testVideo" width="640" height="480" autoplay muted></video>
+    <br><br>
+    
+    <button onclick="startTest()">🚨 Test Posture Service</button>
+    <button onclick="checkML5()">📦 Check ML5</button>
+    
+    <div id="output"></div>
+    
+    <script>
+        let postureService = null;
+        let video = null;
+        
+        function log(message) {
+            console.log(message);
+            document.getElementById('output').innerHTML += message + '<br>';
+        }
+        
+        function checkML5() {
+            log('🔍 Checking ML5...');
+            if (window.ml5) {
+                log('✅ ML5 is loaded: ' + ml5.version);
+                log('✅ ML5 poseNet available: ' + (!!ml5.poseNet));
+            } else {
+                log('❌ ML5 is NOT loaded!');
+            }
+        }
+        
+        async function initCamera() {
+            try {
+                log('📹 Starting camera...');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 640, height: 480 } 
+                });
+                video = document.getElementById('testVideo');
+                video.srcObject = stream;
+                
+                video.onloadedmetadata = () => {
+                    log('✅ Camera started: ' + video.videoWidth + 'x' + video.videoHeight);
+                };
+                
+                return new Promise(resolve => {
+                    video.onloadeddata = () => resolve(video);
+                });
+            } catch (error) {
+                log('❌ Camera failed: ' + error.message);
+                throw error;
+            }
+        }
+        
+        async function startTest() {
+            try {
+                log('🚨 STARTING POSTURE SERVICE TEST...');
+                
+                // Check ML5 first
+                checkML5();
+                
+                // Start camera
+                video = await initCamera();
+                
+                // Simple ML5 PoseNet test (without our service)
+                log('🎯 Testing ML5 PoseNet directly...');
+                const poseNet = ml5.poseNet(video, {
+                    architecture: 'MobileNetV1',
+                    imageScaleFactor: 0.5,
+                    outputStride: 16,
+                    flipHorizontal: true,
+                    minConfidence: 0.1,
+                    maxPoseDetections: 1
+                }, () => {
+                    log('✅ ML5 PoseNet initialized successfully!');
+                });
+                
+                poseNet.on('pose', (poses) => {
+                    if (poses && poses.length > 0) {
+                        log('🎭 Got poses: ' + poses.length + ' poses detected');
+                        log('🎯 First pose confidence: ' + poses[0].pose.score.toFixed(3));
+                        
+                        const keypoints = poses[0].pose.keypoints;
+                        const shoulders = keypoints.filter(kp => 
+                            kp.part === 'leftShoulder' || kp.part === 'rightShoulder'
+                        );
+                        
+                        if (shoulders.length >= 2) {
+                            log('👤 Both shoulders detected with confidence: ' + 
+                                shoulders.map(s => s.score.toFixed(3)).join(', '));
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                log('❌ Test failed: ' + error.message);
+                console.error('Test error:', error);
+            }
+        }
+        
+        // Auto-check ML5 on load
+        window.onload = () => {
+            setTimeout(checkML5, 1000);
+        };
+    </script>
+</body>
+</html>
