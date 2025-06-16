@@ -16,6 +16,12 @@ interface PresenceAvatarProps {
   animationName?: string; // e.g., 'idle', 'talking'
   emotionalBlendshapes?: Record<string, number>; // For Hume EVI prosody
   audioData?: Uint8Array; // For lip-sync from Hume EVI audio
+  postureData?: {
+    bodyOpenness?: number;
+    confidenceScore?: number;
+    shoulderAlignment?: number;
+    leaning?: string;
+  }; // For posture responsiveness
   participantId?: string;
 }
 
@@ -125,7 +131,8 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
   participantId,
   emotionalBlendshapes = {}, // Fix TypeScript error
   animationName = 'idle', // Default to idle animation
-  audioData
+  audioData,
+  postureData
 }) => {
   console.log('[DOUGIE MALE COACH AVATAR] Component mounted! Using masculine animations.');
   
@@ -997,6 +1004,43 @@ export const PresenceAvatarMaleCoach: React.FC<PresenceAvatarProps> = React.memo
         console.log(`[PresenceAvatarMaleCoach] Active blendshapes: ${activeBlendshapes}`);
       }
       lastDebugLogRef.current = now;
+    }
+
+    // 🤸 POSTURE RESPONSIVENESS - Mirror user's posture
+    if (postureData && modelRootRef.current) {
+      const { bodyOpenness = 50, confidenceScore = 70, shoulderAlignment = 0.5, leaning = 'none' } = postureData;
+      
+      // Convert posture data to avatar adjustments
+      const postureInfluence = Math.max(0, Math.min(1, confidenceScore / 100)); // 0-1 range
+      const opennessInfluence = Math.max(0, Math.min(1, bodyOpenness / 100)); // 0-1 range
+      
+      // Apply posture-based rotation and position adjustments
+      modelRootRef.current.rotation.z = (shoulderAlignment - 0.5) * 0.3 * postureInfluence; // Shoulder tilt
+      
+      // Body openness affects arm positioning (wider stance)
+      const armSpread = opennessInfluence * 0.2; // 0-0.2 radians
+      
+      // Leaning affects overall body tilt
+      let leanAmount = 0;
+      if (leaning === 'left') leanAmount = -0.1;
+      else if (leaning === 'right') leanAmount = 0.1;
+      
+      modelRootRef.current.rotation.x = leanAmount * postureInfluence;
+      
+      // Scale affects confidence - more upright when confident
+      const confidenceScale = 0.95 + (postureInfluence * 0.1); // 0.95-1.05 scale
+      modelRootRef.current.scale.setScalar(confidenceScale);
+      
+      // Debug posture responsiveness every 60 frames
+      if (frameCountRef.current % 60 === 0) {
+        console.log('[PresenceAvatarMaleCoach] 🤸 POSTURE MIRRORING:', {
+          bodyOpenness: bodyOpenness.toFixed(1),
+          confidence: confidenceScore.toFixed(1),
+          shoulderTilt: (modelRootRef.current.rotation.z * 180 / Math.PI).toFixed(1) + '°',
+          lean: leaning,
+          scale: confidenceScale.toFixed(3)
+        });
+      }
     }
 
     // ONE-TIME MESH SCAN: Check if we're using wrong mesh and show all options

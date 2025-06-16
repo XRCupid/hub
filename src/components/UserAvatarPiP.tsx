@@ -42,15 +42,60 @@ class CanvasErrorBoundary extends React.Component<
 const AvatarCanvas = ({ 
   avatarUrl, 
   trackingData,
+  postureData,
   idleAnimationUrl = "/animations/M_Standing_Idle_001.glb",
   onContextLost
 }: { 
   avatarUrl: string;
   trackingData: any;
+  postureData?: {
+    bodyOpenness?: number;
+    confidenceScore?: number;
+    shoulderAlignment?: number;
+    leaning?: string;
+  };
   idleAnimationUrl?: string;
   onContextLost?: () => void;
 }) => {
   console.log('[AvatarCanvas] Rendering with:', { avatarUrl, hasTrackingData: !!trackingData });
+  
+  // Calculate camera position based on posture data
+  const getCameraPosition = () => {
+    if (!postureData) return [0, 1.5, 2.0];
+    
+    const { bodyOpenness = 50, shoulderAlignment = 0.5, leaning = 'none' } = postureData;
+    
+    // Base position
+    let x = 0;
+    let y = 1.5;
+    let z = 2.0;
+    
+    // Leaning affects camera tilt (x position)
+    if (leaning === 'left') x = -0.2;
+    else if (leaning === 'right') x = 0.2;
+    
+    // Body openness affects camera distance (z position)
+    const opennessFactor = bodyOpenness / 100; // 0-1
+    z = 1.8 + (opennessFactor * 0.4); // 1.8-2.2 range
+    
+    // Shoulder alignment affects camera height slightly
+    y = 1.4 + (shoulderAlignment * 0.2); // 1.4-1.6 range
+    
+    return [x, y, z];
+  };
+  
+  const getControlsTarget = () => {
+    if (!postureData) return [0, 1.5, 0];
+    
+    const { leaning = 'none' } = postureData;
+    
+    // Adjust target based on leaning
+    let x = 0;
+    if (leaning === 'left') x = -0.1;
+    else if (leaning === 'right') x = 0.1;
+    
+    return [x, 1.5, 0];
+  };
   
   // Add a test to ensure canvas doesn't lose context
   React.useEffect(() => {
@@ -64,7 +109,7 @@ const AvatarCanvas = ({
     <CanvasErrorBoundary>
       <Canvas 
         camera={{ 
-          position: [0, 1.5, 2.0],
+          position: getCameraPosition(),
           fov: 28,
           near: 0.1,
           far: 100
@@ -114,7 +159,7 @@ const AvatarCanvas = ({
           enablePan={false}
           enableZoom={false}
           enableRotate={false}
-          target={[0, 1.5, 0]}
+          target={getControlsTarget()}
         />
       </Canvas>
     </CanvasErrorBoundary>
@@ -145,6 +190,12 @@ interface UserAvatarPiPProps {
   className?: string;
   enableOwnTracking?: boolean;
   cameraStream?: MediaStream | null;
+  postureData?: {
+    bodyOpenness?: number;
+    confidenceScore?: number;
+    shoulderAlignment?: number;
+    leaning?: string;
+  }; // For camera responsiveness
 }
 
 export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({ 
@@ -155,7 +206,8 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
   onClose,
   className,
   enableOwnTracking = false,
-  cameraStream
+  cameraStream,
+  postureData
 }) => {
   console.log('[UserAvatarPiP] Component rendering with props:', { avatarUrl, position, size, hasTrackingData: !!trackingData });
   
@@ -491,7 +543,30 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
             <Canvas
               key={`canvas-${attemptReload}`}
               camera={{ 
-                position: [0, 1.2, 0.9], 
+                position: (() => {
+                  // Calculate camera position based on posture data
+                  if (!postureData) return [0, 1.2, 0.9];
+                  
+                  const { bodyOpenness = 50, shoulderAlignment = 0.5, leaning = 'none' } = postureData;
+                  
+                  // Base position
+                  let x = 0;
+                  let y = 1.2;
+                  let z = 0.9;
+                  
+                  // Leaning affects camera tilt (x position)
+                  if (leaning === 'left') x = -0.15;
+                  else if (leaning === 'right') x = 0.15;
+                  
+                  // Body openness affects camera distance (z position)
+                  const opennessFactor = bodyOpenness / 100; // 0-1
+                  z = 0.8 + (opennessFactor * 0.2); // 0.8-1.0 range
+                  
+                  // Shoulder alignment affects camera height slightly
+                  y = 1.1 + (shoulderAlignment * 0.2); // 1.1-1.3 range
+                  
+                  return [x, y, z];
+                })(),
                 fov: 35,
                 near: 0.01,
                 far: 100
@@ -532,7 +607,17 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
                 enablePan={false}
                 enableZoom={false}
                 enableRotate={false}
-                target={[0, 1.0, 0]}
+                target={(() => {
+                  // Adjust target based on leaning
+                  if (!postureData) return [0, 1.0, 0];
+                  
+                  const { leaning = 'none' } = postureData;
+                  let x = 0;
+                  if (leaning === 'left') x = -0.08;
+                  else if (leaning === 'right') x = 0.08;
+                  
+                  return [x, 1.0, 0];
+                })()}
               />
             </Canvas>
           </Suspense>

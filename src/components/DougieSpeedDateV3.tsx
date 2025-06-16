@@ -137,18 +137,17 @@ const DOUGIE_CONFIG = {
 };
 
 const DougieSpeedDateV3: React.FC = () => {
-  console.log('🚨🚨🚨 DOUGIE SPEED DATE V3 COMPONENT FUNCTION STARTED! 🚨🚨🚨');
-  console.log('🚨🚨🚨 DOUGIE SPEED DATE V3 COMPONENT RENDERING! 🚨🚨🚨');
-  
+  console.log('DougieSpeedDateV3 component initialized');
+
   // Add global test function for browser console debugging
   useEffect(() => {
     (window as any).testPostureTracking = () => {
-      console.log('🚨 WINDOW TEST FUNCTION CALLED!');
+      console.log('Window test function called');
       return 'Test function works!';
     };
-    console.log('🚨 Window test function added - try calling window.testPostureTracking() in console');
+    console.log('Window test function added - try calling window.testPostureTracking() in console');
   }, []);
-  
+
   // Core date state
   const [isConnected, setIsConnected] = useState(false);
   const [dateStarted, setDateStarted] = useState(false);
@@ -217,7 +216,7 @@ const DougieSpeedDateV3: React.FC = () => {
   useEffect(() => {
     const maxValue = Math.max(...Array.from(audioData));
     const nonZeroCount = Array.from(audioData).filter(val => val > 0).length;
-    console.log('[DougieSpeedDateV3] 🎵 AudioData updated:', {
+    console.log('[DougieSpeedDateV3] AudioData updated:', {
       maxValue,
       nonZeroCount,
       isSpeaking,
@@ -264,14 +263,6 @@ const DougieSpeedDateV3: React.FC = () => {
   // CV Analytics State
   const [cvAnalyticsMode, setCvAnalyticsMode] = useState<CVAnalyticsMode>('none');
   const [cvAnalyticsData, setCvAnalyticsData] = useState<CVAnalyticsData | null>(null);
-
-  // Debug state for on-page display
-  const [debugStatus, setDebugStatus] = useState<string[]>([]);
-  
-  const addDebugLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setDebugStatus(prev => [...prev.slice(-4), `${timestamp} - ${message}`]); // Keep last 5 logs
-  };
 
   // Service references
   const voiceServiceRef = useRef<HybridVoiceService | null>(null);
@@ -349,37 +340,37 @@ const DougieSpeedDateV3: React.FC = () => {
         console.log('[DougieSpeedDateV3] Voice service created, setting up callbacks...');
         
         if (voiceServiceRef.current) {
-          console.log('[HUME-DEBUG] 🔍 Voice service exists, registering callbacks...');
+          console.log('[HUME-DEBUG] Voice service exists, registering callbacks...');
           
           // Setup voice service callbacks
           voiceServiceRef.current.onAudio((audioBlob: Blob) => {
-            console.log('[DougieSpeedDateV3] 🎵 Audio received from Hume, size:', audioBlob.size, 'type:', audioBlob.type);
+            console.log('[DougieSpeedDateV3] Audio received from Hume, size:', audioBlob.size, 'type:', audioBlob.type);
             
             if (audioBlob.size > 0) {
-              console.log('[DougieSpeedDateV3] ✅ Valid audio blob, starting playback...');
+              console.log('[DougieSpeedDateV3] Valid audio blob, starting playback...');
               playAudio(audioBlob);
             } else {
-              console.warn('[DougieSpeedDateV3] ⚠️ Empty audio blob received from Hume');
+              console.warn('[DougieSpeedDateV3] Empty audio blob received from Hume');
             }
           });
           
-          console.log('[HUME-DEBUG] ✅ Audio callback registered');
+          console.log('[HUME-DEBUG] Audio callback registered');
           
           // Also register message callback to see if Hume is working at all
           voiceServiceRef.current.onMessage((message: any) => {
-            console.log('[HUME-DEBUG] 📨 Message received from Hume:', message);
+            console.log('[HUME-DEBUG] Message received from Hume:', message);
           });
           
-          console.log('[HUME-DEBUG] ✅ Message callback registered');
+          console.log('[HUME-DEBUG] Message callback registered');
           
           // Register error callback
           voiceServiceRef.current.onError((error: any) => {
-            console.log('[HUME-DEBUG] ❌ Hume error:', error);
+            console.log('[HUME-DEBUG] Hume error:', error);
           });
           
-          console.log('[HUME-DEBUG] ✅ Error callback registered');
+          console.log('[HUME-DEBUG] Error callback registered');
         } else {
-          console.log('[HUME-DEBUG] ❌ Voice service is null!');
+          console.log('[HUME-DEBUG] Voice service is null!');
         }
         
         // Initialize expression service
@@ -402,7 +393,7 @@ const DougieSpeedDateV3: React.FC = () => {
   // Connection handlers
   const handleConnectClick = async () => {
     try {
-      console.log('[DougieSpeedDateV3] 🚀 CONNECT BUTTON CLICKED - Starting connection...');
+      console.log('[DougieSpeedDateV3] CONNECT BUTTON CLICKED - Starting connection...');
       
       if (voiceServiceRef.current) {
         console.log('[DougieSpeedDateV3] Voice service exists, attempting to connect...');
@@ -411,26 +402,26 @@ const DougieSpeedDateV3: React.FC = () => {
         console.log('[DougieSpeedDateV3] Calling voiceService.connect() with config:', DOUGIE_CONFIG.humeConfigId);
         await voiceServiceRef.current.connect(DOUGIE_CONFIG.humeConfigId);
         
-        console.log('[DougieSpeedDateV3] ✅ Voice service connected successfully!');
+        console.log('[DougieSpeedDateV3] Voice service connected successfully!');
         setIsConnected(true);
         setDateStarted(true);
         setDateStartTime(Date.now());
         
-        console.log('[DougieSpeedDateV3] 🎤 Testing voice service - sending test message...');
+        console.log('[DougieSpeedDateV3] Testing voice service - sending test message...');
         
         // Send a test message to trigger audio
         setTimeout(() => {
-          console.log('[DougieSpeedDateV3] 📤 Sending test message to Hume...');
+          console.log('[DougieSpeedDateV3] Sending test message to Hume...');
           if (voiceServiceRef.current) {
             voiceServiceRef.current.sendMessage("Hello, this is a test message to generate audio");
           }
         }, 2000);
         
       } else {
-        console.error('[DougieSpeedDateV3] ❌ Voice service is null!');
+        console.error('[DougieSpeedDateV3] Voice service is null!');
       }
     } catch (error) {
-      console.error('[DougieSpeedDateV3] ❌ Connection failed:', error);
+      console.error('[DougieSpeedDateV3] Connection failed:', error);
       setIsConnected(false);
     }
   };
@@ -463,24 +454,24 @@ const DougieSpeedDateV3: React.FC = () => {
           console.log('[DougieSpeedDateV3] Tracking system initialized successfully');
           
           // Initialize CV analytics in posture-only mode for engagement tracking
-          console.log('[DougieSpeedDateV3] 🚨 CURRENT CV ANALYTICS MODE:', cvAnalyticsMode);
+          console.log('[DougieSpeedDateV3] CURRENT CV ANALYTICS MODE:', cvAnalyticsMode);
           if (cvAnalyticsMode === 'none') {
-            console.log('[DougieSpeedDateV3] 🚨 FORCING POSTURE-ONLY MODE (not combined)');
+            console.log('[DougieSpeedDateV3] FORCING POSTURE-ONLY MODE (not combined)');
             setCvAnalyticsMode('posture'); // Force posture-only, not combined
             try {
               await initializeCVAnalytics('posture'); // Force posture-only
-              console.log('[DougieSpeedDateV3] ✅ POSTURE-ONLY analytics initialized successfully');
+              console.log('[DougieSpeedDateV3] POSTURE-ONLY analytics initialized successfully');
             } catch (error) {
-              console.error('[DougieSpeedDateV3] ❌ Failed to initialize POSTURE-ONLY analytics:', error);
+              console.error('[DougieSpeedDateV3] Failed to initialize POSTURE-ONLY analytics:', error);
             }
           } else {
-            console.log('[DougieSpeedDateV3] 🚨 CV Analytics mode is NOT none, forcing POSTURE-ONLY anyway...');
+            console.log('[DougieSpeedDateV3] CV Analytics mode is NOT none, forcing POSTURE-ONLY anyway...');
             setCvAnalyticsMode('posture'); // Force posture-only
             try {
               await initializeCVAnalytics('posture'); // Force posture-only
-              console.log('[DougieSpeedDateV3] ✅ FORCED POSTURE-ONLY analytics initialized successfully');
+              console.log('[DougieSpeedDateV3] FORCED POSTURE-ONLY analytics initialized successfully');
             } catch (error) {
-              console.error('[DougieSpeedDateV3] ❌ FORCED POSTURE-ONLY analytics failed:', error);
+              console.error('[DougieSpeedDateV3] FORCED POSTURE-ONLY analytics failed:', error);
             }
           }
         } catch (trackingError) {
@@ -502,7 +493,7 @@ const DougieSpeedDateV3: React.FC = () => {
         console.log('[DougieSpeedDateV3] Initializing camera for facial emotion tracking...');
         try {
           await initializeCVAnalytics('combined');
-          console.log('[DougieSpeedDateV3] ✅ Camera initialized successfully for facial tracking');
+          console.log('[DougieSpeedDateV3] Camera initialized successfully for facial tracking');
           
           // Verify camera is working
           if (cvVideoRef.current) {
@@ -650,12 +641,12 @@ const DougieSpeedDateV3: React.FC = () => {
       setTimeout(() => {
         console.log('[DougieSpeedDateV3] Sending initial greeting to trigger conversation');
         if (voiceServiceRef.current && isConnected) {
-          console.log('[DougieSpeedDateV3] 📤 Sending initial greeting to start conversation...');
+          console.log('[DougieSpeedDateV3] Sending initial greeting to start conversation...');
           setTimeout(() => {
             voiceServiceRef.current?.sendMessage("Hi Dougie! I'm ready to start our speed date conversation. Please introduce yourself and ask me a question.");
           }, 1000);
         } else {
-          console.warn('[DougieSpeedDateV3] ⚠️ Cannot send initial message - voice service not connected');
+          console.warn('[DougieSpeedDateV3] Cannot send initial message - voice service not connected');
         }
 
         // Start timer
@@ -717,15 +708,7 @@ const DougieSpeedDateV3: React.FC = () => {
 
   // CV Analytics Functions
   const initializeCVAnalytics = async (mode: CVAnalyticsMode) => {
-    console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
-    console.log('🚨🚨🚨 CV ANALYTICS INITIALIZATION STARTED!!! 🚨🚨🚨');
-    console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
-    alert('🚨 CV ANALYTICS INIT STARTED! Mode: ' + mode);
-    
-    addDebugLog(`CV Init: ${mode}`);
-    console.log('🚨🚨🚨 [DougieSpeedDateV3] CV ANALYTICS INIT CALLED WITH MODE:', mode);
-    console.log('🚨🚨🚨 [DougieSpeedDateV3] CV ANALYTICS INIT CALLED WITH MODE:', mode);
-    console.log('🚨🚨🚨 [DougieSpeedDateV3] CV ANALYTICS INIT CALLED WITH MODE:', mode);
+    console.log('[DougieSpeedDateV3] CV ANALYTICS INIT CALLED WITH MODE:', mode);
     
     if (!cvVideoRef.current) {
       console.error('[DougieSpeedDateV3] No CV video element available');
@@ -746,8 +729,7 @@ const DougieSpeedDateV3: React.FC = () => {
 
       // Ensure video element has camera stream
       if (!cvVideoRef.current?.srcObject) {
-        addDebugLog('❌ NO CAMERA - REQUESTING');
-        console.log('[DougieSpeedDateV3] 🎥 Requesting camera access...');
+        console.log('[DougieSpeedDateV3] Requesting camera access...');
         
         try {
           const cameraStream = await navigator.mediaDevices.getUserMedia({ 
@@ -759,8 +741,7 @@ const DougieSpeedDateV3: React.FC = () => {
           });
           
           cvVideoRef.current!.srcObject = cameraStream;
-          addDebugLog('✅ Camera stream added');
-          console.log('[DougieSpeedDateV3] ✅ Camera stream attached to video element');
+          console.log('[DougieSpeedDateV3] Camera stream attached to video element');
           
           // CRITICAL: Wait for video to actually start playing
           await new Promise((resolve, reject) => {
@@ -769,24 +750,22 @@ const DougieSpeedDateV3: React.FC = () => {
             }, 5000);
             
             cvVideoRef.current!.onloadedmetadata = () => {
-              console.log('[DougieSpeedDateV3] 📹 Video metadata loaded');
+              console.log('[DougieSpeedDateV3] Video metadata loaded');
               cvVideoRef.current!.play().then(() => {
                 clearTimeout(timeout);
-                console.log('[DougieSpeedDateV3] ▶️ Video playing successfully');
+                console.log('[DougieSpeedDateV3] Video playing successfully');
                 resolve(true);
               }).catch(reject);
             };
           });
           
         } catch (cameraError) {
-          console.error('[DougieSpeedDateV3] ❌ Camera access failed:', cameraError);
-          addDebugLog('❌ Camera access failed');
+          console.error('[DougieSpeedDateV3] Camera access failed:', cameraError);
           alert('Camera access failed. Please allow camera permissions.');
           return;
         }
       } else {
-        console.log('[DougieSpeedDateV3] ✅ Video element already has camera stream');
-        addDebugLog('✅ Camera already available');
+        console.log('[DougieSpeedDateV3] Video element already has camera stream');
       }
       
       // Wait for video to be fully ready with actual dimensions
@@ -796,12 +775,11 @@ const DougieSpeedDateV3: React.FC = () => {
               cvVideoRef.current.readyState >= 3 && 
               cvVideoRef.current.videoWidth > 0 && 
               cvVideoRef.current.videoHeight > 0) {
-            addDebugLog(`Video ready: ${cvVideoRef.current.videoWidth}x${cvVideoRef.current.videoHeight}`);
-            console.log('[DougieSpeedDateV3] ✅ Video fully ready with dimensions:', 
+            console.log('[DougieSpeedDateV3] Video fully ready with dimensions:', 
                        cvVideoRef.current.videoWidth, 'x', cvVideoRef.current.videoHeight);
             resolve(true);
           } else {
-            console.log('[DougieSpeedDateV3] ⏳ Waiting for video... readyState:', 
+            console.log('[DougieSpeedDateV3] Waiting for video... readyState:', 
                        cvVideoRef.current?.readyState, 'dimensions:', 
                        cvVideoRef.current?.videoWidth, 'x', cvVideoRef.current?.videoHeight);
             setTimeout(checkReady, 100);
@@ -813,18 +791,15 @@ const DougieSpeedDateV3: React.FC = () => {
       postureServiceRef.current = new PostureTrackingService();
       await postureServiceRef.current.startTracking(cvVideoRef.current);
       
-      console.log('[DougieSpeedDateV3] 🎯 Setting up posture results callback...');
-      addDebugLog('Service Started');
+      console.log('[DougieSpeedDateV3] Setting up posture results callback...');
       postureServiceRef.current.onResults((postureData: any) => {
-        console.log('[DougieSpeedDateV3] 🎭 POSTURE DATA RECEIVED:', postureData);
-        addDebugLog('Pose Data Received');
+        console.log('[DougieSpeedDateV3] POSTURE DATA RECEIVED:', postureData);
         updatePostureAnalytics(postureData);
       });
       
-      console.log('[DougieSpeedDateV3] ✅ POSTURE TRACKING INITIALIZED SUCCESSFULLY!');
-      addDebugLog('Posture Complete!');
+      console.log('[DougieSpeedDateV3] POSTURE TRACKING INITIALIZED SUCCESSFULLY!');
     } catch (error) {
-      console.error('[DougieSpeedDateV3] ❌ POSTURE TRACKING INITIALIZATION FAILED:', error);
+      console.error('[DougieSpeedDateV3] POSTURE TRACKING INITIALIZATION FAILED:', error);
     }
   };
 
@@ -993,7 +968,7 @@ const DougieSpeedDateV3: React.FC = () => {
     const bodyOpenness = Math.min(100, shoulderWidth / 2);
     
     // Debug body openness calculation
-    console.log('[DougieSpeedDateV3] 🤸 Body Openness Debug:', {
+    console.log('[DougieSpeedDateV3] Body Openness Debug:', {
       leftShoulderX: leftShoulder.x,
       rightShoulderX: rightShoulder.x,
       shoulderWidth: shoulderWidth,
@@ -1166,14 +1141,14 @@ const DougieSpeedDateV3: React.FC = () => {
 
   // Auto-initialize CV analytics when component mounts
   useEffect(() => {
-    console.log('[DougieSpeedDateV3] 🚨 COMPONENT MOUNTED - AUTO INITIALIZING POSTURE-ONLY MODE');
+    console.log('[DougieSpeedDateV3] COMPONENT MOUNTED - AUTO INITIALIZING POSTURE-ONLY MODE');
     const autoInit = async () => {
       try {
-        console.log('[DougieSpeedDateV3] 🚨 AUTO-INIT: Starting POSTURE-ONLY analytics...');
+        console.log('[DougieSpeedDateV3] AUTO-INIT: Starting POSTURE-ONLY analytics...');
         await initializeCVAnalytics('posture'); // Use posture-only mode
-        console.log('[DougieSpeedDateV3] ✅ AUTO-INIT: POSTURE-ONLY analytics successful');
+        console.log('[DougieSpeedDateV3] AUTO-INIT: POSTURE-ONLY analytics successful');
       } catch (error) {
-        console.error('[DougieSpeedDateV3] ❌ AUTO-INIT: POSTURE-ONLY analytics failed:', error);
+        console.error('[DougieSpeedDateV3] AUTO-INIT: POSTURE-ONLY analytics failed:', error);
       }
     };
     
@@ -1220,7 +1195,7 @@ const DougieSpeedDateV3: React.FC = () => {
     let lipSyncInterval: NodeJS.Timeout | null = null;
     
     if (isSpeaking && audioData.every(val => val === 0)) {
-      console.log('[DougieSpeedDateV3] 🎭 Starting fallback lip sync - no audio data available');
+      console.log('[DougieSpeedDateV3] Starting fallback lip sync - no audio data available');
       
       // Create dynamic fallback lip sync
       const createFallbackLipSync = () => {
@@ -1247,7 +1222,7 @@ const DougieSpeedDateV3: React.FC = () => {
       }, 80); // Update every 80ms for smooth animation
       
     } else if (!isSpeaking && lipSyncInterval) {
-      console.log('[DougieSpeedDateV3] 🔇 Stopping fallback lip sync');
+      console.log('[DougieSpeedDateV3] Stopping fallback lip sync');
       clearInterval(lipSyncInterval);
       setAudioData(new Uint8Array(128)); // Reset to silence
     }
@@ -1262,7 +1237,7 @@ const DougieSpeedDateV3: React.FC = () => {
   useEffect(() => {
     if (voiceServiceRef.current) {
       voiceServiceRef.current.onUserMessage((message: any) => {
-        console.log('[DougieSpeedDateV3] 👤 User message received:', message);
+        console.log('[DougieSpeedDateV3] User message received:', message);
         
         // Create transcript segment for user message
         const userSegment: TranscriptSegment = {
@@ -1279,7 +1254,7 @@ const DougieSpeedDateV3: React.FC = () => {
       });
       
       voiceServiceRef.current.onMessage((message: any) => {
-        console.log('[DougieSpeedDateV3] 🤖 Assistant message received:', message);
+        console.log('[DougieSpeedDateV3] Assistant message received:', message);
         
         // Create transcript segment for assistant response
         const assistantSegment: TranscriptSegment = {
@@ -1296,7 +1271,7 @@ const DougieSpeedDateV3: React.FC = () => {
       });
       
       voiceServiceRef.current.onEmotion((emotions: any) => {
-        console.log('[DougieSpeedDateV3] 🎭 Dougie emotions received:', emotions);
+        console.log('[DougieSpeedDateV3] Dougie emotions received:', emotions);
         
         // Convert emotions to blendshapes for avatar
         const blendshapes: Record<string, number> = {};
@@ -1376,7 +1351,7 @@ const DougieSpeedDateV3: React.FC = () => {
         });
       });
       
-      console.log('[DougieSpeedDateV3] ✅ All voice service callbacks registered');
+      console.log('[DougieSpeedDateV3] All voice service callbacks registered');
     }
   }, [voiceServiceRef]);
 
@@ -1455,11 +1430,10 @@ const DougieSpeedDateV3: React.FC = () => {
   };
 
   const handleCVPanelToggle = () => {
-    console.log('🚨🚨🚨🚨🚨 CV PANEL BUTTON CLICKED!!! 🚨🚨🚨🚨🚨');
-    console.log('🚨🚨🚨🚨🚨 CV PANEL BUTTON CLICKED!!! 🚨🚨🚨🚨🚨');
-    console.log('🚨🚨🚨🚨🚨 CV PANEL BUTTON CLICKED!!! 🚨🚨🚨🚨🚨');
-    alert('🚨 CV PANEL BUTTON CLICKED! Check console...');
-    addDebugLog('🚨 CV PANEL CLICKED!');
+    console.log('CV PANEL BUTTON CLICKED!!!');
+    console.log('CV PANEL BUTTON CLICKED!!!');
+    console.log('CV PANEL BUTTON CLICKED!!!');
+    alert('CV PANEL BUTTON CLICKED! Check console...');
     
     if (!showSidebar) {
       setShowSidebar(true);
@@ -1467,53 +1441,12 @@ const DougieSpeedDateV3: React.FC = () => {
     setActiveLeftTab('analytics');
     
     // Force posture tracking initialization
-    console.log('🎯🎯🎯 FORCING POSTURE TRACKING INIT 🎯🎯🎯');
+    console.log('FORCING POSTURE TRACKING INIT');
     initializeCVAnalytics('posture');
   };
 
   return (
     <div className="dougie-speed-date-v3">
-      {/* Debug Controls - Force Sidebar */}
-      <div style={{
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        zIndex: 10000,
-        background: '#FF6B6B',
-        padding: '10px',
-        borderRadius: '8px',
-        border: '3px solid #FFD700'
-      }}>
-        <button 
-          style={{
-            padding: '10px 15px',
-            backgroundColor: '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            marginBottom: '5px',
-            display: 'block',
-            width: '100%'
-          }}
-          onClick={() => {
-            console.log('[DougieSpeedDateV3] 🚨 FORCE SIDEBAR BUTTON CLICKED!');
-            console.log('[DougieSpeedDateV3] Before - showSidebar:', showSidebar, 'activeLeftTab:', activeLeftTab);
-            setShowSidebar(true);
-            setActiveLeftTab('avatar');
-            console.log('[DougieSpeedDateV3] After setting - should be sidebar=true, tab=avatar');
-          }}
-        >
-          🔧 Force Open Avatar Tab
-        </button>
-        <div style={{ fontSize: '10px', color: 'white' }}>
-          Sidebar: {showSidebar ? 'ON' : 'OFF'}<br/>
-          Tab: {activeLeftTab}
-        </div>
-      </div>
-
       {/* Top Bar - Toggle Controls */}
       <div className="top-bar-v3">
         <div className="top-bar-left">
@@ -1601,45 +1534,9 @@ const DougieSpeedDateV3: React.FC = () => {
 
       {/* Main Container */}
       <div className="main-container-v3">
-        {/* BIG TEST BUTTON */}
-        <button
-          onClick={() => {
-            console.log('🚨 BIG TEST BUTTON CLICKED - POSTURE ONLY!');
-            console.log('Attempting to call initializeCVAnalytics with posture-only mode...');
-            initializeCVAnalytics('posture').catch(console.error);
-          }}
-          style={{
-            position: 'fixed',
-            top: '60px', // Below nav bar
-            right: '60px',
-            zIndex: 999999,
-            background: 'lime',
-            color: 'black',
-            border: '5px solid red',
-            padding: '20px',
-            fontSize: '18px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            borderRadius: '8px'
-          }}
-        >
-          🚨 POSTURE ONLY
-        </button>
         {/* Left Sidebar */}
         {showSidebar && (
           <div className="left-sidebar-v3">
-            <div style={{ 
-              padding: '10px', 
-              background: 'rgba(255,255,0,0.3)', 
-              borderRadius: '4px',
-              marginBottom: '10px',
-              fontSize: '11px',
-              color: 'black',
-              fontWeight: 'bold'
-            }}>
-              🔧 SIDEBAR DEBUG: Visible={showSidebar.toString()}, Tab={activeLeftTab}
-            </div>
-            {/* Tab Navigation */}
             <div className="tab-navigation">
               <button 
                 className={`tab-btn ${activeLeftTab === 'controls' ? 'active' : ''}`}
@@ -1756,18 +1653,6 @@ const DougieSpeedDateV3: React.FC = () => {
               {/* Avatar PiP Tab */}
               {activeLeftTab === 'avatar' && (
                 <div className="avatar-tab">
-                  <div style={{ 
-                    padding: '10px', 
-                    background: 'rgba(0,255,0,0.2)', 
-                    borderRadius: '4px',
-                    marginBottom: '10px',
-                    fontSize: '12px',
-                    color: '#4CAF50',
-                    fontWeight: 'bold'
-                  }}>
-                    ✅ DEBUG: Avatar tab is successfully rendering! Current tab: {activeLeftTab}
-                  </div>
-                  
                   <h4>👤 Avatar & Camera</h4>
                   
                   <div className="avatar-controls">
@@ -1818,7 +1703,7 @@ const DougieSpeedDateV3: React.FC = () => {
                         fontSize: '11px',
                         color: 'white'
                       }}>
-                        🔧 DEBUG: Camera zoom button should appear below
+                        DEBUG: Camera zoom button should appear below
                       </div>
                       <button 
                         className="camera-zoom-toggle-btn"
@@ -1842,24 +1727,24 @@ const DougieSpeedDateV3: React.FC = () => {
                           pointerEvents: 'auto'
                         }}
                         onMouseEnter={() => {
-                          console.log('[DougieSpeedDateV3] 🖱️ MOUSE ENTERED camera zoom button');
+                          console.log('MOUSE ENTERED camera zoom button');
                         }}
                         onMouseLeave={() => {
-                          console.log('[DougieSpeedDateV3] 🖱️ MOUSE LEFT camera zoom button');
+                          console.log('MOUSE LEFT camera zoom button');
                         }}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          console.log('[DougieSpeedDateV3] 🚨🚨🚨 CAMERA ZOOM BUTTON CLICKED!!! 🚨🚨🚨');
-                          console.log('[DougieSpeedDateV3] Current camera zoomed state:', cameraZoomed);
-                          console.log('[DougieSpeedDateV3] Camera ref exists:', !!cameraRef.current);
+                          console.log('CAMERA ZOOM BUTTON CLICKED!!!');
+                          console.log('Current camera zoomed state:', cameraZoomed);
+                          console.log('Camera ref exists:', !!cameraRef.current);
                           
                           setCameraZoomed(!cameraZoomed);
                           
                           // Control camera position for face zoom
-                          console.log('[DougieSpeedDateV3] 🔍 Using setCameraForEyeTracking function');
+                          console.log('Using setCameraForEyeTracking function');
                           setCameraForEyeTracking(!cameraZoomed); // Use existing function that handles OrbitControls properly
-                          console.log('[DougieSpeedDateV3] 📍 Camera zoom set to:', !cameraZoomed);
+                          console.log('Camera zoom set to:', !cameraZoomed);
                           
                         }}
                       >
@@ -1878,7 +1763,7 @@ const DougieSpeedDateV3: React.FC = () => {
                         fontSize: '12px',
                         color: '#4CAF50'
                       }}>
-                        📸 Camera zoomed for close-up eye contact interaction
+                        Camera zoomed for close-up eye contact interaction
                       </div>
                     )}
                     
@@ -1987,255 +1872,10 @@ const DougieSpeedDateV3: React.FC = () => {
           </div>
         )}
 
-        {/* Independent CV Analytics Panel */}
-        {showControls && (
-          <div className="cv-analytics-panel" style={{
-            position: 'fixed',
-            top: '220px', // Below nav bar
-            left: '20px',
-            zIndex: 100000,
-            backgroundColor: 'rgba(0, 0, 0, 0.9)',
-            color: 'white',
-            padding: '15px',
-            borderRadius: '8px',
-            width: '250px',
-            maxHeight: '70vh',
-            overflowY: 'auto',
-            border: '2px solid #333'
-          }}>
-            <div className="cv-panel-header">
-              <h4>📊 Computer Vision Analytics</h4>
-              <button 
-                className="cv-close-btn"
-                onClick={() => setShowControls(false)}
-                title="Close CV Panel"
-                style={{
-                  position: 'fixed',
-                  top: '420px',
-                  left: '175px',
-                  zIndex: 999999,
-                  background: 'red',
-                  color: 'white',
-                  border: '2px solid white',
-                  borderRadius: '50%',
-                  width: '30px',
-                  height: '30px',
-                  cursor: 'pointer',
-                  fontSize: '18px',
-                  fontWeight: 'bold',
-                  pointerEvents: 'auto',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.5)'
-                }}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="cv-mode-selector">
-              <h5>Tracking Mode {cvAnalyticsMode !== 'none' && <span className="status-indicator">🟢 Active</span>}</h5>
-              <div className="cv-mode-buttons">
-                <button
-                  onClick={() => initializeCVAnalytics('none')}
-                  className={`cv-mode-btn ${cvAnalyticsMode === 'none' ? 'active' : ''}`}
-                  title="No tracking"
-                >
-                  <FaEyeSlash /> Off
-                </button>
-                <button
-                  onClick={() => initializeCVAnalytics('eye-contact')}
-                  className={`cv-mode-btn ${cvAnalyticsMode === 'eye-contact' ? 'active' : ''}`}
-                  title="Eye contact tracking"
-                >
-                  <FaEye /> Eyes
-                </button>
-                <button
-                  onClick={() => {
-                    console.log('[DougieSpeedDateV3] 🚨 FULL BUTTON CLICKED - FORCING POSTURE-ONLY!');
-                    initializeCVAnalytics('posture').catch(console.error); // Force posture-only instead of combined
-                  }}
-                  className={`cv-mode-btn ${cvAnalyticsMode === 'posture' ? 'active' : ''}`}
-                  title="DISABLED - Testing posture-only"
-                >
-                  <FaUser /> Posture Test
-                </button>
-              </div>
-            </div>
-
-            {/* Avatar Eye Tracking Section */}
-            <div className="avatar-eye-tracking">
-              <h5>👁️ Avatar Eye Contact</h5>
-              <div className="eye-tracking-controls">
-                <button
-                  onClick={() => {
-                    const newEnabled = !isEyeTrackingEnabled;
-                    setIsEyeTrackingEnabled(newEnabled);
-                    setCameraZoomedIn(newEnabled);
-                    setCameraForEyeTracking(newEnabled);
-                  }}
-                  className={`eye-tracking-btn ${isEyeTrackingEnabled ? 'active' : ''}`}
-                  title="Toggle avatar eye tracking"
-                >
-                  {isEyeTrackingEnabled ? '🎯 Tracking Active' : '🚫 Start Tracking'}
-                </button>
-              </div>
-
-              {isEyeTrackingEnabled && (
-                <div className="eye-tracking-status">
-                  <div className="tracking-indicator">
-                    <span className={`status-dot ${gazeCalibrated ? 'ready' : 'initializing'}`}></span>
-                    <span>{gazeCalibrated ? 'Calibrated' : 'Initializing...'}</span>
-                  </div>
-
-                  <div className="gaze-feedback">
-                    <div className={`gaze-status ${isLookingAtAvatar ? 'looking' : 'not-looking'}`}>
-                      {isLookingAtAvatar ? '👁️ Looking at Dougie' : '👀 Look at Dougie\'s face'}
-                    </div>
-
-                    <div className="eye-contact-percentage">
-                      <span>Eye Contact: {eyeContactPercentage}%</span>
-                      <div className="progress-bar">
-                        <div 
-                          className="progress-fill" 
-                          style={{ width: `${eyeContactPercentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Live Analytics Display */}
-            {cvAnalyticsMode !== 'none' && cvAnalyticsData && (
-              <div className="cv-analytics-display">
-                <h5>📈 Live Metrics</h5>
-
-                {/* Eye Contact Analytics */}
-                {(cvAnalyticsMode === 'eye-contact' || cvAnalyticsMode === 'combined') && (
-                  <div className="cv-metric-section">
-                    <div className="cv-metric">
-                      <div className="cv-metric-header">
-                        <span className="cv-metric-label">👁️ Eye Contact</span>
-                        <span className="cv-metric-value">
-                          {Math.round(cvAnalyticsData?.eyeContact?.percentage || 0)}%
-                        </span>
-                      </div>
-                      <div className="cv-metric-bar">
-                        <div 
-                          className="cv-metric-fill"
-                          style={{ width: `${cvAnalyticsData?.eyeContact?.percentage || 0}%` }}
-                        />
-                      </div>
-                      <div className="cv-details">
-                        <div className="cv-detail">
-                          <span>Status:</span>
-                          <span>{cvAnalyticsData?.eyeContact?.gazeOnTarget ? 'Good' : 'Look at camera'}</span>
-                        </div>
-                        <div className="cv-detail">
-                          <span>Avg Duration:</span>
-                          <span>{cvAnalyticsData?.eyeContact?.averageContactDuration}s</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Posture Analytics */}
-                {(cvAnalyticsMode === 'posture' || cvAnalyticsMode === 'combined') && (
-                  <div className="cv-metric-section">
-                    <div className="cv-metric">
-                      <div className="cv-metric-header">
-                        <span className="cv-metric-label">🧘 Posture</span>
-                        <span className="cv-metric-value">
-                          {Math.round(cvAnalyticsData?.posture?.confidenceScore || 0)}%
-                        </span>
-                      </div>
-                      <div className="cv-metric-bar">
-                        <div 
-                          className="cv-metric-fill"
-                          style={{ width: `${cvAnalyticsData?.posture?.confidenceScore || 0}%` }}
-                        />
-                      </div>
-                      <div className="cv-details">
-                        <div className="cv-detail">
-                          <span>Openness:</span>
-                          <span>{Math.round(cvAnalyticsData?.posture?.bodyOpenness || 0)}%</span>
-                        </div>
-                        <div className="cv-detail">
-                          <span>Confidence:</span>
-                          <span>{Math.round(cvAnalyticsData?.posture?.confidenceScore || 0)}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {/* Backup close button at bottom */}
-            <div style={{ padding: '10px', textAlign: 'center', borderTop: '1px solid #ccc' }}>
-              <button 
-                onClick={async () => {
-                  console.log('🚨 MANUAL CV ANALYTICS INIT TRIGGERED!');
-                  console.log('Attempting to call initializeCVAnalytics with combined mode...');
-                  try {
-                    console.log('🚨 Current cvVideoRef:', !!cvVideoRef.current);
-                    console.log('🚨 Current cvAnalyticsMode:', cvAnalyticsMode);
-                    
-                    // Check if video element exists
-                    if (!cvVideoRef.current) {
-                      const errorMsg = '❌ No CV video element available!';
-                      console.error(errorMsg);
-                      return;
-                    }
-                    
-                    await initializeCVAnalytics('combined');
-                    const successMsg = '✅ Manual CV analytics init successful!';
-                    console.log(successMsg);
-                    
-                  } catch (error) {
-                    const errorMsg = `❌ Manual CV analytics init failed: ${error instanceof Error ? error.message : String(error)}`;
-                    console.error(errorMsg, error);
-                  }
-                }}
-                style={{
-                  background: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  fontSize: '12px',
-                  marginRight: '10px'
-                }}
-              >
-                🚨 FORCE COMBINED INIT
-              </button>
-              
-              <button 
-                onClick={() => setShowControls(false)}
-                style={{
-                  background: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  fontSize: '14px'
-                }}
-              >
-                🚫 CLOSE CV PANEL
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Main Content Area */}
         <div className={`main-content-v3 ${!showSidebar ? 'full-width' : ''} ${!showChat ? 'full-height' : ''}`}>
           {/* PiP View - Final Position (Lower Right) */}
-          {false && showPiP && pipSize !== 'hidden' && (
+          {showPiP && pipSize !== 'hidden' && (
             <div className="pip-view-position">
               <div className="pip-container">
                 <div className="pip-header">
@@ -2257,13 +1897,14 @@ const DougieSpeedDateV3: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                {false && showPiP && pipSize !== 'hidden' && (
+                {showPiP && pipSize !== 'hidden' && (
                   <UserAvatarPiP
                     size={pipSize as 'small' | 'medium' | 'large'}
                     position={'bottom-right'}
                     className={`user-avatar-pip user-avatar-${pipSize}`}
                     enableOwnTracking={true} // Enable internal face tracking for PiP
                     cameraStream={streamRef.current} // Share the same camera stream
+                    postureData={cvAnalyticsData?.posture} // Add posture data for camera responsiveness
                     onClose={() => setShowPiP(false)}
                   />
                 )}
@@ -2284,7 +1925,7 @@ const DougieSpeedDateV3: React.FC = () => {
               padding: '20px',
               borderRadius: '8px'
             }}>
-              <h3>🎭 Avatar Temporarily Unavailable</h3>
+              <h3>Avatar Temporarily Unavailable</h3>
               <p>WebGL context limit reached. Please:</p>
               <ul style={{ textAlign: 'left', marginTop: '10px' }}>
                 <li>Refresh the page</li>
@@ -2305,7 +1946,7 @@ const DougieSpeedDateV3: React.FC = () => {
                   fontWeight: 'bold'
                 }}
               >
-                🔄 Refresh Page
+                Refresh Page
               </button>
             </div>
           }>
@@ -2313,7 +1954,7 @@ const DougieSpeedDateV3: React.FC = () => {
               className="three-canvas" 
               ref={canvasRef}
               onCreated={(state) => {
-                console.log('[DougieSpeedDateV3] Canvas created successfully');
+                console.log('Canvas created successfully');
               }}
               gl={{ 
                 preserveDrawingBuffer: false, 
@@ -2412,83 +2053,6 @@ const DougieSpeedDateV3: React.FC = () => {
           isVisible={showEngagementDashboard}
           onToggleMinimize={() => setShowEngagementDashboard(false)}
         />
-      )}
-      {practiceMode && false && ( // Hide debug panel
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          left: '20px',
-          background: 'rgba(0,0,0,0.9)',
-          color: 'white',
-          padding: '15px',
-          borderRadius: '8px',
-          fontSize: '12px',
-          zIndex: 1000,
-          maxWidth: '350px',
-          border: '1px solid #4CAF50'
-        }}>
-          <div><strong>🔬 CV Analytics Debug</strong></div>
-          <div>📊 Analytics Status: {cvAnalyticsData ? '✅ Active' : '❌ Not Initialized'}</div>
-          <div>📱 PiP Active: {showPiP ? '✅' : '❌'}</div>
-          <div>📹 Video Element: {cvVideoRef.current ? '✅ Available' : '❌ Missing'}</div>
-          <div>🎥 Camera Stream: {cvVideoRef.current?.srcObject ? '✅ Connected' : '❌ No Stream'}</div>
-          <div>📷 Video Playing: {cvVideoRef.current?.readyState === 4 ? '✅ Ready' : '❌ Not Ready'}</div>
-          <div>🔍 Expression Service: {expressionServiceRef.current ? '✅ Available' : '❌ Missing'}</div>
-          <div>🎭 Emotional Blends: {Object.keys(emotionalBlendshapes).length} active</div>
-          <div>😊 User Emotions: {userFacialEmotions?.length || 0} detected</div>
-          <div>🤖 ML5 Available: {typeof window.ml5 !== 'undefined' ? '✅' : '❌'}</div>
-          <div>👀 WebGazer Available: {typeof window.webgazer !== 'undefined' ? '✅' : '❌'}</div>
-          
-          {cvAnalyticsData ? (
-            <>
-              <hr style={{margin: '10px 0', border: '1px solid #333'}} />
-              <div><strong>📈 Live Data:</strong></div>
-              <div>👁️ Eye Contact: {cvAnalyticsData?.eyeContact?.percentage || 0}%</div>
-              <div>🎯 Gaze On Target: {cvAnalyticsData?.eyeContact?.gazeOnTarget ? '✅' : '❌'}</div>
-              <div>🏃 Posture Score: {cvAnalyticsData?.posture?.confidenceScore || 0}</div>
-              <div>📐 Shoulder Alignment: {cvAnalyticsData?.posture?.shoulderAlignment || 0}</div>
-              <div>🤸 Body Openness: {cvAnalyticsData?.posture?.bodyOpenness || 0}</div>
-              <div>📍 Head Position: {cvAnalyticsData?.posture?.headPosition ? 
-                `(${Math.round(cvAnalyticsData?.posture?.headPosition?.x || 0)}, ${Math.round(cvAnalyticsData?.posture?.headPosition?.y || 0)})` : 
-                'None'}</div>
-              <div>🔄 Leaning: {cvAnalyticsData?.posture?.leaning || 'none'}</div>
-            </>
-          ) : (
-            <>
-              <hr style={{margin: '10px 0', border: '1px solid #333'}} />
-              <div><strong>🚨 Troubleshooting:</strong></div>
-              <div>1. Click "👁️ CV Panel" to restart analytics</div>
-              <div>2. Allow camera permissions when prompted</div>
-              <div>3. Make sure you're visible to camera</div>
-              <div>4. Check browser console for errors</div>
-            </>
-          )}
-        </div>
-      )}
-      {debugStatus.length > 0 && (
-        <div style={{
-          position: 'fixed',
-          top: '80px',
-          right: '10px',
-          backgroundColor: 'rgba(0,0,0,0.8)',
-          color: 'lime',
-          padding: '8px',
-          borderRadius: '4px',
-          fontSize: '10px',
-          fontFamily: 'monospace',
-          maxWidth: '200px',
-          maxHeight: '150px',
-          overflow: 'auto',
-          zIndex: 1000,
-          border: '1px solid lime'
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>🔧 DEBUG STATUS</div>
-          {debugStatus.slice(-5).map((log, i) => (
-            <div key={i} style={{ margin: '2px 0', fontSize: '9px' }}>
-              {new Date().toLocaleTimeString().slice(-8)} - {log}
-            </div>
-          ))}
-        </div>
       )}
     </div>
   );

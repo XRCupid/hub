@@ -28,19 +28,14 @@ export class PostureTrackingService {
   }
 
   async startTracking(videoElement: HTMLVideoElement) {
-    console.log('[PostureTracking] 🚀 Starting responsive posture tracking (no WebGL conflicts)...');
-    
     this.videoElement = videoElement;
     this.isTracking = true;
 
     // Start responsive posture tracking without canvas/WebGL
     this.startResponsivePostureTracking();
-    console.log('[PostureTracking] ✅ Responsive posture tracking started!');
   }
 
   private startResponsivePostureTracking() {
-    console.log('[PostureTracking] 🔄 Starting movement-responsive tracking...');
-    
     // Analyze video feed every 300ms for high responsiveness
     this.trackingInterval = setInterval(() => {
       if (!this.isTracking || !this.videoElement) {
@@ -53,20 +48,6 @@ export class PostureTrackingService {
 
       // Generate responsive posture data based on video status and time
       const postureAnalysis = this.generateResponsivePostureData();
-      
-      console.log('[PostureTracking] 📊 RESPONSIVE analysis:', {
-        movement: postureAnalysis.movementDetected ? 'DETECTED' : 'NONE',
-        shoulderAlignment: postureAnalysis.shoulderAlignment.toFixed(2),
-        spineAlignment: postureAnalysis.spineAlignment.toFixed(2),
-        headPosition: postureAnalysis.headPosition.toFixed(2),
-        confidence: postureAnalysis.confidence.toFixed(2),
-        keypoints: {
-          leftShoulder: postureAnalysis.keypoints.leftShoulder,
-          rightShoulder: postureAnalysis.keypoints.rightShoulder,
-          shoulderSpread: (postureAnalysis.keypoints.rightShoulder && postureAnalysis.keypoints.leftShoulder) ? 
-            Math.abs(postureAnalysis.keypoints.rightShoulder.x - postureAnalysis.keypoints.leftShoulder.x) : 'N/A'
-        }
-      });
       
       this.onResultsCallback?.(postureAnalysis);
       this.lastPostureData = postureAnalysis;
