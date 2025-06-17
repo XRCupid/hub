@@ -522,9 +522,8 @@ const CoachSession: React.FC = () => {
           avatarUrl="/avatars/user_avatar.glb"
           position="bottom-right"
           size="medium"
-          trackingData={faceTrackingData}
           enableOwnTracking={true}
-          cameraStream={cameraStream}
+          cameraStream={null} // Let PiP manage its own camera stream
         />
       )}
     </div>

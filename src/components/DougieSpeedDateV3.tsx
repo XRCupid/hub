@@ -1788,11 +1788,8 @@ const DougieSpeedDateV3: React.FC = () => {
                 avatarUrl="/avatars/user_avatar.glb"
                 position="bottom-right"
                 size={pipSize as 'small' | 'medium' | 'large'}
-                postureData={(() => {
-                  const data = cvAnalyticsMode === 'posture' || cvAnalyticsMode === 'combined' ? cvAnalyticsData?.posture : undefined;
-                  console.log('[DougieSpeedDate] 🎭 Passing to PiP - Mode:', cvAnalyticsMode, 'PostureData:', data);
-                  return data;
-                })()}
+                postureData={cvAnalyticsData?.posture}
+                trackingData={cvAnalyticsData}
                 enableOwnTracking={true}
                 onClose={() => setShowPiP(false)}
                 cameraPosition={[pipCameraX, pipCameraY, pipCameraZ]}

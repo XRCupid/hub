@@ -823,8 +823,7 @@ const DougieSpeedDateV2: React.FC = () => {
                       size={pipSize}
                       position="bottom-right"
                       enableOwnTracking={true}
-                      trackingData={userFacialEmotions}
-                      cameraStream={null}
+                      cameraStream={null} // Let PiP manage its own camera stream
                       className="pip-user-avatar"
                     />
                   </WebGLErrorBoundary>

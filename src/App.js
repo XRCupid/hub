@@ -92,7 +92,6 @@ import PiPTrackingTest from './components/PiPTrackingTest'; // Import PiP tracki
 import './utils/quickWins'; // Import quick wins utilities
 import './utils/diagnostics'; // Import diagnostics utilities  
 import './utils/offlineMode'; // Import offline mode handler
-import './utils/pipDiagnostic'; // Import PiP diagnostic utility
 import './utils/performanceMonitor'; // Import performance monitor
 import CurriculumNavigator from './components/CurriculumNavigator';
 import { PerformanceToProgress } from './components/PerformanceToProgress';
@@ -114,20 +113,8 @@ import { HeartIcon, SparkleIcon, RadiatingHeartIcon, WingedHeartIcon } from './c
 import { CupidCursor } from './components/CupidCursor';
 import PasswordProtection from './components/PasswordProtection';
 import './App.css';
-import LiveDemoController from './components/LiveDemoController';
-import EmotionAnalysisShowcase from './components/EmotionAnalysisShowcase';
-import DougieSpeedDate from './components/DougieSpeedDate';
-import DougieSpeedDateV2 from './components/DougieSpeedDateV2';
-import DougieSpeedDateV3 from './components/DougieSpeedDateV3';
-import DougieSpeedDateSimple from './components/DougieSpeedDateSimple';
-import DougieSpeedDateCoach from './components/DougieSpeedDateCoach';
-import DougieCoachSimple from './components/DougieCoachSimple';
-import DougieCoachWorkingCopy from './components/DougieCoachWorkingCopy';
-import DougieTest from './components/DougieTest';
-import RealInvestorDemo from './components/RealInvestorDemo';
-import SimpleInvestorDemo from './components/SimpleInvestorDemo';
-import { TestMicrophone } from './pages/TestMicrophone';
-import { TestPiP } from './pages/TestPiP';
+import './global.css';
+import './services/nuclearHumeOverride';
 
 // Make testBlendshapeCompositor, testRPMIntegration, and testRPMAvatars available globally
 window.testBlendshapeCompositor = testBlendshapeCompositor;
