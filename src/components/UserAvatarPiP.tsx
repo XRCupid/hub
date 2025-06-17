@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { PresenceAvatar } from './PresenceAvatar';
 import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';
+import { FallbackFaceTracking } from '../services/FallbackFaceTracking';
 import { FacialExpressions } from '../types/tracking';
 import './UserAvatarPiP.css';
 
@@ -58,6 +59,27 @@ const AvatarCanvas = ({
   onContextLost?: () => void;
 }) => {
   console.log('[AvatarCanvas] Rendering with:', { avatarUrl, hasTrackingData: !!trackingData });
+  
+  // Enhanced debugging for tracking data
+  React.useEffect(() => {
+    const debugInterval = setInterval(() => {
+      console.log('[AvatarCanvas] 🔍 TRACKING DEBUG:', {
+        hasTrackingData: !!trackingData,
+        trackingDataKeys: trackingData ? Object.keys(trackingData) : null,
+        facialExpressions: trackingData?.facialExpressions ? {
+          isObject: typeof trackingData.facialExpressions === 'object' && !Array.isArray(trackingData.facialExpressions),
+          isArray: Array.isArray(trackingData.facialExpressions),
+          keyCount: typeof trackingData.facialExpressions === 'object' ? Object.keys(trackingData.facialExpressions).length : 0,
+          sampleKeys: trackingData.facialExpressions ? Object.keys(trackingData.facialExpressions).slice(0, 3) : null,
+          hasValues: trackingData.facialExpressions ? Object.values(trackingData.facialExpressions).some((v: any) => typeof v === 'number' && v > 0) : false
+        } : null,
+        headRotation: trackingData?.headRotation,
+        avatarUrl
+      });
+    }, 3000); // Every 3 seconds
+    
+    return () => clearInterval(debugInterval);
+  }, [trackingData, avatarUrl]);
   
   // Calculate camera position based on posture data
   const getCameraPosition = (): [number, number, number] => {
@@ -237,6 +259,7 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const trackingService = useRef<CombinedFaceTrackingService | null>(null);
+  const fallbackTrackingService = useRef<FallbackFaceTracking | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -264,47 +287,128 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
 
   // Log state changes
   React.useEffect(() => {
-    console.log('[UserAvatarPiP] State updated:', {
+    console.log('[UserAvatarPiP] 🎯 STATE UPDATE:', {
       isTracking,
       hasError: !!error,
+      error: error,
       isMinimized,
-      hasTrackingData: !!trackingDataState
+      hasTrackingData: !!trackingDataState,
+      trackingSource,
+      enableOwnTracking,
+      hasParentTrackingData: !!trackingData,
+      hasCameraStream: !!cameraStream,
+      trackingDataSample: trackingDataState?.facialExpressions ? {
+        sampleExpression: Object.entries(trackingDataState.facialExpressions).find(([_, v]) => (v as number) > 0.1)
+      } : null
     });
-  }, [isTracking, error, isMinimized, trackingDataState]);
+  }, [isTracking, error, isMinimized, trackingDataState, trackingSource, enableOwnTracking, trackingData, cameraStream]);
 
   useEffect(() => {
     // If trackingData is provided from parent, use that instead of camera tracking
     if (trackingData) {
-      console.log('[UserAvatarPiP] Using trackingData from parent');
-      setTrackingData(trackingData);
+      console.log('[UserAvatarPiP] Using trackingData from parent:', trackingData);
+      
+      // Ensure facialExpressions is in the correct format (object, not array)
+      let processedTrackingData = trackingData;
+      if (trackingData.facialExpressions && Array.isArray(trackingData.facialExpressions)) {
+        console.log('[UserAvatarPiP] Converting array facialExpressions to object format');
+        const facialExpressionsObj = trackingData.facialExpressions.reduce((obj: any, emotion: any) => {
+          obj[emotion.name || emotion.emotion] = emotion.score;
+          return obj;
+        }, {});
+        processedTrackingData = { ...trackingData, facialExpressions: facialExpressionsObj };
+      }
+      
+      setTrackingData(processedTrackingData);
       setIsTracking(true);
       setTrackingSource('Parent');
       return; // Don't initialize camera tracking
     }
+
+    // Only proceed with own tracking if enableOwnTracking is true
+    if (!enableOwnTracking) {
+      console.log('[UserAvatarPiP] enableOwnTracking=false, skipping camera tracking');
+      return;
+    }
     
-    // Otherwise, initialize camera tracking
-    console.log('[UserAvatarPiP] No trackingData provided, initializing camera tracking');
+    console.log('[UserAvatarPiP] Initializing own camera tracking with enableOwnTracking=true');
+    
     const initializeTracking = async () => {
       try {
-        // Initialize tracking service
-        if (!trackingService.current) {
-          trackingService.current = new CombinedFaceTrackingService();
+        console.log('[UserAvatarPiP] Starting tracking initialization...');
+        
+        // Check if ML5 is available
+        if (typeof window.ml5 === 'undefined' || typeof window.ml5.facemesh !== 'function') {
+          console.warn('[UserAvatarPiP] ML5 or facemesh not available, using fallback tracking:', {
+            ml5Available: typeof window.ml5 !== 'undefined',
+            facemeshAvailable: typeof window.ml5?.facemesh === 'function'
+          });
           
-          // Force ML5-only for now due to Hume API issues
-          // const hasHume = process.env.REACT_APP_HUME_API_KEY ? true : false;
-          const hasHume = false; // Disable Hume temporarily
-          setTrackingSource(hasHume ? 'ML5 + Hume' : 'ML5');
+          // Initialize fallback tracking
+          if (!fallbackTrackingService.current) {
+            console.log('[UserAvatarPiP] Creating fallback tracking service...');
+            fallbackTrackingService.current = new FallbackFaceTracking();
+          }
+          
+          await fallbackTrackingService.current.initialize();
+          setTrackingSource('Fallback');
+          console.log('[UserAvatarPiP] Fallback tracking initialized, starting...');
+          
+          // Start fallback tracking
+          await fallbackTrackingService.current.startTracking();
+          setIsTracking(true);
+          setError('');
+          
+          // Update tracking data from fallback service
+          intervalRef.current = setInterval(() => {
+            if (fallbackTrackingService.current) {
+              const expressions = fallbackTrackingService.current.getExpressions();
+              const headRotation = fallbackTrackingService.current.getHeadRotation();
+              
+              const newTrackingData = {
+                facialExpressions: expressions,
+                headRotation: headRotation,
+                posture: null,
+                hands: null,
+                landmarks: []
+              };
+              
+              // Debug fallback tracking data
+              if (Math.random() < 0.1) { // 10% of updates
+                console.log('[UserAvatarPiP] 🤖 FALLBACK TRACKING DATA:', {
+                  expressionKeys: expressions ? Object.keys(expressions) : null,
+                  hasNonZeroExpressions: expressions ? Object.values(expressions).some(v => v > 0) : false,
+                  sampleExpressions: expressions ? Object.entries(expressions).slice(0, 3).map(([k, v]) => `${k}:${v}`) : null,
+                  headRotation: headRotation
+                });
+              }
+              
+              trackingDataRef.current = newTrackingData;
+              setTrackingData(newTrackingData);
+            }
+          }, 100); // 10 FPS for fallback
+          
+          return; // Exit early with fallback tracking
         }
         
-        await trackingService.current.initialize();
+        // Initialize tracking service
+        if (!trackingService.current) {
+          console.log('[UserAvatarPiP] Creating new CombinedFaceTrackingService...');
+          trackingService.current = new CombinedFaceTrackingService();
+        }
         
-        // Use provided cameraStream if enableOwnTracking is true, otherwise get camera
+        console.log('[UserAvatarPiP] Initializing tracking service...');
+        await trackingService.current.initialize();
+        console.log('[UserAvatarPiP] Tracking service initialized successfully');
+
+        // Get camera stream
+        console.log('[UserAvatarPiP] Getting camera stream...');
         let stream: MediaStream;
-        if (enableOwnTracking && cameraStream) {
+        if (cameraStream) {
           console.log('[UserAvatarPiP] Using provided cameraStream');
           stream = cameraStream;
         } else {
-          console.log('[UserAvatarPiP] Getting camera stream');
+          console.log('[UserAvatarPiP] Requesting new camera stream...');
           stream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
               width: { ideal: 640 },
@@ -315,36 +419,68 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
         }
         
         streamRef.current = stream;
+        console.log('[UserAvatarPiP] Camera stream obtained:', stream.getTracks().length, 'tracks');
         
+        // Set up video element
         if (videoRef.current) {
+          console.log('[UserAvatarPiP] Setting up video element...');
           videoRef.current.srcObject = stream;
           
           // Wait for video to be ready
-          await new Promise<void>((resolve) => {
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error('Video loading timeout'));
+            }, 10000);
+            
             if (videoRef.current) {
               videoRef.current.onloadedmetadata = () => {
-                videoRef.current!.play();
-                resolve();
+                console.log('[UserAvatarPiP] Video metadata loaded, starting playback...');
+                clearTimeout(timeout);
+                if (videoRef.current) {
+                  videoRef.current.play().then(() => {
+                    console.log('[UserAvatarPiP] Video playing successfully');
+                    resolve();
+                  }).catch(reject);
+                }
+              };
+              videoRef.current.onerror = (e) => {
+                clearTimeout(timeout);
+                reject(new Error('Video loading error'));
               };
             }
           });
           
+          console.log('[UserAvatarPiP] Video ready, starting tracking...');
           // Start tracking
           startTracking();
         }
-      } catch (err) {
-        console.error('Failed to initialize tracking:', err);
-        setError('Failed to access camera or initialize tracking');
+      } catch (err: any) {
+        console.error('[UserAvatarPiP] Failed to initialize tracking:', err);
+        setError(`Failed to initialize tracking: ${err.message}`);
       }
     };
 
     initializeTracking();
 
     return () => {
+      console.log('[UserAvatarPiP] Cleaning up tracking...');
       stopTracking();
+      
+      // Clean up tracking services
+      if (trackingService.current) {
+        trackingService.current.cleanup();
+      }
+      
+      if (fallbackTrackingService.current) {
+        fallbackTrackingService.current.cleanup();
+      }
+      
       // Only stop tracks if we created our own stream
-      if (streamRef.current && (!enableOwnTracking || !cameraStream)) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+      if (streamRef.current && !cameraStream) {
+        streamRef.current.getTracks().forEach(track => {
+          console.log('[UserAvatarPiP] Stopping track:', track.kind);
+          track.stop();
+        });
       }
     };
   }, [trackingData, enableOwnTracking, cameraStream]);
@@ -361,12 +497,14 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
         throw new Error('Tracking service or video not initialized');
       }
       
+      console.log('[UserAvatarPiP] Starting ML5 face tracking...');
       setIsTracking(true);
       setError('');
       
       await trackingService.current.startTracking(videoRef.current);
+      console.log('[UserAvatarPiP] Face tracking started successfully');
       
-      // Update tracking data at 50ms
+      // Update tracking data at 30 FPS (33ms intervals)
       intervalRef.current = setInterval(async () => {
         if (trackingService.current) {
           const expressions = trackingService.current.getExpressions();
@@ -374,18 +512,20 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
           const postureData = trackingService.current.getPostureData();
           const landmarks = trackingService.current.getLandmarks();
           
-          // Log tracking data occasionally
-          if (Math.random() < 0.05) {
-            console.log('[UserAvatarPiP] Raw tracking data:', {
-              expressions,
-              headRotation,
-              expressionKeys: expressions ? Object.keys(expressions) : null,
-              hasAnyExpression: expressions ? Object.values(expressions).some(v => v > 0) : false
+          // Log tracking data occasionally for debugging
+          if (Math.random() < 0.02) { // 2% of frames
+            console.log('[UserAvatarPiP] 🔬 ML5 TRACKING DATA:', {
+              hasExpressions: !!expressions,
+              expressionKeys: expressions ? Object.keys(expressions).length : 0,
+              hasHeadRotation: !!headRotation,
+              hasLandmarks: !!landmarks,
+              sampleExpression: expressions ? expressions.mouthSmile || expressions.eyeBlink : null,
+              nonZeroExpressions: expressions ? Object.entries(expressions).filter(([_, v]) => v > 0).length : 0,
+              trackingServiceType: trackingService.current?.constructor?.name || 'unknown'
             });
           }
           
-          // Update ref immediately
-          trackingDataRef.current = {
+          const newTrackingData = {
             facialExpressions: expressions,
             headRotation: headRotation,
             posture: postureData,
@@ -393,13 +533,17 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
             landmarks: landmarks || []
           };
           
-          // Update state every time to ensure data flows to avatar
-          setTrackingData(trackingDataRef.current);
+          // Update ref immediately for latest data
+          trackingDataRef.current = newTrackingData;
+          
+          // Update state to trigger re-render
+          setTrackingData(newTrackingData);
         }
-      }, 50);
+      }, 33); // 30 FPS
+      
     } catch (err: any) {
-      console.error('Tracking error:', err);
-      setError(err.message || 'Failed to start tracking');
+      console.error('[UserAvatarPiP] Tracking error:', err);
+      setError(`Tracking error: ${err.message}`);
       setIsTracking(false);
     }
   };
@@ -408,10 +552,6 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
-    }
-    
-    if (trackingService.current) {
-      trackingService.current.stopTracking();
     }
     
     setIsTracking(false);
@@ -491,7 +631,7 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
         clearInterval(intervalRef.current);
       }
       if (trackingService.current) {
-        trackingService.current.stopTracking();
+        trackingService.current.cleanup();
       }
       if (videoRef.current && videoRef.current.parentNode) {
         videoRef.current.parentNode.removeChild(videoRef.current);

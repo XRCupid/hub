@@ -88,9 +88,11 @@ import './utils/mockHumeData'; // Import mock Hume data to make it available in 
 import { testRPMIntegration } from './utils/testRPMIntegration'; // Import RPM test utility
 import { testRPMAvatars } from './utils/testRPMAvatars'; // Import RPM avatar test utility
 import { createTestAvatar } from './utils/createTestAvatar'; // Import test avatar creator
+import PiPTrackingTest from './components/PiPTrackingTest'; // Import PiP tracking test component
 import './utils/quickWins'; // Import quick wins utilities
 import './utils/diagnostics'; // Import diagnostics utilities  
 import './utils/offlineMode'; // Import offline mode handler
+import './utils/pipDiagnostic'; // Import PiP diagnostic utility
 import './utils/performanceMonitor'; // Import performance monitor
 import CurriculumNavigator from './components/CurriculumNavigator';
 import { PerformanceToProgress } from './components/PerformanceToProgress';
@@ -249,7 +251,7 @@ const AppContent = () => {
           {/* Debug Routes */}
           <Route path="/env-check" element={<EnvCheck />} />
           <Route path="/hume-debug" element={<HumeConnectionDebug />} />
-          
+          <Route path="/pip-tracking-test" element={<PiPTrackingTest />} />
           {/* Enhanced Coach Sessions */}
           <Route path="/enhanced-coach" element={<EnhancedCoachSession />} />
           <Route path="/coaching-demo" element={<CoachingSessionDemo />} />

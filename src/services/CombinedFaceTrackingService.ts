@@ -240,4 +240,98 @@ export class CombinedFaceTrackingService {
   getLandmarks(): any[] | null {
     return this.ml5Service.getLandmarks();
   }
+  
+  cleanup() {
+    console.log('[CombinedFaceTracking] Cleaning up services...');
+    
+    // Clean up ML5 service (safe runtime check)
+    if (this.ml5Service) {
+      const ml5Service = this.ml5Service as any;
+      if (typeof ml5Service.cleanup === 'function') {
+        ml5Service.cleanup();
+      } else if (typeof ml5Service.stopTracking === 'function') {
+        ml5Service.stopTracking();
+      }
+    }
+    
+    // Clean up Hume service (safe runtime check)
+    if (this.humeService) {
+      const humeService = this.humeService as any;
+      if (typeof humeService.cleanup === 'function') {
+        humeService.cleanup();
+      } else if (typeof humeService.stopTracking === 'function') {
+        humeService.stopTracking();
+      }
+    }
+    
+    // Clean up posture service (safe runtime check)
+    if (this.postureService) {
+      const postureService = this.postureService as any;
+      if (typeof postureService.cleanup === 'function') {
+        postureService.cleanup();
+      } else if (typeof postureService.stopTracking === 'function') {
+        postureService.stopTracking();
+      }
+    }
+    
+    // Reset state
+    this.useHume = false;
+    this.humeError = false;
+    this.lastCombinedExpressions = {
+      mouthSmile: 0,
+      mouthSmileLeft: 0,
+      mouthSmileRight: 0,
+      mouthFrown: 0,
+      mouthOpen: 0,
+      mouthPucker: 0,
+      mouthDimpleLeft: 0,
+      mouthDimpleRight: 0,
+      mouthStretchLeft: 0,
+      mouthStretchRight: 0,
+      mouthPressLeft: 0,
+      mouthPressRight: 0,
+      lipsSuckUpper: 0,
+      lipsSuckLower: 0,
+      lipsFunnel: 0,
+      browUpLeft: 0,
+      browUpRight: 0,
+      browInnerUp: 0,
+      browInnerUpLeft: 0,
+      browInnerUpRight: 0,
+      browDownLeft: 0,
+      browDownRight: 0,
+      eyeSquintLeft: 0,
+      eyeSquintRight: 0,
+      cheekPuff: 0,
+      cheekSquintLeft: 0,
+      cheekSquintRight: 0,
+      noseSneer: 0,
+      tongueOut: 0,
+      jawOpen: 0,
+      jawLeft: 0,
+      jawRight: 0,
+      eyeBlinkLeft: 0,
+      eyeBlinkRight: 0,
+      eyebrowRaiseLeft: 0,
+      eyebrowRaiseRight: 0,
+      eyebrowFurrow: 0,
+      eyeWideLeft: 0,
+      eyeWideRight: 0,
+      eyeWide: 0,
+      eyeBlink: 0,
+      eyebrowRaise: 0,
+      eyeSquint: 0,
+      eyeLookDownLeft: 0,
+      eyeLookDownRight: 0,
+      eyeLookUpLeft: 0,
+      eyeLookUpRight: 0,
+      eyeLookInLeft: 0,
+      eyeLookInRight: 0,
+      eyeLookOutLeft: 0,
+      eyeLookOutRight: 0
+    };
+    this.lastPostureData = null;
+    
+    console.log('[CombinedFaceTracking] Cleanup completed');
+  }
 }
