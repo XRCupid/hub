@@ -164,8 +164,8 @@ const AvatarCanvas = ({
           <PresenceAvatar
             avatarUrl={avatarUrl}
             trackingData={trackingData}
-            position={[0, 0, 0]}
-            scale={1}
+            position={[0, -0.5, 0]} 
+            scale={1.5} 
           />
         </Suspense>
         
@@ -212,6 +212,11 @@ interface UserAvatarPiPProps {
   }; 
   onClose?: () => void;
   onTogglePiP?: () => void;
+  // Camera control props
+  cameraPosition?: [number, number, number];
+  cameraFOV?: number;
+  cameraTarget?: [number, number, number];
+  disableAutoCamera?: boolean; // Disable automatic camera control for manual mode
 }
 
 export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({ 
@@ -225,7 +230,11 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
   trackingData,
   postureData,
   onClose,
-  onTogglePiP
+  onTogglePiP,
+  cameraPosition = [0, 1.6, 1.8],
+  cameraFOV = 38,
+  cameraTarget = [0, 1.6, 0],
+  disableAutoCamera = false
 }) => {
   console.log('[UserAvatarPiP] Component rendering with props:', { 
     avatarUrl, 
@@ -234,7 +243,11 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
     hasTrackingData: !!trackingData,
     trackingData: trackingData,
     hasPostureData: !!postureData,
-    postureData: postureData
+    postureData: postureData,
+    cameraPosition,
+    cameraFOV,
+    cameraTarget,
+    disableAutoCamera
   });
   
   const [isTracking, setIsTracking] = useState(false);
@@ -280,10 +293,6 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
       trackingDataRef.current = trackingData;
     }
   }, [trackingData]);
-
-  // Camera position for face framing - simple close-up portrait
-  const cameraPosition: [number, number, number] = [0, 1.6, 1.8];
-  const cameraTarget: [number, number, number] = [0, 1.6, 0];
 
   // Log state changes
   React.useEffect(() => {
@@ -506,7 +515,7 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
       
       // Update tracking data at 30 FPS (33ms intervals)
       intervalRef.current = setInterval(async () => {
-        if (trackingService.current) {
+        if (trackingService.current && videoRef.current) {
           const expressions = trackingService.current.getExpressions();
           const headRotation = trackingService.current.getHeadRotation();
           const postureData = trackingService.current.getPostureData();
@@ -639,12 +648,27 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
     };
   }, [enableOwnTracking, cameraStream]);
 
+  // Debug logging for camera props
+  React.useEffect(() => {
+    console.log('[UserAvatarPiP] 🔍 Camera props changed:', {
+      position: cameraPosition,
+      fov: cameraFOV,
+      target: cameraTarget,
+      disableAutoCamera,
+      hasPostureData: !!postureData
+    });
+    
+    if (postureData) {
+      console.log('[UserAvatarPiP] 📊 Posture data received:', postureData);
+    }
+  }, [cameraPosition, cameraFOV, cameraTarget, disableAutoCamera, postureData]);
+
   // Camera controller component for dynamic pitch adjustment
   const CameraController: React.FC<{ postureData?: any }> = ({ postureData }) => {
     const { camera } = useThree();
     const frameCount = useRef(0);
     const lastPostureRef = useRef<any>(null);
-    
+
     useFrame(() => {
       frameCount.current++;
       
@@ -658,7 +682,7 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
         
         // Calculate pitch adjustment based on posture quality
         const postureQuality = Math.max(10, Math.min(90, (bodyOpenness + (shoulderAlignment * 100)) / 2));
-        const pitchAdjustment = (postureQuality - 50) / 150; // Increased sensitivity: ±0.33 radians (±19 degrees)
+        const pitchAdjustment = (postureQuality - 50) / 50; // Increased sensitivity: ±1.8 radians (±103 degrees) for testing
         
         // Apply camera pitch rotation
         camera.rotation.x = pitchAdjustment;
@@ -675,6 +699,96 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
         // Log when no posture data
         if (frameCount.current % 120 === 0) {
           console.log('[PiP Camera] NO POSTURE DATA - Camera static');
+        }
+      }
+    });
+
+    return null;
+  };
+
+  // Manual Camera Controller component
+  const ManualCameraController: React.FC<{ 
+    position: [number, number, number]; 
+    fov: number; 
+    target: [number, number, number] 
+  }> = ({ position, fov, target }) => {
+    const { camera } = useThree();
+    
+    React.useEffect(() => {
+      if (camera) {
+        console.log('[ManualCameraController] Setting camera position:', position, 'fov:', fov);
+        camera.position.set(position[0], position[1], position[2]);
+        if ('fov' in camera) {
+          (camera as any).fov = fov;
+          camera.updateProjectionMatrix();
+        }
+      }
+    }, [camera, position, fov]);
+    
+    return null;
+  };
+
+  // Hybrid Camera Controller - Manual position + Posture pitch
+  const HybridCameraController: React.FC<{ 
+    position: [number, number, number]; 
+    fov: number; 
+    target: [number, number, number];
+    postureData?: any;
+  }> = ({ position, fov, target, postureData }) => {
+    const { camera } = useThree();
+    const frameCount = useRef(0);
+    const lastPostureRef = useRef<any>(null);
+    
+    // Set manual position and FOV
+    React.useEffect(() => {
+      if (camera) {
+        console.log('[HybridCameraController] Setting base camera position:', position, 'fov:', fov);
+        camera.position.set(position[0], position[1], position[2]);
+        if ('fov' in camera) {
+          (camera as any).fov = fov;
+          camera.updateProjectionMatrix();
+        }
+      }
+    }, [camera, position, fov]);
+    
+    // Apply posture-based pitch adjustment
+    useFrame(() => {
+      if (!camera) return;
+      
+      frameCount.current++;
+      
+      // Always log posture data status
+      if (frameCount.current % 120 === 0) { // Every 2 seconds
+        console.log('[PiP HybridCameraController] PostureData received:', !!postureData, postureData);
+      }
+      
+      if (postureData && (postureData.bodyOpenness !== undefined || postureData.shoulderAlignment !== undefined)) {
+        const { bodyOpenness = 50, shoulderAlignment = 0.5 } = postureData;
+        
+        // Calculate pitch adjustment based on posture quality
+        const postureQuality = Math.max(10, Math.min(90, (bodyOpenness + (shoulderAlignment * 100)) / 2));
+        const pitchAdjustment = (50 - postureQuality) / 50; // Reduced sensitivity: ±1.8 radians (±103 degrees) for testing
+        
+        // Apply camera pitch rotation
+        camera.rotation.x = pitchAdjustment;
+        camera.updateProjectionMatrix();
+        
+        // Only log when posture changes
+        if (JSON.stringify(postureData) !== JSON.stringify(lastPostureRef.current)) {
+          console.log('[PiP Hybrid Camera] 🎯 ACTIVE - Posture Quality:', postureQuality.toFixed(1), 
+                     'Pitch:', (pitchAdjustment * 180 / Math.PI).toFixed(1), '°', 
+                     'BodyOpenness:', bodyOpenness, 'ShoulderAlignment:', shoulderAlignment);
+          lastPostureRef.current = postureData;
+        }
+      } else {
+        // Reset pitch when no posture data
+        if (camera.rotation.x !== 0) {
+          camera.rotation.x = 0;
+          camera.updateProjectionMatrix();
+        }
+        // Log when no posture data
+        if (frameCount.current % 120 === 0) {
+          console.log('[PiP Hybrid Camera] NO POSTURE DATA - Camera pitch reset to 0');
         }
       }
     });
@@ -730,11 +844,11 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
           }>
             <Canvas
               key={`canvas-${attemptReload}`}
-              camera={{ 
-                position: cameraPosition, 
-                fov: 38, // Matches AnimatedAvatarDemo for optimal face framing
-                near: 0.01,
-                far: 100
+              camera={{
+                position: cameraPosition,
+                fov: cameraFOV,
+                near: 0.1,
+                far: 1000
               }}
               gl={{ 
                 antialias: true, 
@@ -747,15 +861,17 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
               }}
             >
               <ambientLight intensity={0.6} />
-              <directionalLight position={[0, 10, 5]} intensity={0.8} />
-              <directionalLight position={[0, 5, 10]} intensity={0.5} />
+              <directionalLight position={[5, 5, 5]} intensity={0.8} />
+              <directionalLight position={[-5, -5, -5]} intensity={0.4} />
               
-              <Suspense fallback={
-                <mesh position={[0, 0.6, 0]}>
-                  <sphereGeometry args={[0.2, 32, 32]} />
-                  <meshStandardMaterial color="yellow" />
-                </mesh>
-              }>
+              <group 
+                rotation={[
+                  0,
+                  0, // Y-axis (no left/right rotation)  
+                  0  // Z-axis (no roll)
+                ]}
+                position={[0, 0, 0]} 
+              >
                 <PresenceAvatar
                   avatarUrl={avatarUrl}
                   trackingData={(() => {
@@ -763,10 +879,10 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
                     console.log('[UserAvatarPiP] Passing tracking data to PresenceAvatar:', data);
                     return data;
                   })()}
-                  position={[0, -0.8, 0]} // Move avatar down to show head/shoulders
-                  scale={1.8} // Larger scale to fill the canvas
+                  position={[0, -0.5, 0]} 
+                  scale={1.5} 
                 />
-              </Suspense>
+              </group>
               
               <OrbitControls 
                 enablePan={false}
@@ -774,7 +890,7 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
                 enableRotate={false}
                 target={cameraTarget} // Adjusted target for better framing
               />
-              <CameraController postureData={postureData} />
+              {disableAutoCamera ? <ManualCameraController position={cameraPosition} fov={cameraFOV} target={cameraTarget} /> : <HybridCameraController position={cameraPosition} fov={cameraFOV} target={cameraTarget} postureData={postureData} />}
             </Canvas>
           </Suspense>
         )}
@@ -798,3 +914,5 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
     </div>
   );
 };
+
+export default UserAvatarPiP;

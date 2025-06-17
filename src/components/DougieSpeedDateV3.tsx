@@ -172,6 +172,28 @@ const DougieSpeedDateV3: React.FC = () => {
   const [practiceMode, setPracticeMode] = useState(false); // New practice mode toggle
   const [cameraZoomed, setCameraZoomed] = useState(false);
 
+  // Manual PiP Camera Controls - Optimized values for perfect face framing
+  const [pipCameraX, setPipCameraX] = useState(0.70);
+  const [pipCameraY, setPipCameraY] = useState(1.70);
+  const [pipCameraZ, setPipCameraZ] = useState(1.80);
+  const [pipCameraFOV, setPipCameraFOV] = useState(25);
+  const [pipTargetX, setPipTargetX] = useState(0);
+  const [pipTargetY, setPipTargetY] = useState(2.10);
+  const [pipTargetZ, setPipTargetZ] = useState(0);
+  const [showPipCameraControls, setShowPipCameraControls] = useState(false);
+
+  // Debug logging for camera controls
+  useEffect(() => {
+    console.log('[DougieSpeedDateV3] Camera controls state:', {
+      showPipCameraControls,
+      pipCameraX,
+      pipCameraY,
+      pipCameraZ,
+      pipCameraFOV,
+      pipTargetY
+    });
+  }, [showPipCameraControls, pipCameraX, pipCameraY, pipCameraZ, pipCameraFOV, pipTargetY]);
+
   // Tracking system state
   const [showTrackingPreferences, setShowTrackingPreferences] = useState(false);
   const [trackingPreferences, setTrackingPreferences] = useState<DateTrackingPreferences | null>(null);
@@ -261,7 +283,7 @@ const DougieSpeedDateV3: React.FC = () => {
   const [engagementAnalytics, setEngagementAnalytics] = useState<EngagementAnalytics | null>(null);
 
   // CV Analytics State
-  const [cvAnalyticsMode, setCvAnalyticsMode] = useState<CVAnalyticsMode>('none');
+  const [cvAnalyticsMode, setCvAnalyticsMode] = useState<CVAnalyticsMode>('none'); // Default to none to prevent camera interference
   const [cvAnalyticsData, setCvAnalyticsData] = useState<CVAnalyticsData | null>(null);
   const [showCVPanel, setShowCVPanel] = useState(false);
 
@@ -912,6 +934,11 @@ const DougieSpeedDateV3: React.FC = () => {
   };
 
   const setCameraForEyeTracking = (enabled: boolean) => {
+    // DISABLED: Prevent CV modes from changing main camera position
+    // This keeps the avatar framing stable regardless of CV analytics mode
+    console.log('[DougieSpeedDateV3] setCameraForEyeTracking called but disabled to maintain stable framing');
+    return; // Exit early to prevent camera changes
+    
     if (!controlsRef.current) return;
     
     if (enabled) {
@@ -1353,7 +1380,7 @@ const DougieSpeedDateV3: React.FC = () => {
       </div>
 
       {/* Main Container */}
-      <div className="main-container-v3">
+      <div className={`main-container-v3 ${!showSidebar ? 'full-width' : ''} ${!showChat ? 'full-height' : ''}`}>
         {/* Left Sidebar */}
         {showSidebar && (
           <div className="left-sidebar-v3">
@@ -1486,108 +1513,33 @@ const DougieSpeedDateV3: React.FC = () => {
                       </button>
                     </div>
 
-                    {false && showPiP && pipSize !== 'hidden' && (
-                      <div className="pip-container">
-                        <div className="pip-info">
-                          <p>🔍 PiP View Active</p>
-                          <p>Check bottom-right corner →</p>
+                    <div className="camera-info">
+                      <h5>Camera Status</h5>
+                      <div className="camera-details">
+                        <div className="detail-item">
+                          <span>Video Element:</span>
+                          <span className={videoRef.current ? 'status-good' : 'status-warning'}>
+                            {videoRef.current ? 'Ready' : 'Not Ready'}
+                          </span>
+                        </div>
+                        <div className="detail-item">
+                          <span>CV Video:</span>
+                          <span className={cvVideoRef.current ? 'status-good' : 'status-warning'}>
+                            {cvVideoRef.current ? 'Ready' : 'Not Ready'}
+                          </span>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
 
-                  <div className="camera-info">
-                    <h5>Camera Status</h5>
-                    <div className="camera-details">
-                      <div className="detail-item">
-                        <span>Video Element:</span>
-                        <span className={videoRef.current ? 'status-good' : 'status-warning'}>
-                          {videoRef.current ? 'Ready' : 'Not Ready'}
-                        </span>
-                      </div>
-                      <div className="detail-item">
-                        <span>CV Video:</span>
-                        <span className={cvVideoRef.current ? 'status-good' : 'status-warning'}>
-                          {cvVideoRef.current ? 'Ready' : 'Not Ready'}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {/* Camera Zoom Control */}
-                    <div style={{ marginTop: '15px' }}>
-                      <div style={{ 
-                        padding: '5px', 
-                        background: 'rgba(255,0,0,0.2)', 
-                        borderRadius: '4px',
-                        marginBottom: '5px',
-                        fontSize: '11px',
-                        color: 'white'
-                      }}>
-                        DEBUG: Camera zoom button should appear below
-                      </div>
-                      <button 
-                        className="camera-zoom-toggle-btn"
-                        style={{
-                          width: '100%',
-                          padding: '10px 15px',
-                          backgroundColor: cameraZoomed ? '#4CAF50' : '#FF6B6B',
-                          color: 'white',
-                          border: '2px solid #FFD700',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '16px',
-                          fontWeight: 'bold',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          transition: 'all 0.3s ease',
-                          zIndex: 9999,
-                          position: 'relative',
-                          pointerEvents: 'auto'
-                        }}
-                        onMouseEnter={() => {
-                          console.log('MOUSE ENTERED camera zoom button');
-                        }}
-                        onMouseLeave={() => {
-                          console.log('MOUSE LEFT camera zoom button');
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log('CAMERA ZOOM BUTTON CLICKED!!!');
-                          console.log('Current camera zoomed state:', cameraZoomed);
-                          console.log('Camera ref exists:', !!cameraRef.current);
-                          
-                          setCameraZoomed(!cameraZoomed);
-                          
-                          // Control camera position for face zoom
-                          console.log('Using setCameraForEyeTracking function');
-                          setCameraForEyeTracking(!cameraZoomed); // Use existing function that handles OrbitControls properly
-                          console.log('Camera zoom set to:', !cameraZoomed);
-                          
-                        }}
-                      >
-                        {cameraZoomed ? '👁️ Normal View' : '🔍 Zoom Face'} 
-                      </button>
-                    </div>
-                    
-                    {/* Face Zoom Instructions */}
-                    {cameraZoomed && (
-                      <div style={{
-                        marginTop: '10px',
-                        padding: '8px',
-                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                        border: '1px solid #4CAF50',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        color: '#4CAF50'
-                      }}>
-                        Camera zoomed for close-up eye contact interaction
-                      </div>
+                  <div className="debug-info">
+                    <h5>Debug Info</h5>
+                    <p>Connected: {isConnected ? 'Yes' : 'No'}</p>
+                    <p>Speaking: {isSpeaking ? 'Yes' : 'No'}</p>
+                    <p>Animation: {animationName}</p>
+                    {audioContextRef.current && (
+                      <p>Audio Context: {audioContextRef.current.state}</p>
                     )}
-                    
-                    {/* Remove the face zoom video section - not needed for 3D camera control */}
                   </div>
                 </div>
               )}
@@ -1654,16 +1606,6 @@ const DougieSpeedDateV3: React.FC = () => {
                       📊 View Chemistry Report
                     </button>
                   </div>
-
-                  <div className="debug-info">
-                    <h5>Debug Info</h5>
-                    <p>Connected: {isConnected ? 'Yes' : 'No'}</p>
-                    <p>Speaking: {isSpeaking ? 'Yes' : 'No'}</p>
-                    <p>Animation: {animationName}</p>
-                    {audioContextRef.current && (
-                      <p>Audio Context: {audioContextRef.current.state}</p>
-                    )}
-                  </div>
                 </div>
               )}
               {/* Analytics Tab */}
@@ -1696,47 +1638,171 @@ const DougieSpeedDateV3: React.FC = () => {
         <div className={`main-content-v3 ${!showSidebar ? 'full-width' : ''} ${!showChat ? 'full-height' : ''}`}>
           {/* PiP View - Final Position (Lower Right) */}
           {showPiP && pipSize !== 'hidden' && (
-            <div className="pip-view-position">
-              <div className="pip-container">
-                <div className="pip-header">
-                  <h4>Your Avatar</h4>
-                  <div className="pip-size-controls">
-                    <button 
-                      className={`pip-size-btn ${pipSize === 'medium' ? 'active' : ''}`}
-                      onClick={() => setPipSize('medium')}
-                      title="Medium Size"
-                    >
-                      M
-                    </button>
-                    <button 
-                      className={`pip-size-btn ${pipSize === 'large' ? 'active' : ''}`}
-                      onClick={() => setPipSize('large')}
-                      title="Large Size"
-                    >
-                      L
-                    </button>
-                  </div>
-                </div>
+            <div style={{ 
+              position: 'absolute', 
+              bottom: '20px', 
+              right: '20px', 
+              zIndex: 1000
+            }}>
+              {/* PiP Header with Camera Controls */}
+              <div className="pip-header" style={{
+                background: 'rgba(0,0,0,0.8)',
+                padding: '8px',
+                borderRadius: '8px 8px 0 0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>
+                  User Avatar
+                </span>
+                
+                {/* Camera Controls Toggle */}
                 {showPiP && (
-                  <UserAvatarPiP
-                    avatarUrl="/avatars/user_avatar.glb"
-                    position="bottom-right"
-                    size="medium"
-                    style={{ zIndex: 1000 }}
-                    cameraStream={streamRef.current}
-                    postureData={(() => {
-                      console.log('[DougieSpeedDateV3] PiP PostureData:', cvAnalyticsData?.posture);
-                      return cvAnalyticsData?.posture;
-                    })()} // Add posture data for camera responsiveness
-                    trackingData={null} // Let PiP handle its own tracking
-                    enableOwnTracking={true} // Enable PiP's own face tracking
-                    onClose={() => setShowPiP(false)}
-                  />
+                  <button 
+                    className={`pip-size-btn ${showPipCameraControls ? 'active' : ''}`}
+                    onClick={() => {
+                      console.log('[DougieSpeedDateV3] Camera controls toggle clicked. Current state:', showPipCameraControls);
+                      setShowPipCameraControls(!showPipCameraControls);
+                    }}
+                    title="Camera Controls"
+                    style={{
+                      background: showPipCameraControls ? '#FF6B6B' : '#4CAF50',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      marginLeft: '8px'
+                    }}
+                  >
+                    📹
+                  </button>
                 )}
               </div>
+
+              {/* Camera Controls Panel */}
+              {showPipCameraControls && (
+                <div style={{
+                  position: 'absolute',
+                  top: '-120px',
+                  left: '0',
+                  right: '0',
+                  background: 'rgba(0,0,0,0.9)',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  zIndex: 1001
+                }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ color: 'white', display: 'block' }}>Camera X: {pipCameraX.toFixed(2)}</label>
+                      <input
+                        type="range"
+                        min={-3}
+                        max={3}
+                        step={0.1}
+                        value={pipCameraX}
+                        onChange={(e) => setPipCameraX(parseFloat(e.target.value))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ color: 'white', display: 'block' }}>Camera Y: {pipCameraY.toFixed(2)}</label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={3}
+                        step={0.1}
+                        value={pipCameraY}
+                        onChange={(e) => setPipCameraY(parseFloat(e.target.value))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ color: 'white', display: 'block' }}>Camera Z: {pipCameraZ.toFixed(2)}</label>
+                      <input
+                        type="range"
+                        min={0.5}
+                        max={5}
+                        step={0.1}
+                        value={pipCameraZ}
+                        onChange={(e) => setPipCameraZ(parseFloat(e.target.value))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ color: 'white', display: 'block' }}>FOV: {pipCameraFOV.toFixed(0)}</label>
+                      <input
+                        type="range"
+                        min={15}
+                        max={75}
+                        step={1}
+                        value={pipCameraFOV}
+                        onChange={(e) => setPipCameraFOV(parseFloat(e.target.value))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ color: 'white', display: 'block' }}>Target Y: {pipTargetY.toFixed(2)}</label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={3}
+                        step={0.1}
+                        value={pipTargetY}
+                        onChange={(e) => setPipTargetY(parseFloat(e.target.value))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <button 
+                        onClick={() => {
+                          console.log('Current PiP Camera Settings:', {
+                            position: [pipCameraX, pipCameraY, pipCameraZ],
+                            fov: pipCameraFOV,
+                            target: [pipTargetX, pipTargetY, pipTargetZ]
+                          });
+                        }}
+                        style={{
+                          background: '#4CAF50',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          marginLeft: '8px'
+                        }}
+                      >
+                        Log Values
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Direct UserAvatarPiP - No wrapper container */}
+              <UserAvatarPiP
+                avatarUrl="/avatars/user_avatar.glb"
+                position="bottom-right"
+                size={pipSize as 'small' | 'medium' | 'large'}
+                postureData={(() => {
+                  const data = cvAnalyticsMode === 'posture' || cvAnalyticsMode === 'combined' ? cvAnalyticsData?.posture : undefined;
+                  console.log('[DougieSpeedDate] 🎭 Passing to PiP - Mode:', cvAnalyticsMode, 'PostureData:', data);
+                  return data;
+                })()}
+                enableOwnTracking={true}
+                onClose={() => setShowPiP(false)}
+                cameraPosition={[pipCameraX, pipCameraY, pipCameraZ]}
+                cameraFOV={pipCameraFOV}
+                cameraTarget={[pipTargetX, pipTargetY, pipTargetZ]}
+                disableAutoCamera={true} // Always manual camera for stable positioning
+              />
             </div>
           )}
-
+          
           {/* 3D Scene */}
           <WebGLErrorBoundary fallback={
             <div style={{ 
@@ -1797,6 +1863,13 @@ const DougieSpeedDateV3: React.FC = () => {
                 minDistance={0.8}
                 maxDistance={4}
                 maxPolarAngle={Math.PI / 2}
+                onStart={() => {
+                  // Prevent any external camera position changes
+                  if (controlsRef.current) {
+                    controlsRef.current.object.position.set(0, 1.6, 1.8);
+                    controlsRef.current.target.set(0, 1.6, 0);
+                  }
+                }}
               />
               <ambientLight intensity={0.5} />
               <directionalLight position={[5, 5, 5]} />
