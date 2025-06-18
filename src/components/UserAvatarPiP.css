@@ -8,6 +8,15 @@
   background: rgba(20, 20, 32, 0.95);
   transition: all 0.3s ease;
   cursor: move;
+  /* Ensure the container doesn't expand beyond intended size */
+  max-width: 400px;
+  max-height: 400px;
+  min-width: 120px;
+  min-height: 120px;
+  contain: layout style size;
+  /* Force isolation to prevent canvas escape */
+  isolation: isolate;
+  transform: translateZ(0);
 }
 
 /* Position variants */
@@ -84,12 +93,55 @@
   height: 100%;
   position: relative;
   background: #000;
-  overflow: hidden;
+  border-radius: inherit;
 }
 
 .pip-content canvas {
   width: 100% !important;
   height: 100% !important;
+  border-radius: inherit;
+}
+
+/* Aggressive containment for any canvas that tries to escape */
+.user-avatar-pip canvas,
+.user-avatar-pip canvas[data-engine*="three"] {
+  position: relative !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  transform: none !important;
+  z-index: 1 !important;
+}
+
+/* Canvas container - ensures Canvas stays within bounds */
+.pip-canvas-container {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  overflow: hidden !important;
+  border-radius: inherit;
+  contain: layout style size paint;
+}
+
+/* Additional defensive rules for Three.js */
+.user-avatar-pip canvas,
+.user-avatar-pip canvas[data-engine="three.js r162"] {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  z-index: 1 !important;
 }
 
 /* Minimized state */
@@ -183,6 +235,88 @@
 .user-avatar-pip.dragging {
   cursor: move;
   opacity: 0.8;
+}
+
+/* Save camera button */
+.pip-save-btn {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 10px;
+  cursor: pointer;
+  z-index: 1000;
+  opacity: 0.8;
+}
+
+.pip-save-btn:hover {
+  opacity: 1;
+  background: #45a049;
+}
+
+/* Lock camera button */
+.pip-lock-btn {
+  position: absolute;
+  top: 5px;
+  left: 85px;
+  background: #FF6B6B;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 10px;
+  cursor: pointer;
+  z-index: 1000;
+  opacity: 0.8;
+}
+
+.pip-lock-btn:hover {
+  opacity: 1;
+  background: #FF5252;
+}
+
+/* Transform button */
+.pip-transform-btn {
+  position: absolute;
+  top: 30px;
+  left: 5px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 10px;
+  cursor: pointer;
+  z-index: 1000;
+  opacity: 0.8;
+}
+
+.pip-transform-btn:hover {
+  opacity: 1;
+  background: #1976D2;
+}
+
+/* Transform display */
+.pip-transform {
+  position: absolute;
+  top: 55px;
+  left: 5px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  z-index: 1000;
+  max-width: 200px;
+}
+
+.pip-transform p {
+  margin: 2px 0;
+  font-family: monospace;
 }
 
 /* Mobile responsive */

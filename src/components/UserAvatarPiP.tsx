@@ -21,9 +21,13 @@ interface UserAvatarPiPProps {
   cameraFOV?: number;
   cameraTarget?: [number, number, number];
   disableAutoCamera?: boolean;
+  // Legacy props for backward compatibility
+  trackingData?: any;
+  cameraStream?: MediaStream | null;
+  postureData?: any;
 }
 
-export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({ 
+export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
   avatarUrl = "/avatars/user_avatar.glb",
   size = 'medium',
   position = 'bottom-right',
@@ -31,20 +35,36 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
   className,
   enableOwnTracking = false,
   onClose,
-  cameraPosition = [0, 1.6, 1.8],
-  cameraFOV = 38,
-  cameraTarget = [0, 1.6, 0],
-  disableAutoCamera = false
+  cameraPosition: initialCameraPosition = [0, 1.6, 1.8],
+  cameraFOV: initialCameraFOV = 38,
+  cameraTarget: initialCameraTarget = [0, 1.6, 0],
+  disableAutoCamera = false,
+  trackingData,
+  cameraStream,
+  postureData
 }) => {
   const [isVisible, setIsVisible] = useState(true);
-  const [trackingData, setTrackingData] = useState<any>(null);
+  const [trackingDataState, setTrackingData] = useState<any>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Get size dimensions
+  const getSizeDimensions = () => {
+    switch(size) {
+      case 'small': return { width: 120, height: 120 };
+      case 'large': return { width: 320, height: 320 };
+      default: return { width: 200, height: 200 };
+    }
+  };
+
+  const dimensions = getSizeDimensions();
 
   // Simple fallback tracking - just basic animation
   useEffect(() => {
     if (!enableOwnTracking) return;
 
     console.log('[UserAvatarPiP-Simple] Starting simple tracking...');
+    console.log('[UserAvatarPiP-Simple] Avatar URL:', avatarUrl);
     
     // Very lightweight tracking simulation
     intervalRef.current = setInterval(() => {
@@ -83,11 +103,56 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
     return `pip-${position}`;
   };
 
+  const [cameraPosition, setCameraPosition] = useState(() => {
+    const saved = localStorage.getItem('pipCameraPosition');
+    return saved ? JSON.parse(saved) : initialCameraPosition;
+  });
+  
+  const [cameraTarget, setCameraTarget] = useState(() => {
+    const saved = localStorage.getItem('pipCameraTarget');  
+    return saved ? JSON.parse(saved) : initialCameraTarget;
+  });
+  
+  const [cameraFOV, setCameraFOV] = useState(() => {
+    const saved = localStorage.getItem('pipCameraFOV');
+    return saved ? JSON.parse(saved) : initialCameraFOV;
+  });
+
+  const [isLocked, setIsLocked] = useState(() => {
+    const saved = localStorage.getItem('pipCameraLocked');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  const [showTransform, setShowTransform] = useState(false);
+
+  // Save current camera settings to localStorage
+  const saveCameraSettings = () => {
+    // Get current camera state from OrbitControls
+    const canvas = document.querySelector('.user-avatar-pip canvas') as any;
+    if (canvas?.__r3f?.camera) {
+      const camera = canvas.__r3f.camera;
+      const position = [camera.position.x, camera.position.y, camera.position.z];
+      const target = [camera.target?.x || 0, camera.target?.y || 1.0, camera.target?.z || 0];
+      const fov = camera.fov;
+      
+      localStorage.setItem('pipCameraPosition', JSON.stringify(position));
+      localStorage.setItem('pipCameraTarget', JSON.stringify(target));
+      localStorage.setItem('pipCameraFOV', JSON.stringify(fov));
+      
+      setCameraPosition(position);
+      setCameraTarget(target);  
+      setCameraFOV(fov);
+      
+      console.log('PiP Camera Settings Saved:', { position, target, fov });
+      alert('Camera settings saved! Will be restored on page reload.');
+    }
+  };
+
   if (!isVisible) return null;
 
   return (
     <div 
-      className={`pip-container ${getSizeClass()} ${getPositionClass()} ${className || ''}`}
+      className={`user-avatar-pip ${getSizeClass()} ${getPositionClass()} ${className || ''}`}
       style={style}
     >
       {onClose && (
@@ -116,27 +181,29 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
               position: cameraPosition, 
               fov: cameraFOV 
             }}
-            style={{ background: 'transparent' }}
+            gl={{ 
+              antialias: true,
+              alpha: true,
+              powerPreference: "high-performance"
+            }}
           >
-            <ambientLight intensity={0.6} />
-            <directionalLight position={[10, 10, 5]} intensity={0.8} />
+            <ambientLight intensity={1.2} />
+            <directionalLight position={[10, 10, 5]} intensity={1.5} />
             
             <PresenceAvatar
               avatarUrl={avatarUrl}
               position={[0, -0.8, 0]}
               scale={1}
-              trackingData={trackingData}
+              trackingData={trackingDataState}
               animationName="idle"
             />
             
-            {!disableAutoCamera && (
-              <OrbitControls
-                target={cameraTarget}
-                enablePan={false}
-                enableZoom={false}
-                enableRotate={false}
-              />
-            )}
+            <OrbitControls
+              target={cameraTarget}
+              enablePan={!isLocked}
+              enableZoom={!isLocked}
+              enableRotate={!isLocked}
+            />
           </Canvas>
         </Suspense>
       </div>
@@ -145,6 +212,41 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
         <div className="pip-status">
           <div className="pip-status-dot pip-status-active"></div>
           <span className="pip-status-text">Tracking</span>
+        </div>
+      )}
+      
+      <button 
+        className="pip-save-btn"
+        onClick={saveCameraSettings}
+        aria-label="Save Camera Settings"
+      >
+        Save Camera
+      </button>
+      
+      <button 
+        className="pip-lock-btn"
+        onClick={() => {
+          setIsLocked(!isLocked);
+          localStorage.setItem('pipCameraLocked', JSON.stringify(!isLocked));
+        }}
+        aria-label="Toggle Camera Lock"
+      >
+        {isLocked ? 'Unlock Camera' : 'Lock Camera'}
+      </button>
+      
+      <button 
+        className="pip-transform-btn"
+        onClick={() => setShowTransform(!showTransform)}
+        aria-label="Toggle Camera Transform"
+      >
+        {showTransform ? 'Hide Transform' : 'Show Transform'}
+      </button>
+      
+      {showTransform && (
+        <div className="pip-transform">
+          <p>Camera Position: ({cameraPosition.join(', ')})</p>
+          <p>Camera Target: ({cameraTarget.join(', ')})</p>
+          <p>Camera FOV: {cameraFOV}</p>
         </div>
       )}
     </div>

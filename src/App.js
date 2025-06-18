@@ -109,6 +109,17 @@ import ConferenceBoothDemo from './components/ConferenceBoothDemo'; // Fix impor
 import ConferenceHost from './components/ConferenceHost';
 import ConferenceMobile from './components/ConferenceMobile';
 import ConferenceAudience from './components/ConferenceAudience';
+import SimpleInvestorDemo from './components/SimpleInvestorDemo';
+import EmotionAnalysisShowcase from './components/EmotionAnalysisShowcase';
+import DougieSpeedDate from './components/DougieSpeedDate';
+import DougieSpeedDateV2 from './components/DougieSpeedDateV2';
+import DougieSpeedDateV3 from './components/DougieSpeedDateV3';
+import DougieSpeedDateSimple from './components/DougieSpeedDateSimple';
+import DougieSpeedDateCoach from './components/DougieSpeedDateCoach';
+import DougieCoachSimple from './components/DougieCoachSimple';
+import DougieCoachWorkingCopy from './components/DougieCoachWorkingCopy';
+import DougieTest from './components/DougieTest';
+import LiveDemoController from './components/LiveDemoController';
 import { HeartIcon, SparkleIcon, RadiatingHeartIcon, WingedHeartIcon } from './components/RisographIcons';
 import { CupidCursor } from './components/CupidCursor';
 import PasswordProtection from './components/PasswordProtection';

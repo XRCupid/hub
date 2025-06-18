@@ -523,13 +523,15 @@
   position: relative;
 }
 
-.scene-container canvas {
+.scene-container > canvas,
+.scene-container .three-canvas canvas {
   width: 100% !important;
   height: 100% !important;
   cursor: grab;
 }
 
-.scene-container canvas:active {
+.scene-container > canvas:active,
+.scene-container .three-canvas canvas:active {
   cursor: grabbing;
 }
 

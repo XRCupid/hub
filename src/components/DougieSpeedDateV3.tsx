@@ -178,7 +178,7 @@ const DougieSpeedDateV3: React.FC = () => {
   const [pipCameraZ, setPipCameraZ] = useState(1.80);
   const [pipCameraFOV, setPipCameraFOV] = useState(25);
   const [pipTargetX, setPipTargetX] = useState(0);
-  const [pipTargetY, setPipTargetY] = useState(2.10);
+  const [pipTargetY, setPipTargetY] = useState(1.0);
   const [pipTargetZ, setPipTargetZ] = useState(0);
   const [showPipCameraControls, setShowPipCameraControls] = useState(false);
 
@@ -190,9 +190,10 @@ const DougieSpeedDateV3: React.FC = () => {
       pipCameraY,
       pipCameraZ,
       pipCameraFOV,
-      pipTargetY
+      pipTargetY,
+      pipTargetZ
     });
-  }, [showPipCameraControls, pipCameraX, pipCameraY, pipCameraZ, pipCameraFOV, pipTargetY]);
+  }, [showPipCameraControls, pipCameraX, pipCameraY, pipCameraZ, pipCameraFOV, pipTargetY, pipTargetZ]);
 
   // Tracking system state
   const [showTrackingPreferences, setShowTrackingPreferences] = useState(false);
@@ -1512,22 +1513,100 @@ const DougieSpeedDateV3: React.FC = () => {
                         {showPiP ? '👁️ PiP Visible' : '🚫 PiP Hidden'}
                       </button>
                     </div>
+                  </div>
 
-                    <div className="camera-info">
-                      <h5>Camera Status</h5>
-                      <div className="camera-details">
-                        <div className="detail-item">
-                          <span>Video Element:</span>
-                          <span className={videoRef.current ? 'status-good' : 'status-warning'}>
-                            {videoRef.current ? 'Ready' : 'Not Ready'}
-                          </span>
-                        </div>
-                        <div className="detail-item">
-                          <span>CV Video:</span>
-                          <span className={cvVideoRef.current ? 'status-good' : 'status-warning'}>
-                            {cvVideoRef.current ? 'Ready' : 'Not Ready'}
-                          </span>
-                        </div>
+                  <div className="pip-camera-controls">
+                    <h5 style={{ color: '#333', marginBottom: '10px' }}>PiP Camera Controls</h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div>
+                        <label style={{ color: '#333', display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Camera X: {pipCameraX.toFixed(2)}</label>
+                        <input
+                          type="range"
+                          min={-3}
+                          max={3}
+                          step={0.1}
+                          value={pipCameraX}
+                          onChange={(e) => setPipCameraX(parseFloat(e.target.value))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ color: '#333', display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Camera Y: {pipCameraY.toFixed(2)}</label>
+                        <input
+                          type="range"
+                          min={0}
+                          max={3}
+                          step={0.1}
+                          value={pipCameraY}
+                          onChange={(e) => setPipCameraY(parseFloat(e.target.value))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ color: '#333', display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Camera Z: {pipCameraZ.toFixed(2)}</label>
+                        <input
+                          type="range"
+                          min={0.5}
+                          max={5}
+                          step={0.1}
+                          value={pipCameraZ}
+                          onChange={(e) => setPipCameraZ(parseFloat(e.target.value))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ color: '#333', display: 'block', fontSize: '12px', fontWeight: 'bold' }}>FOV: {pipCameraFOV.toFixed(0)}</label>
+                        <input
+                          type="range"
+                          min={15}
+                          max={75}
+                          step={1}
+                          value={pipCameraFOV}
+                          onChange={(e) => setPipCameraFOV(parseFloat(e.target.value))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ color: '#333', display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Target Y: {pipTargetY.toFixed(2)}</label>
+                        <input
+                          type="range"
+                          min={-2}
+                          max={2}
+                          step={0.1}
+                          value={pipTargetY}
+                          onChange={(e) => setPipTargetY(parseFloat(e.target.value))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ color: '#333', display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Target Z: {pipTargetZ.toFixed(2)}</label>
+                        <input
+                          type="range"
+                          min={-2}
+                          max={2}
+                          step={0.1}
+                          value={pipTargetZ}
+                          onChange={(e) => setPipTargetZ(parseFloat(e.target.value))}
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="camera-info">
+                    <h5>Camera Status</h5>
+                    <div className="camera-details">
+                      <div className="detail-item">
+                        <span>Video Element:</span>
+                        <span className={videoRef.current ? 'status-good' : 'status-warning'}>
+                          {videoRef.current ? 'Ready' : 'Not Ready'}
+                        </span>
+                      </div>
+                      <div className="detail-item">
+                        <span>CV Video:</span>
+                        <span className={cvVideoRef.current ? 'status-good' : 'status-warning'}>
+                          {cvVideoRef.current ? 'Ready' : 'Not Ready'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1748,11 +1827,23 @@ const DougieSpeedDateV3: React.FC = () => {
                       <label style={{ color: 'white', display: 'block' }}>Target Y: {pipTargetY.toFixed(2)}</label>
                       <input
                         type="range"
-                        min={0}
-                        max={3}
+                        min={-2}
+                        max={2}
                         step={0.1}
                         value={pipTargetY}
                         onChange={(e) => setPipTargetY(parseFloat(e.target.value))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ color: 'white', display: 'block' }}>Target Z: {pipTargetZ.toFixed(2)}</label>
+                      <input
+                        type="range"
+                        min={-2}
+                        max={2}
+                        step={0.1}
+                        value={pipTargetZ}
+                        onChange={(e) => setPipTargetZ(parseFloat(e.target.value))}
                         style={{ width: '100%' }}
                       />
                     </div>

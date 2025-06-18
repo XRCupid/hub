@@ -231,9 +231,9 @@ export class MemoryManager {
     };
     
     const originalSetTimeout = window.setTimeout;
-    window.setTimeout = function(callback: TimerHandler, ms?: number) {
-      return originalSetTimeout(callback, Math.max(ms || 0, 50)); // Minimum 50ms
-    };
+    window.setTimeout = function(callback: TimerHandler, ms?: number, ...args: any[]): number {
+      return originalSetTimeout(callback, Math.max(ms || 0, 50), ...args); // Minimum 50ms
+    } as typeof setTimeout;
     
     console.log('✅ Performance limits applied');
   }
