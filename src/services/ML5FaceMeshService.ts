@@ -3,6 +3,10 @@ import { FaceMeshPrediction, HeadRotation, IFaceTrackingService } from './IFaceT
 
 declare const ml5: any; // Declare ml5 as a global variable
 
+// Global singleton tracking
+let globalML5Instance: ML5FaceMeshService | null = null;
+let globalInitializationPromise: Promise<void> | null = null;
+
 export class ML5FaceMeshService implements IFaceTrackingService {
   private facemesh: any = null;
   private isInitialized = false;
@@ -16,11 +20,11 @@ export class ML5FaceMeshService implements IFaceTrackingService {
   private cleanupFunctions: (() => void)[] = [];
   private lastPredictionTime = 0;
   private predictions: any[] = [];
-  private smoothingAlpha = 0.1; // REDUCED for more stability
+  private smoothingAlpha = 0.3; // Increased for more responsive tracking
   private frameCount = 0;
-  private skipFrames = 2; // Process every 3rd frame to reduce CPU usage
+  private skipFrames = 1; // Process every 2nd frame for better responsiveness
   private lastProcessTime = 0;
-  private minProcessInterval = 50; // Minimum 50ms between processing (20 FPS max)
+  private minProcessInterval = 33; // ~30 FPS for smoother tracking
 
   // Calibration state
   private isCalibrated: boolean = false;
@@ -41,11 +45,11 @@ export class ML5FaceMeshService implements IFaceTrackingService {
   private getMobileOptimizedSettings() {
     const mobile = this.isMobile();
     return {
-      skipFrames: mobile ? 4 : 2,  // Skip more frames on mobile
-      minProcessInterval: mobile ? 100 : 50,  // Slower processing on mobile
-      smoothingAlpha: mobile ? 0.2 : 0.1,  // More smoothing on mobile
-      maxAttempts: mobile ? 15 : 10,  // More time to load on mobile
-      delay: mobile ? 500 : 300  // Longer delays for mobile
+      skipFrames: mobile ? 2 : 1,  // Less frame skipping for desktop
+      minProcessInterval: mobile ? 66 : 33,  // 15 FPS mobile, 30 FPS desktop
+      smoothingAlpha: mobile ? 0.25 : 0.3,  // Less smoothing for more responsiveness
+      maxAttempts: mobile ? 15 : 10,
+      delay: mobile ? 500 : 300
     };
   }
 
@@ -106,6 +110,12 @@ export class ML5FaceMeshService implements IFaceTrackingService {
   }
 
   public async initialize(): Promise<void> {
+    // Use global singleton pattern to prevent multiple ML5 initializations
+    if (globalInitializationPromise) {
+      console.log('[ML5FaceMesh] Using global initialization promise');
+      return globalInitializationPromise;
+    }
+    
     // Return existing initialization promise if already in progress
     if (this.initializationPromise) {
       console.log('[ML5FaceMesh] Returning existing initialization promise');
@@ -118,12 +128,29 @@ export class ML5FaceMeshService implements IFaceTrackingService {
       return Promise.resolve();
     }
 
-    this.initializationPromise = this._doInitialize();
-    return this.initializationPromise;
+    // Create global initialization promise
+    globalInitializationPromise = this._doInitialize();
+    this.initializationPromise = globalInitializationPromise;
+    
+    try {
+      await globalInitializationPromise;
+    } catch (error) {
+      // Reset global promise on error
+      globalInitializationPromise = null;
+      throw error;
+    }
+    
+    return globalInitializationPromise;
   }
 
   private async _doInitialize(): Promise<void> {
     console.log('[ML5FaceMesh] Initializing face mesh...');
+    console.log('[ML5FaceMesh] Current state:', {
+      isInitialized: this.isInitialized,
+      hasFacemesh: !!this.facemesh,
+      ml5Available: typeof ml5 !== 'undefined',
+      facemeshAvailable: typeof ml5?.facemesh === 'function'
+    });
     
     // Wait for ml5 to be available
     const ml5Ready = await this.waitForML5();
@@ -139,6 +166,7 @@ export class ML5FaceMeshService implements IFaceTrackingService {
     }
     return new Promise<void>((resolve, reject) => {
       try {
+        console.log('[ML5FaceMesh] Creating facemesh with config:', this.modelConfig);
         this.facemesh = ml5.facemesh(this.modelConfig, () => {
           console.log('[ML5FaceMesh] ml5.facemesh LOAD CALLBACK invoked.');
           // Don't check if this.facemesh is null here - it may be set asynchronously
@@ -148,31 +176,58 @@ export class ML5FaceMeshService implements IFaceTrackingService {
           resolve();
         });
         console.log('[ML5FaceMesh] Value of this.facemesh IMMEDIATELY AFTER ml5.facemesh() call:', this.facemesh);
+        console.log('[ML5FaceMesh] Is facemesh null?', this.facemesh === null);
+        console.log('[ML5FaceMesh] Facemesh type:', typeof this.facemesh);
+        
+        // Check if facemesh was created synchronously
+        if (this.facemesh) {
+          console.log('[ML5FaceMesh] Facemesh created synchronously, checking if ready...');
+          // Sometimes ML5 creates the object synchronously but still needs to load
+          // Wait a bit for the callback to fire
+          setTimeout(() => {
+            if (!this.isInitialized && this.facemesh) {
+              console.log('[ML5FaceMesh] Facemesh exists but callback not fired, forcing initialization');
+              this.isInitialized = true;
+              resolve();
+            }
+          }, 2000);
+        }
         
         // Add a timeout to handle cases where the callback never fires
         setTimeout(() => {
           if (!this.isInitialized) {
-            console.warn('[ML5FaceMesh] Model load timeout - forcing initialization');
-            this.isInitialized = true;
-            resolve();
+            console.log('[ML5FaceMesh] Model load timeout - forcing initialization');
+            if (this.facemesh) {
+              console.log('[ML5FaceMesh] Facemesh exists during timeout, marking as initialized');
+              this.isInitialized = true;
+              resolve();
+            } else {
+              console.error('[ML5FaceMesh] Facemesh still null after timeout');
+              reject(new Error('ML5 FaceMesh model failed to load within timeout'));
+            }
           }
-        }, 5000);
-        
-        if (this.facemesh && typeof this.facemesh.on === 'function') {
-          this.facemesh.on('error', (error: any) => {
-            console.error('[ML5FaceMesh] Model error:', error);
-            reject(error);
-          });
-        }
+        }, 8000); // 8 seconds timeout
       } catch (error) {
         console.error('[ML5FaceMesh] Error during ml5.facemesh call:', error);
         reject(error);
       }
+    }).then(() => {
+      // Additional check after promise resolves
+      console.log('[ML5FaceMesh] After initialization promise resolved:', {
+        hasFacemesh: !!this.facemesh,
+        isInitialized: this.isInitialized
+      });
     });
   }
 
   public async startTracking(videoElement: HTMLVideoElement): Promise<void> {
     console.log('[ML5FaceMesh] Starting face tracking...');
+    console.log('[ML5FaceMesh] Current state:', {
+      hasFacemesh: !!this.facemesh,
+      isInitialized: this.isInitialized,
+      facemeshType: typeof this.facemesh,
+      facemeshValue: this.facemesh
+    });
     console.log('[ML5FaceMesh] Device info:', {
       isMobile: this.isMobile(),
       userAgent: navigator.userAgent,
@@ -182,9 +237,25 @@ export class ML5FaceMeshService implements IFaceTrackingService {
     
     if (!this.facemesh) {
       console.warn('[ML5FaceMesh] Face mesh model not loaded properly, attempting to reinitialize...');
+      // Reset initialization state to force a fresh attempt
+      this.isInitialized = false;
+      this.initializationPromise = null;
+      globalInitializationPromise = null;
+      
       // Try to initialize again
       await this.initialize();
+      
+      // Wait a bit for the model to settle
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       if (!this.facemesh) {
+        console.error('[ML5FaceMesh] Face mesh model still not loaded after reinitialization');
+        console.error('[ML5FaceMesh] ML5 state:', {
+          ml5Exists: typeof ml5 !== 'undefined',
+          ml5FacemeshExists: typeof ml5 !== 'undefined' && typeof ml5.facemesh === 'function',
+          thisInstance: this,
+          globalPromise: globalInitializationPromise
+        });
         throw new Error('Face mesh model not loaded. Call initialize() first.');
       }
     }
@@ -270,14 +341,12 @@ export class ML5FaceMeshService implements IFaceTrackingService {
         if (this.facemesh && this.facemesh.predict && typeof this.facemesh.predict === 'function') {
           // Use callback-based predict to avoid promise rejection issues
           this.facemesh.predict(this.videoElement, (predictions: any) => {
-            console.log(`[ML5FaceMesh] 📸 Processing frame ${this.frameCount}, device: ${this.isMobile() ? 'mobile' : 'desktop'}`);
             this.handlePredictions(predictions);
             resolve();
           });
         } else if (this.facemesh && this.facemesh.detect && typeof this.facemesh.detect === 'function') {
           this.facemesh.detect(this.videoElement, (err: any, predictions: any) => {
             if (!err) {
-              console.log(`[ML5FaceMesh] 📸 Processing frame ${this.frameCount}, device: ${this.isMobile() ? 'mobile' : 'desktop'}`);
               this.handlePredictions(predictions);
             }
             resolve();
@@ -649,6 +718,23 @@ export class ML5FaceMeshService implements IFaceTrackingService {
         expressions.eyebrowFurrow = Math.min(1, Math.max(0, furrowRatio));
         expressions.browDownLeft = expressions.eyebrowFurrow; 
         expressions.browDownRight = expressions.eyebrowFurrow;
+      }
+
+      // Debug log significant expressions
+      const hasSignificantExpression = Object.entries(expressions).some(([key, value]) => 
+        value > 0.1 && !key.includes('eyeLook')
+      );
+      
+      if (hasSignificantExpression && Math.random() < 0.05) { // Log 5% of the time when expressions detected
+        console.log('[ML5FaceMesh] Calculated expressions:', {
+          mouthOpen: expressions.mouthOpen.toFixed(2),
+          jawOpen: expressions.jawOpen.toFixed(2),
+          mouthSmile: expressions.mouthSmile.toFixed(2),
+          mouthSmileLeft: expressions.mouthSmileLeft.toFixed(2),
+          mouthSmileRight: expressions.mouthSmileRight.toFixed(2),
+          eyebrowRaiseLeft: expressions.eyebrowRaiseLeft.toFixed(2),
+          eyebrowRaiseRight: expressions.eyebrowRaiseRight.toFixed(2)
+        });
       }
 
     } catch (e: any) {
