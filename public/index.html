@@ -29,11 +29,22 @@
     <link rel="stylesheet" href="%PUBLIC_URL%/assets/cursors.css" />
     <!-- TensorFlow.js warning suppression - MUST load first -->
     <script src="%PUBLIC_URL%/tfjs-suppress.js"></script>
-    <!-- WebGazer 2.1.0 - Stable version that works with modern TensorFlow -->
-    <script src="https://unpkg.com/webgazer@2.1.0/dist/webgazer.min.js"></script>
-    <!-- ML5.js for face and pose detection -->
+    <!-- TensorFlow.js 1.7.4 - Compatible with ML5 0.12.2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
+    <!-- ML5.js 0.12.2 - Proven working version -->
     <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
+    <!-- WebGazer 2.1.0 - Load AFTER our TF.js to preserve face tracking -->
+    <script src="https://unpkg.com/webgazer@2.1.0/dist/webgazer.min.js"></script>
     <script>
+      // Initialize TensorFlow.js backend before other libraries use it
+      if (typeof tf !== 'undefined') {
+        tf.ready().then(() => {
+          console.log('[index.html] TensorFlow.js backend ready:', tf.getBackend());
+        }).catch(err => {
+          console.error('[index.html] TensorFlow.js initialization error:', err);
+        });
+      }
+      
       // Debug ML5 loading
       console.log('[index.html] ML5 version:', typeof ml5 !== 'undefined' ? ml5.version : 'Not loaded');
       
