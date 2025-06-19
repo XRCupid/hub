@@ -162,7 +162,87 @@ voiceService.onEmotion((emotions: Array<{name: string, score: number}>) => {
 await voiceService.connect(NPC_CONFIG.humeConfigId);
 ```
 
-### 6. NPC Configuration
+### 6. Face Tracking for User Emotions
+
+User facial emotions are captured directly from the camera using CombinedFaceTrackingService:
+
+```typescript
+// Import the service
+import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';
+
+// Create refs
+const faceTrackingServiceRef = useRef<CombinedFaceTrackingService | null>(null);
+const faceVideoRef = useRef<HTMLVideoElement | null>(null);
+
+// Initialize when camera is ready
+useEffect(() => {
+  if (!cameraStream) return;
+  
+  const initFaceTracking = async () => {
+    faceTrackingServiceRef.current = new CombinedFaceTrackingService();
+    await faceTrackingServiceRef.current.initialize();
+    
+    if (faceVideoRef.current) {
+      faceVideoRef.current.srcObject = cameraStream;
+      await faceVideoRef.current.play();
+      await faceTrackingServiceRef.current.startTracking(faceVideoRef.current);
+    }
+    
+    // Poll for expressions
+    const pollExpressions = setInterval(() => {
+      if (faceTrackingServiceRef.current) {
+        const expressions = faceTrackingServiceRef.current.getExpressions();
+        setUserBlendshapes(expressions);
+      }
+    }, 100);
+  };
+  
+  initFaceTracking();
+}, [cameraStream]);
+
+// Convert blendshapes to emotions
+const mapBlendshapesToEmotions = (blendshapes) => {
+  const emotions = [];
+  
+  // Joy detection
+  const smileScore = (blendshapes['mouthSmileLeft'] + blendshapes['mouthSmileRight']) / 2;
+  if (smileScore > 0.3) emotions.push({ name: 'joy', score: smileScore });
+  
+  // Surprise detection
+  const surpriseScore = Math.max(blendshapes['browInnerUp'], blendshapes['eyeWideLeft']);
+  if (surpriseScore > 0.4) emotions.push({ name: 'surprise', score: surpriseScore });
+  
+  return emotions;
+};
+```
+
+### 7. Transcript Integration
+
+Both user and NPC emotions are captured in transcript segments:
+
+```typescript
+// User message with facial emotions
+const userSegment: TranscriptSegment = {
+  timestamp: Date.now(),
+  speaker: 'user',
+  text: message,
+  emotions: [],
+  prosodyEmotions: undefined,
+  facialEmotions: userEmotions.length > 0 ? [...userEmotions] : undefined
+};
+
+// Assistant message with emotions
+const assistantSegment: TranscriptSegment = {
+  timestamp: Date.now(),
+  speaker: 'assistant',
+  text: message,
+  emotions: [],
+  prosodyEmotions: undefined,
+  facialEmotions: dougieEmotions.length > 0 ? [...dougieEmotions] : undefined
+};
+```
+
+### 8. NPC Configuration
 
 Each NPC should have:
 
@@ -235,6 +315,8 @@ interface NPCConfig {
    - Avatar: `/avatars/Mindy.glb`
    - Voice: Bubbly, confident
    - Topics: Fashion, travel, lifestyle
+
+## Chemistry Report Features
 
 ## References
 

@@ -18,6 +18,7 @@ import { EngagementAnalytics } from '../types/tracking';
 import { FaLock, FaLockOpen, FaCog, FaEye, FaUser, FaEyeSlash, FaRunning, FaBars, FaComments, FaChartLine } from 'react-icons/fa';
 import './DougieSpeedDateV3.css';
 import { UserAvatarPiP } from './UserAvatarPiP';
+import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';
 
 // CV Analytics Types
 type CVAnalyticsMode = 'none' | 'eye-contact' | 'posture' | 'combined';
@@ -36,6 +37,17 @@ interface CVAnalyticsData {
     leaning: 'neutral' | 'forward' | 'backward' | 'left' | 'right';
     confidenceScore: number;
   };
+}
+
+interface ChemistryData {
+  totalScore: number;
+  categories: {
+    emotionalSync: number;
+    conversationalFlow: number;
+    mutualEngagement: number;
+    humorCompatibility: number;
+  };
+  summary: string;
 }
 
 // WebGL Error Boundary
@@ -165,7 +177,7 @@ const DougieSpeedDateV3: React.FC = () => {
   // UI toggle states
   const [showSidebar, setShowSidebar] = useState(true);
   const [showChat, setShowChat] = useState(true);
-  const [showPiP, setShowPiP] = useState(true);
+  const [showPiP, setShowPiP] = useState(false);
   const [pipSize, setPipSize] = useState<'small' | 'medium' | 'large' | 'hidden'>('medium'); // Default to medium for better visibility
   const [showControls, setShowControls] = useState(true);
   const [showEngagementDashboard, setShowEngagementDashboard] = useState(false);
@@ -176,6 +188,26 @@ const DougieSpeedDateV3: React.FC = () => {
   // Camera permission state (needed for PiP)
   const [hasPermissions, setHasPermissions] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+
+  // User blendshapes and emotions from face tracking
+  const [userBlendshapes, setUserBlendshapes] = useState<Record<string, number>>({});
+  const [userEmotions, setUserEmotions] = useState<string[]>([]);
+  const [userDetailedEmotions, setUserDetailedEmotions] = useState<Array<{ emotion: string; score: number }>>([]);
+  
+  // Chemistry report
+  const [showChemistryReport, setShowChemistryReport] = useState(false);
+  const [chemistryData, setChemistryData] = useState<ChemistryData | null>(null);
+  
+  // PiP controls
+  const [pipCameraX, setPipCameraX] = useState(0.70);
+  const [pipCameraY, setPipCameraY] = useState(1.70);
+  const [pipCameraZ, setPipCameraZ] = useState(1.80);
+  const [pipCameraFOV, setPipCameraFOV] = useState(25);
+  const [pipTargetX, setPipTargetX] = useState(0);
+  const [pipTargetY, setPipTargetY] = useState(1.0);
+  const [pipTargetZ, setPipTargetZ] = useState(0);
+  const [showPipCameraControls, setShowPipCameraControls] = useState(false);
+  const [currentCameraValues, setCurrentCameraValues] = useState<string>('');
 
   // Get media permissions for PiP
   useEffect(() => {
@@ -206,16 +238,58 @@ const DougieSpeedDateV3: React.FC = () => {
     };
   }, []);
 
-  // Manual PiP Camera Controls - Optimized values for perfect face framing
-  const [pipCameraX, setPipCameraX] = useState(0.70);
-  const [pipCameraY, setPipCameraY] = useState(1.70);
-  const [pipCameraZ, setPipCameraZ] = useState(1.80);
-  const [pipCameraFOV, setPipCameraFOV] = useState(25);
-  const [pipTargetX, setPipTargetX] = useState(0);
-  const [pipTargetY, setPipTargetY] = useState(1.0);
-  const [pipTargetZ, setPipTargetZ] = useState(0);
-  const [showPipCameraControls, setShowPipCameraControls] = useState(false);
-  const [currentCameraValues, setCurrentCameraValues] = useState<string>('');
+  // Poll for comprehensive tracking data from shared face tracking service
+  useEffect(() => {
+    if (!cameraStream) return;
+    
+    console.log('[DougieSpeedDateV3] Setting up comprehensive face tracking polling');
+    
+    const pollInterval = setInterval(() => {
+      try {
+        // Get the singleton instance
+        const trackingService = CombinedFaceTrackingService.getInstance();
+        const comprehensiveData = trackingService.getComprehensiveTrackingData();
+        
+        if (comprehensiveData) {
+          // Update blendshapes (convert FacialExpressions to Record<string, number>)
+          const blendshapesRecord: Record<string, number> = {};
+          Object.entries(comprehensiveData.blendshapes).forEach(([key, value]) => {
+            blendshapesRecord[key] = value;
+          });
+          setUserBlendshapes(blendshapesRecord);
+          
+          // Update detailed emotions
+          if (comprehensiveData.emotions && comprehensiveData.emotions.length > 0) {
+            setUserDetailedEmotions(comprehensiveData.emotions);
+            
+            // Also map to simple emotion strings for backward compatibility
+            const emotions = mapBlendshapesToEmotions(comprehensiveData.blendshapes);
+            if (emotions.length > 0) {
+              console.log('[DougieSpeedDateV3] User emotions detected:', emotions, 'Detailed:', comprehensiveData.emotions.slice(0, 3));
+              setUserEmotions(emotions);
+            }
+          }
+          
+          // Log additional tracking data periodically
+          if (Math.random() < 0.02) { // Log 2% of the time
+            console.log('[DougieSpeedDateV3] Comprehensive tracking data:', {
+              hasBlendshapes: Object.keys(comprehensiveData.blendshapes).length > 0,
+              emotionCount: comprehensiveData.emotions.length,
+              topEmotions: comprehensiveData.emotions.slice(0, 3),
+              headRotation: comprehensiveData.headRotation,
+              ml5Analysis: comprehensiveData.ml5Analysis
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[DougieSpeedDateV3] Error polling face tracking:', error);
+      }
+    }, 100); // Poll every 100ms
+    
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [cameraStream]);
 
   // Debug logging for camera controls
   useEffect(() => {
@@ -237,10 +311,55 @@ const DougieSpeedDateV3: React.FC = () => {
   const [trackingCoordinator] = useState(() => new UnifiedTrackingCoordinator());
   const [trackingInsights, setTrackingInsights] = useState(null);
 
-  // Emotion tracking
-  const [userFacialEmotions, setUserFacialEmotions] = useState<{ name: string; score: number }[]>([]);
-  const [userProsodyEmotions, setUserProsodyEmotions] = useState<{ name: string; score: number }[]>([]);
-  const [dougieEmotions, setDougieEmotions] = useState<{ name: string; score: number }[]>([]);
+  // Map blendshapes to emotions - returns string array for compatibility
+  const mapBlendshapesToEmotions = (blendshapes: Record<string, number>): string[] => {
+    const emotions: string[] = [];
+
+    // Joy/Happiness detection
+    const smileScore = (blendshapes['mouthSmileLeft'] || 0) + (blendshapes['mouthSmileRight'] || 0) / 2;
+    if (smileScore > 0.3) {
+      emotions.push('joy');
+    }
+
+    // Surprise detection
+    const eyeWide = (blendshapes['eyeWideLeft'] || 0) + (blendshapes['eyeWideRight'] || 0) / 2;
+    const mouthOpen = blendshapes['jawOpen'] || 0;
+    if (eyeWide > 0.3 && mouthOpen > 0.3) {
+      emotions.push('surprise');
+    }
+
+    // Sadness detection
+    const frownScore = (blendshapes['mouthFrownLeft'] || 0) + (blendshapes['mouthFrownRight'] || 0) / 2;
+    const browDown = (blendshapes['browDownLeft'] || 0) + (blendshapes['browDownRight'] || 0) / 2;
+    if (frownScore > 0.3 || browDown > 0.3) {
+      emotions.push('sadness');
+    }
+
+    // Anger detection
+    const browFurrow = blendshapes['browInnerUp'] || 0;
+    const lipPress = (blendshapes['mouthPressLeft'] || 0) + (blendshapes['mouthPressRight'] || 0) / 2;
+    if (browFurrow > 0.3 && lipPress > 0.3) {
+      emotions.push('anger');
+    }
+
+    // Neutral if no strong emotions detected
+    if (emotions.length === 0) {
+      emotions.push('neutral');
+    }
+
+    return emotions;
+  };
+
+  // Update user emotions when blendshapes change
+  useEffect(() => {
+    if (Object.keys(userBlendshapes).length > 0) {
+      const detectedEmotions = mapBlendshapesToEmotions(userBlendshapes);
+      if (detectedEmotions.length > 0) {
+        console.log('[DougieSpeedDateV3] User emotions detected:', detectedEmotions);
+      }
+      setUserEmotions(detectedEmotions);
+    }
+  }, [userBlendshapes]);
 
   // Transcript and communication
   const [transcriptSegments, setTranscriptSegments] = useState<TranscriptSegment[]>([]);
@@ -252,6 +371,10 @@ const DougieSpeedDateV3: React.FC = () => {
   const [animationName, setAnimationName] = useState('idle');
   const [emotionalBlendshapes, setEmotionalBlendshapes] = useState<Record<string, number>>({});
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Face tracking for user emotions
+  const faceTrackingServiceRef = useRef<CombinedFaceTrackingService | null>(null);
+  const faceVideoRef = useRef<HTMLVideoElement | null>(null);
 
   // Audio analysis refs (from V2)
   const audioPlayerRef = useRef<HTMLAudioElement>(new Audio());
@@ -625,7 +748,7 @@ const DougieSpeedDateV3: React.FC = () => {
         emotionSnapshotRef.current = setInterval(() => {
           const snapshot: any = {
             timestamp: (Date.now() - dateStartTime) / 1000,
-            participant1Emotions: [...userFacialEmotions],
+            participant1Emotions: [...userEmotions],
             participant2Emotions: [...dougieEmotions]
           };
           setEmotionHistory(prev => [...prev, snapshot]);
@@ -1192,6 +1315,8 @@ const DougieSpeedDateV3: React.FC = () => {
     if (voiceServiceRef.current) {
       voiceServiceRef.current.onUserMessage((message: any) => {
         console.log('[DougieSpeedDateV3] User message received:', message);
+        console.log('[DougieSpeedDateV3] Current user emotions:', userEmotions);
+        console.log('[DougieSpeedDateV3] User detailed emotions:', userDetailedEmotions.slice(0, 3));
         
         // Create transcript segment for user message
         const userSegment: TranscriptSegment = {
@@ -1200,8 +1325,14 @@ const DougieSpeedDateV3: React.FC = () => {
           text: typeof message === 'string' ? message : (message.content || message.text || ''),
           emotions: [],
           prosodyEmotions: undefined,
-          facialEmotions: undefined
+          facialEmotions: userEmotions.length > 0 ? [...userEmotions] : undefined,
+          emotionalScores: userDetailedEmotions.length > 0 ? [...userDetailedEmotions] : undefined
         };
+        
+        console.log('[DougieSpeedDateV3] User segment created with:', {
+          facialEmotions: userSegment.facialEmotions,
+          emotionalScores: userSegment.emotionalScores?.slice(0, 3)
+        });
         
         setTranscriptSegments(prev => [...prev, userSegment]);
         setCurrentTranscript(prev => prev + ' [User]: ' + userSegment.text);
@@ -1217,7 +1348,7 @@ const DougieSpeedDateV3: React.FC = () => {
           text: typeof message === 'string' ? message : (message.content || message.text || ''),
           emotions: [],
           prosodyEmotions: undefined,
-          facialEmotions: undefined
+          facialEmotions: dougieEmotions.length > 0 ? [...dougieEmotions] : undefined
         };
         
         setTranscriptSegments(prev => [...prev, assistantSegment]);
@@ -1885,9 +2016,9 @@ const DougieSpeedDateV3: React.FC = () => {
               {activeLeftTab === 'emotions' && (
                 <div className="emotions-tab">
                   <h4>😊 Your Emotions</h4>
-                  {userFacialEmotions.length > 0 ? (
+                  {userEmotions.length > 0 ? (
                     <RealTimeEmotionSliders 
-                      emotions={userFacialEmotions.map(e => ({ emotion: e.name, score: e.score }))}
+                      emotions={userEmotions.map(e => ({ emotion: e, score: 1 }))}
                       participantName="You"
                       position="left"
                     />
@@ -1900,7 +2031,7 @@ const DougieSpeedDateV3: React.FC = () => {
                   <h4>Dougie's Emotions</h4>
                   {dougieEmotions.length > 0 ? (
                     <RealTimeEmotionSliders 
-                      emotions={dougieEmotions.map(e => ({ emotion: e.name, score: e.score }))}
+                      emotions={dougieEmotions.map(e => ({ emotion: e, score: 1 }))}
                       participantName="Dougie"
                       position="right"
                     />
@@ -2055,6 +2186,28 @@ const DougieSpeedDateV3: React.FC = () => {
             </Canvas>
           </WebGLErrorBoundary>
 
+          {/* Hidden video element for face tracking */}
+          <video
+            ref={faceVideoRef}
+            style={{ display: 'none' }}
+            width={640}
+            height={480}
+            autoPlay
+            playsInline
+            muted
+          />
+          
+          {/* PiP User Avatar */}
+          {showPiP && pipSize !== 'hidden' && delayedShowPiP && cameraStream && (
+            <UserAvatarPiP 
+              avatarUrl="/avatars/user_avatar.glb"
+              position="bottom-right"
+              size="medium"
+              enableOwnTracking={true}
+              cameraStream={cameraStream}
+            />
+          )}
+          
           {/* Hidden video element for CV analytics */}
           <video
             ref={cvVideoRef}
@@ -2123,7 +2276,7 @@ const DougieSpeedDateV3: React.FC = () => {
             
             <div className="cv-status">
               <div>Mode: <strong>{cvAnalyticsMode}</strong></div>
-              <div>Face Data: {userFacialEmotions.length > 0 ? '✅ Active' : '❌ None'}</div>
+              <div>Face Data: {userEmotions.length > 0 ? '✅ Active' : '❌ None'}</div>
               <div>Posture Data: {cvAnalyticsData?.posture ? '✅ Active' : '❌ None'}</div>
             </div>
           </div>
@@ -2148,7 +2301,7 @@ const DougieSpeedDateV3: React.FC = () => {
                 setTranscriptSegments([]);
                 setConversationSegments([]);
                 setEmotionHistory([]);
-                setUserFacialEmotions([]);
+                setUserEmotions([]);
                 setDougieEmotions([]);
                 setAnimationName('idle');
                 setIsSpeaking(false);
@@ -2163,15 +2316,6 @@ const DougieSpeedDateV3: React.FC = () => {
           engagementData={engagementAnalytics}
           isVisible={showEngagementDashboard}
           onToggleMinimize={() => setShowEngagementDashboard(false)}
-        />
-      )}
-      {showPiP && pipSize !== 'hidden' && delayedShowPiP && cameraStream && (
-        <UserAvatarPiP 
-          avatarUrl="/avatars/user_avatar.glb"
-          position="bottom-right"
-          size="medium"
-          enableOwnTracking={true}
-          cameraStream={cameraStream}
         />
       )}
     </div>
