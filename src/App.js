@@ -119,6 +119,10 @@ import DougieSpeedDateCoach from './components/DougieSpeedDateCoach';
 import DougieCoachSimple from './components/DougieCoachSimple';
 import DougieCoachWorkingCopy from './components/DougieCoachWorkingCopy';
 import DougieTest from './components/DougieTest';
+import TestPiPAvatar from './components/TestPiPAvatar';
+import TestPiPVersions from './components/TestPiPVersions';
+import TestBasicFaceTracking from './components/TestBasicFaceTracking';
+import TestML5Direct from './components/TestML5Direct';
 import LiveDemoController from './components/LiveDemoController';
 import { HeartIcon, SparkleIcon, RadiatingHeartIcon, WingedHeartIcon } from './components/RisographIcons';
 import { CupidCursor } from './components/CupidCursor';
@@ -250,6 +254,10 @@ const AppContent = () => {
           <Route path="/env-check" element={<EnvCheck />} />
           <Route path="/hume-debug" element={<HumeConnectionDebug />} />
           <Route path="/pip-tracking-test" element={<PiPTrackingTest />} />
+          <Route path="/test-pip-avatar" element={<TestPiPAvatar />} />
+          <Route path="/test-pip-versions" element={<TestPiPVersions />} />
+          <Route path="/test-face-tracking" element={<TestBasicFaceTracking />} />
+          <Route path="/test-ml5" element={<TestML5Direct />} />
           {/* Enhanced Coach Sessions */}
           <Route path="/enhanced-coach" element={<EnhancedCoachSession />} />
           <Route path="/coaching-demo" element={<CoachingSessionDemo />} />

@@ -14,9 +14,12 @@
   min-width: 120px;
   min-height: 120px;
   contain: layout style size;
-  /* Force isolation to prevent canvas escape */
+  /* CRITICAL: Force strict isolation to prevent canvas escape */
   isolation: isolate;
   transform: translateZ(0);
+  /* EMERGENCY: Force absolute containment */
+  overflow: hidden !important;
+  position: fixed !important;
 }
 
 /* Position variants */
@@ -48,6 +51,7 @@
 
 .user-avatar-pip.pip-small .pip-content {
   border-radius: 8px !important;
+  height: calc(100% - 40px) !important;
 }
 
 .user-avatar-pip.pip-medium {
@@ -55,9 +59,17 @@
   height: 200px;
 }
 
+.user-avatar-pip.pip-medium .pip-content {
+  height: calc(100% - 40px) !important;
+}
+
 .user-avatar-pip.pip-large {
   width: 320px;
   height: 320px;
+}
+
+.user-avatar-pip.pip-large .pip-content {
+  height: calc(100% - 40px) !important;
 }
 
 /* Floating close button */
@@ -87,19 +99,40 @@
   transform: scale(1.1);
 }
 
-/* Content area */
+/* PiP content area */
 .pip-content {
-  width: 100%;
-  height: 100%;
   position: relative;
-  background: #000;
-  border-radius: inherit;
+  width: 100%;
+  height: calc(100% - 40px); /* Subtract header height */
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
 }
 
+/* Force canvas to fill container */
 .pip-content canvas {
   width: 100% !important;
   height: 100% !important;
-  border-radius: inherit;
+  display: block !important;
+}
+
+/* EMERGENCY: Force canvas containment */
+.pip-content canvas,
+.pip-content canvas[data-engine*="three"] {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  transform: none !important;
+  object-fit: cover !important;
+  z-index: 1 !important;
+  /* NUCLEAR: Prevent any escape */
+  clip: rect(0, 100%, 100%, 0) !important;
 }
 
 /* Aggressive containment for any canvas that tries to escape */
@@ -319,6 +352,46 @@
   font-family: monospace;
 }
 
+/* Status indicators */
+.pip-status-active {
+  background: #4CAF50;
+  animation: pulse 2s infinite;
+}
+
+.pip-status-fallback {
+  background: #FF9800;
+  animation: pulse 2s infinite;
+}
+
+/* Emoji avatar bounce animation */
+.user-avatar-pip.emoji-avatar {
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
   .user-avatar-pip.pip-large {
@@ -331,3 +404,57 @@
     height: 150px;
   }
 }
+
+/* Header styles */
+.pip-header {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: rgba(0, 0, 0, 0.8);
+  border-bottom: 1px solid rgba(147, 51, 234, 0.3);
+}
+
+.pip-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+
+.status-indicator.active {
+  background: #10b981;
+}
+
+.status-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.pip-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.pip-button {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 16px;
+  transition: color 0.2s;
+}
+
+.pip-button:hover {
+  color: rgba(255, 255, 255, 1);
+}
+
+/* Session info */

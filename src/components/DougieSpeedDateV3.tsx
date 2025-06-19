@@ -171,6 +171,40 @@ const DougieSpeedDateV3: React.FC = () => {
   const [showEngagementDashboard, setShowEngagementDashboard] = useState(false);
   const [practiceMode, setPracticeMode] = useState(false); // New practice mode toggle
   const [cameraZoomed, setCameraZoomed] = useState(false);
+  const [delayedShowPiP, setDelayedShowPiP] = useState(false); // Delayed PiP to avoid WebGL conflicts
+
+  // Camera permission state (needed for PiP)
+  const [hasPermissions, setHasPermissions] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+
+  // Get media permissions for PiP
+  useEffect(() => {
+    const getMediaPermissions = async () => {
+      try {
+        console.log('[DougieSpeedDateV3] Requesting camera permissions for PiP...');
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: true 
+        });
+        
+        cvVideoRef.current!.srcObject = stream;
+        setCameraStream(stream); // Store the stream in state
+        setHasPermissions(true);
+        console.log('[DougieSpeedDateV3] ✅ Camera permissions granted for PiP');
+      } catch (error) {
+        console.error('[DougieSpeedDateV3] ❌ Error accessing camera for PiP:', error);
+        setHasPermissions(false);
+      }
+    };
+
+    getMediaPermissions();
+
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   // Manual PiP Camera Controls - Optimized values for perfect face framing
   const [pipCameraX, setPipCameraX] = useState(0.70);
@@ -181,6 +215,7 @@ const DougieSpeedDateV3: React.FC = () => {
   const [pipTargetY, setPipTargetY] = useState(1.0);
   const [pipTargetZ, setPipTargetZ] = useState(0);
   const [showPipCameraControls, setShowPipCameraControls] = useState(false);
+  const [currentCameraValues, setCurrentCameraValues] = useState<string>('');
 
   // Debug logging for camera controls
   useEffect(() => {
@@ -223,6 +258,11 @@ const DougieSpeedDateV3: React.FC = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioSourceCreatedRef = useRef<boolean>(false);
+  const originalCreateBufferSource = useRef<AudioContext['createBufferSource'] | null>(null);
+  const originalDecodeAudioData = useRef<AudioContext['decodeAudioData'] | null>(null);
+  const audioCleanupRef = useRef<(() => void) | null>(null);
+  const audioQueueRef = useRef<Blob[]>([]);
+  const isPlayingRef = useRef(false);
 
   // Mic analyzer refs
   const micAnalyserRef = useRef<AnalyserNode | null>(null);
@@ -332,28 +372,91 @@ const DougieSpeedDateV3: React.FC = () => {
     }
   }, [isConnected, dateStarted]);
 
+  // Delay PiP rendering by 3 seconds to avoid WebGL context conflicts
+  useEffect(() => {
+    if (showPiP) {
+      const timer = setTimeout(() => {
+        console.log('[DougieSpeedDateV3] Enabling delayed PiP after 3 seconds');
+        setDelayedShowPiP(true);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    } else {
+      setDelayedShowPiP(false);
+    }
+  }, [showPiP]);
+
   // Initialize services and audio context
   useEffect(() => {
     console.log('[DougieSpeedDateV3] Initializing services...');
+    
+    // Set up global audio blocking to prevent Hume SDK from playing audio
+    const blockHumeAudio = () => {
+      const currentRoute = window.location.pathname;
+      console.log('[DougieSpeedDateV3] Current route:', currentRoute);
+      
+      // Aggressively block audio elements created by Hume SDK
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach((node) => {
+            if (node instanceof HTMLAudioElement) {
+              console.log('[DougieSpeedDateV3] Blocking external audio element');
+              node.muted = true;
+              node.volume = 0;
+              node.pause();
+              
+              // Prevent any attempt to unmute or play
+              Object.defineProperty(node, 'muted', {
+                get: () => true,
+                set: () => true
+              });
+              Object.defineProperty(node, 'volume', {
+                get: () => 0,
+                set: () => 0
+              });
+              const originalPlay = node.play.bind(node);
+              node.play = function() {
+                console.log('[DougieSpeedDateV3] Blocked audio play attempt');
+                return Promise.reject(new Error('Audio blocked'));
+              };
+            }
+          });
+        });
+      });
 
-    // Create our audio player first and mark it
+      observer.observe(document.body, { childList: true, subtree: true });
+      
+      // Also block any existing audio elements
+      document.querySelectorAll('audio').forEach(audio => {
+        if (audio !== audioPlayerRef.current) {
+          console.log('[DougieSpeedDateV3] Muting existing audio element');
+          audio.muted = true;
+          audio.volume = 0;
+          audio.pause();
+        }
+      });
+      
+      return observer;
+    };
+
+    const audioObserver = blockHumeAudio();
+    
+    // Re-apply blocking every 500ms to catch any SDK attempts to restore audio
+    const blockingInterval = setInterval(() => {
+      document.querySelectorAll('audio').forEach(audio => {
+        if (audio !== audioPlayerRef.current && (!audio.muted || audio.volume > 0)) {
+          console.log('[DougieSpeedDateV3] Re-blocking audio element');
+          audio.muted = true;
+          audio.volume = 0;
+          audio.pause();
+        }
+      });
+    }, 500);
+
+    // Create our audio player after setting up blocking
     const audioPlayer = new Audio();
     audioPlayer.dataset.dougieSpeedDate = 'true';
     audioPlayerRef.current = audioPlayer;
-
-    // Mute any other audio elements that get created
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node instanceof HTMLAudioElement && !node.dataset.dougieSpeedDate) {
-            console.log('[DougieSpeedDateV3] Muting external audio element');
-            node.muted = true;
-          }
-        });
-      });
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
 
     const setupServices = async () => {
       try {
@@ -409,7 +512,8 @@ const DougieSpeedDateV3: React.FC = () => {
     setupServices();
 
     return () => {
-      observer.disconnect();
+      audioObserver.disconnect();
+      clearInterval(blockingInterval);
       safeCleanup();
     };
   }, [safeCleanup]);
@@ -598,6 +702,7 @@ const DougieSpeedDateV3: React.FC = () => {
           });
           
           cvVideoRef.current!.srcObject = cameraStream;
+          setCameraStream(cameraStream); // Store the stream in state
           console.log('[DougieSpeedDateV3] Camera stream attached to video element');
           
           // CRITICAL: Wait for video to actually start playing
@@ -1229,31 +1334,90 @@ const DougieSpeedDateV3: React.FC = () => {
     return getEngagementColor(analytics.overallEngagement);
   };
 
-  // Audio playback with basic lip sync
-  const playAudio = async (audioBlob: Blob) => {
-    console.log('[DougieSpeedDateV3] Playing audio, blob size:', audioBlob.size);
-    
-    if (!audioBlob || audioBlob.size === 0) {
-      console.warn('[DougieSpeedDateV3] Invalid audio blob');
+  // Audio playback queue system (matching coach sessions)
+  const playNextAudioFromQueue = () => {
+    if (audioQueueRef.current.length === 0) {
+      isPlayingRef.current = false;
+      setIsSpeaking(false);
+      setAnimationName('idle');
+      console.log('[DougieSpeedDateV3] Audio queue empty, animation set to idle');
       return;
     }
-
+    
+    console.log('[DougieSpeedDateV3] Playing audio from queue, queue length:', audioQueueRef.current.length);
+    isPlayingRef.current = true;
+    const audioBlob = audioQueueRef.current.shift()!;
     const audioUrl = URL.createObjectURL(audioBlob);
+    
+    if (!audioPlayerRef.current) {
+      const audioPlayer = new Audio();
+      audioPlayer.dataset.dougieSpeedDate = 'true';
+      audioPlayerRef.current = audioPlayer;
+    }
+    
     audioPlayerRef.current.src = audioUrl;
     
-    try {
-      await audioPlayerRef.current.play();
-      setIsSpeaking(true);
-      setAnimationName('talking');
-      
-      audioPlayerRef.current.onended = () => {
+    // Setup audio analyzer for lip sync BEFORE playing
+    if (!audioSourceCreatedRef.current) {
+      try {
+        if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+          const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+          audioContextRef.current = new AudioContext({ sampleRate: 48000 });
+          console.log('[DougieSpeedDateV3] Created new AudioContext');
+        }
+        
+        if (audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume();
+          console.log('[DougieSpeedDateV3] AudioContext resumed');
+        }
+        
+        const analyser = audioContextRef.current.createAnalyser();
+        analyser.fftSize = 256;
+        const source = audioContextRef.current.createMediaElementSource(audioPlayerRef.current);
+        source.connect(analyser);
+        analyser.connect(audioContextRef.current.destination);
+        
+        analyserRef.current = analyser;
+        audioSourceCreatedRef.current = true;
+        console.log('[DougieSpeedDateV3] Audio analyzer setup complete');
+      } catch (error) {
+        console.error('[DougieSpeedDateV3] Error setting up audio analyzer:', error);
+      }
+    }
+    
+    audioPlayerRef.current.play()
+      .then(() => {
+        console.log('[DougieSpeedDateV3] Audio playing successfully');
+        setIsSpeaking(true);
+        setAnimationName('talking');
+      })
+      .catch(e => {
+        console.error('[DougieSpeedDateV3] Error playing audio:', e);
+        isPlayingRef.current = false;
         setIsSpeaking(false);
         setAnimationName('idle');
-        URL.revokeObjectURL(audioUrl);
-      };
-    } catch (error) {
-      console.error('[DougieSpeedDateV3] Audio playback error:', error);
+        setTimeout(() => playNextAudioFromQueue(), 100);
+      });
+    
+    audioPlayerRef.current.onended = () => {
+      console.log('[DougieSpeedDateV3] Audio playback ended');
       URL.revokeObjectURL(audioUrl);
+      isPlayingRef.current = false;
+      setIsSpeaking(false);
+      setAnimationName('idle');
+      // Play next audio if available
+      setTimeout(() => playNextAudioFromQueue(), 100);
+    };
+  };
+
+  // Audio playback with basic lip sync
+  const playAudio = async (audioBlob: Blob) => {
+    console.log('[DougieSpeedDateV3] Audio received:', audioBlob.size);
+    setIsSpeaking(true);
+    setAnimationName('talking');
+    audioQueueRef.current.push(audioBlob);
+    if (!isPlayingRef.current) {
+      playNextAudioFromQueue();
     }
   };
 
@@ -1292,6 +1456,46 @@ const DougieSpeedDateV3: React.FC = () => {
     // User must select tracking mode via CV panel
     console.log('[DougieSpeedDateV3] Analytics opened - use CV panel to select tracking mode');
   };
+
+  // Audio analysis for lip sync (matching coach sessions)
+  useEffect(() => {
+    if (!isSpeaking || !analyserRef.current) {
+      setAudioData(new Uint8Array());
+      return;
+    }
+
+    console.log('[DougieSpeedDateV3] Starting audio analysis for lip sync');
+    const analyser = analyserRef.current;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    let animationId: number;
+    let lastLogTime = 0;
+
+    const updateAudioData = () => {
+      analyser.getByteFrequencyData(dataArray);
+      setAudioData(new Uint8Array(dataArray)); // Create a copy to trigger re-render
+      
+      // Log audio levels periodically for debugging
+      const now = Date.now();
+      if (now - lastLogTime > 1000) {
+        const avgLevel = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length;
+        console.log('[DougieSpeedDateV3] Audio analysis - Avg level:', avgLevel.toFixed(2), 'Max:', Math.max(...dataArray));
+        lastLogTime = now;
+      }
+      
+      animationId = requestAnimationFrame(updateAudioData);
+    };
+
+    updateAudioData();
+
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+      console.log('[DougieSpeedDateV3] Stopping audio analysis for lip sync');
+      setAudioData(new Uint8Array()); // Clear audio data when not speaking
+    };
+  }, [isSpeaking]);
 
   return (
     <div className="dougie-speed-date-v3">
@@ -1513,6 +1717,60 @@ const DougieSpeedDateV3: React.FC = () => {
                         {showPiP ? '👁️ PiP Visible' : '🚫 PiP Hidden'}
                       </button>
                     </div>
+                    
+                    {/* Log Camera Position Button */}
+                    <div style={{ marginTop: '15px' }}>
+                      <button 
+                        onClick={() => {
+                          const camera = (window as any).pipCamera;
+                          if (camera) {
+                            const position = {
+                              x: camera.position.x.toFixed(3),
+                              y: camera.position.y.toFixed(3),
+                              z: camera.position.z.toFixed(3),
+                              fov: camera.fov.toFixed(1)
+                            };
+                            
+                            const valuesText = `position: [${position.x}, ${position.y}, ${position.z}], fov: ${position.fov}`;
+                            setCurrentCameraValues(valuesText);
+                            
+                            // Also copy to clipboard
+                            navigator.clipboard.writeText(valuesText).then(() => {
+                              console.log('Camera values copied to clipboard!');
+                            });
+                          } else {
+                            setCurrentCameraValues('Camera not found. Make sure PiP is visible.');
+                          }
+                        }}
+                        style={{ 
+                          background: '#ff6b6b', 
+                          color: 'white', 
+                          padding: '8px 16px', 
+                          borderRadius: '4px', 
+                          border: 'none', 
+                          cursor: 'pointer',
+                          width: '100%',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        📸 Get Current Camera Position
+                      </button>
+                      
+                      {currentCameraValues && (
+                        <div style={{ 
+                          marginTop: '10px', 
+                          padding: '10px', 
+                          background: '#f0f0f0', 
+                          borderRadius: '4px',
+                          fontFamily: 'monospace',
+                          fontSize: '12px',
+                          color: '#333',
+                          wordBreak: 'break-all'
+                        }}>
+                          {currentCameraValues}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="pip-camera-controls">
@@ -1715,182 +1973,6 @@ const DougieSpeedDateV3: React.FC = () => {
 
         {/* Main Content Area */}
         <div className={`main-content-v3 ${!showSidebar ? 'full-width' : ''} ${!showChat ? 'full-height' : ''}`}>
-          {/* PiP View - Final Position (Lower Right) */}
-          {showPiP && pipSize !== 'hidden' && (
-            <div style={{ 
-              position: 'absolute', 
-              bottom: '20px', 
-              right: '20px', 
-              zIndex: 1000
-            }}>
-              {/* PiP Header with Camera Controls */}
-              <div className="pip-header" style={{
-                background: 'rgba(0,0,0,0.8)',
-                padding: '8px',
-                borderRadius: '8px 8px 0 0',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span style={{ color: 'white', fontSize: '12px', fontWeight: 'bold' }}>
-                  User Avatar
-                </span>
-                
-                {/* Camera Controls Toggle */}
-                {showPiP && (
-                  <button 
-                    className={`pip-size-btn ${showPipCameraControls ? 'active' : ''}`}
-                    onClick={() => {
-                      console.log('[DougieSpeedDateV3] Camera controls toggle clicked. Current state:', showPipCameraControls);
-                      setShowPipCameraControls(!showPipCameraControls);
-                    }}
-                    title="Camera Controls"
-                    style={{
-                      background: showPipCameraControls ? '#FF6B6B' : '#4CAF50',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '4px 8px',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      marginLeft: '8px'
-                    }}
-                  >
-                    📹
-                  </button>
-                )}
-              </div>
-
-              {/* Camera Controls Panel */}
-              {showPipCameraControls && (
-                <div style={{
-                  position: 'absolute',
-                  top: '-120px',
-                  left: '0',
-                  right: '0',
-                  background: 'rgba(0,0,0,0.9)',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  zIndex: 1001
-                }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    <div>
-                      <label style={{ color: 'white', display: 'block' }}>Camera X: {pipCameraX.toFixed(2)}</label>
-                      <input
-                        type="range"
-                        min={-3}
-                        max={3}
-                        step={0.1}
-                        value={pipCameraX}
-                        onChange={(e) => setPipCameraX(parseFloat(e.target.value))}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ color: 'white', display: 'block' }}>Camera Y: {pipCameraY.toFixed(2)}</label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={3}
-                        step={0.1}
-                        value={pipCameraY}
-                        onChange={(e) => setPipCameraY(parseFloat(e.target.value))}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ color: 'white', display: 'block' }}>Camera Z: {pipCameraZ.toFixed(2)}</label>
-                      <input
-                        type="range"
-                        min={0.5}
-                        max={5}
-                        step={0.1}
-                        value={pipCameraZ}
-                        onChange={(e) => setPipCameraZ(parseFloat(e.target.value))}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ color: 'white', display: 'block' }}>FOV: {pipCameraFOV.toFixed(0)}</label>
-                      <input
-                        type="range"
-                        min={15}
-                        max={75}
-                        step={1}
-                        value={pipCameraFOV}
-                        onChange={(e) => setPipCameraFOV(parseFloat(e.target.value))}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ color: 'white', display: 'block' }}>Target Y: {pipTargetY.toFixed(2)}</label>
-                      <input
-                        type="range"
-                        min={-2}
-                        max={2}
-                        step={0.1}
-                        value={pipTargetY}
-                        onChange={(e) => setPipTargetY(parseFloat(e.target.value))}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ color: 'white', display: 'block' }}>Target Z: {pipTargetZ.toFixed(2)}</label>
-                      <input
-                        type="range"
-                        min={-2}
-                        max={2}
-                        step={0.1}
-                        value={pipTargetZ}
-                        onChange={(e) => setPipTargetZ(parseFloat(e.target.value))}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div>
-                      <button 
-                        onClick={() => {
-                          console.log('Current PiP Camera Settings:', {
-                            position: [pipCameraX, pipCameraY, pipCameraZ],
-                            fov: pipCameraFOV,
-                            target: [pipTargetX, pipTargetY, pipTargetZ]
-                          });
-                        }}
-                        style={{
-                          background: '#4CAF50',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          padding: '4px 8px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          marginLeft: '8px'
-                        }}
-                      >
-                        Log Values
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Direct UserAvatarPiP - No wrapper container */}
-              <UserAvatarPiP
-                avatarUrl="/avatars/user_avatar.glb"
-                position="bottom-right"
-                size={pipSize as 'small' | 'medium' | 'large'}
-                postureData={cvAnalyticsData?.posture}
-                trackingData={cvAnalyticsData}
-                enableOwnTracking={true}
-                onClose={() => setShowPiP(false)}
-                cameraPosition={[pipCameraX, pipCameraY, pipCameraZ]}
-                cameraFOV={pipCameraFOV}
-                cameraTarget={[pipTargetX, pipTargetY, pipTargetZ]}
-                disableAutoCamera={true} // Always manual camera for stable positioning
-              />
-            </div>
-          )}
-          
           {/* 3D Scene */}
           <WebGLErrorBoundary fallback={
             <div style={{ 
@@ -2081,6 +2163,15 @@ const DougieSpeedDateV3: React.FC = () => {
           engagementData={engagementAnalytics}
           isVisible={showEngagementDashboard}
           onToggleMinimize={() => setShowEngagementDashboard(false)}
+        />
+      )}
+      {showPiP && pipSize !== 'hidden' && delayedShowPiP && cameraStream && (
+        <UserAvatarPiP 
+          avatarUrl="/avatars/user_avatar.glb"
+          position="bottom-right"
+          size="medium"
+          enableOwnTracking={true}
+          cameraStream={cameraStream}
         />
       )}
     </div>

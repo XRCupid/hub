@@ -773,6 +773,17 @@ export const PresenceAvatar: React.FC<PresenceAvatarProps> = React.memo(({
       // Priority 2: ML5 trackingData (check both facialExpressions and expressions)
       const expressions = tracking?.facialExpressions ?? tracking?.expressions;
       if (expressions) {
+        // Debug log once per second
+        if (frameCountRef.current % 60 === 0) {
+          const significantExpressions = Object.entries(expressions)
+            .filter(([key, value]) => typeof value === 'number' && value > 0.1)
+            .map(([key, value]) => `${key}: ${(value as number).toFixed(2)}`);
+          
+          if (significantExpressions.length > 0) {
+            console.log('[PresenceAvatar] Applying ML5 expressions:', significantExpressions.join(', '));
+          }
+        }
+        
         Object.entries(expressions).forEach(([ml5Key, rawValue]) => {
           if (typeof rawValue !== 'number') return;
           const mapping = ML5_TO_RPM_MAPPING[ml5Key as keyof typeof ML5_TO_RPM_MAPPING];
