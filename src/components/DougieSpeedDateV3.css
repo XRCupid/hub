@@ -383,92 +383,89 @@
   box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
 }
 
-.audio-meter {
-  margin-bottom: 20px;
-  background: linear-gradient(135deg, rgba(35, 35, 45, 0.8), rgba(25, 25, 35, 0.8));
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.control-btn.connected {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.9), rgba(102, 187, 106, 0.9));
+  border-color: #4CAF50;
 }
 
-.audio-meter label {
-  display: block;
-  color: #E0E0E0;
-  font-size: 0.85rem;
-  margin-bottom: 8px;
-  font-weight: 600;
+.control-btn.active {
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.9), rgba(255, 193, 7, 0.9));
+  border-color: #FF9800;
+  animation: pulse 2s infinite;
 }
 
-.meter-bar {
-  height: 8px;
-  background: linear-gradient(90deg, rgba(40, 40, 45, 0.95), rgba(30, 30, 35, 0.95));
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.control-btn.completed {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.9), rgba(102, 187, 106, 0.9));
+  border-color: #4CAF50;
+  cursor: default;
 }
 
-.meter-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #4CAF50, #FFC107, #ff6b6b);
-  transition: width 0.2s ease;
-  border-radius: 3px;
+.control-btn.disabled,
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, rgba(50, 50, 60, 0.6), rgba(40, 40, 50, 0.6));
 }
 
-.connection-status {
-  color: #4CAF50;
-  font-size: 0.95rem;
-  font-weight: 600;
-  text-align: center;
-  padding: 12px;
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.15), rgba(129, 199, 132, 0.15));
-  border-radius: 10px;
-  border: 1px solid rgba(76, 175, 80, 0.3);
-  box-shadow: 0 3px 10px rgba(76, 175, 80, 0.1);
+.control-btn.disabled:hover,
+.control-btn:disabled:hover {
+  transform: none;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Profile Tab */
-.goal-tag, .interest-tag {
-  display: inline-block;
-  background: linear-gradient(135deg, rgba(156, 39, 176, 0.3), rgba(186, 104, 200, 0.3));
-  color: #CE93D8;
-  padding: 8px 16px;
-  margin: 4px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  border: 1px solid rgba(156, 39, 176, 0.4);
-  backdrop-filter: blur(5px);
-  box-shadow: 0 2px 8px rgba(156, 39, 176, 0.2);
-  transition: all 0.3s ease;
+.control-btn.emergency {
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.9), rgba(229, 57, 53, 0.9));
+  border-color: #f44336;
 }
 
-.goal-tag:hover, .interest-tag:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+.control-btn.emergency:hover {
+  background: linear-gradient(135deg, rgba(229, 57, 53, 1), rgba(211, 47, 47, 1));
+  box-shadow: 0 5px 15px rgba(244, 67, 54, 0.3);
 }
 
-.interest-tag {
-  background: linear-gradient(135deg, rgba(33, 150, 243, 0.3), rgba(100, 181, 246, 0.3));
-  color: #90CAF9;
-  border-color: rgba(33, 150, 243, 0.4);
-  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
-}
-
-.interest-tag:hover {
-  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
-}
-
-.preference {
-  color: #E0E0E0;
-  font-size: 0.9rem;
-  margin-bottom: 10px;
-  padding: 12px;
-  background: linear-gradient(135deg, rgba(45, 45, 55, 0.8), rgba(35, 35, 45, 0.8));
+/* Date Status Display */
+.date-status {
+  margin-top: 10px;
+  padding: 10px;
+  background: rgba(30, 30, 40, 0.6);
   border-radius: 8px;
-  border-left: 4px solid #ff6b6b;
-  backdrop-filter: blur(5px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+}
+
+.status-indicator.active {
+  color: #FF9800;
+}
+
+.status-indicator.completed {
+  color: #4CAF50;
+}
+
+.time-remaining {
+  color: #B0B0B0;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 3px 10px rgba(255, 152, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 3px 20px rgba(255, 152, 0, 0.5);
+  }
+  100% {
+    box-shadow: 0 3px 10px rgba(255, 152, 0, 0.3);
+  }
 }
 
 /* Bottom Chat Area - Replaces Right Sidebar */
@@ -658,8 +655,7 @@
   background: rgba(20, 20, 32, 0.95);
   border: 2px solid rgba(147, 51, 234, 0.5);
   border-radius: 12px;
-  padding: 8px;
-  backdrop-filter: blur(10px);
+  overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   min-width: 200px;
   min-height: 200px;
@@ -948,6 +944,7 @@
   background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #0abde3);
   transition: width 0.3s ease;
   border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.2);
 }
 
 .dougie-speed-date-v3-cv-value {

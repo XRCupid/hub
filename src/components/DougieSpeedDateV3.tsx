@@ -10,6 +10,7 @@ import { PostureTrackingService } from '../services/PostureTrackingService';
 import RealTimeEmotionSliders from './RealTimeEmotionSliders';
 import TranscriptTimeline from './TranscriptTimeline';
 import ChemistryReport from './ChemistryReport';
+import { LessonRecommendations } from './LessonRecommendations';
 import TrackingPreferencesSelector from './TrackingPreferencesSelector';
 import TrackingStatusIndicator from './TrackingStatusIndicator';
 import EngagementDashboard from './EngagementDashboard';
@@ -19,6 +20,8 @@ import { FaLock, FaLockOpen, FaCog, FaEye, FaUser, FaEyeSlash, FaRunning, FaBars
 import './DougieSpeedDateV3.css';
 import { UserAvatarPiP } from './UserAvatarPiP';
 import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';
+import { SpeedDatePerformanceAnalyzer, SpeedDatePerformanceMetrics, LessonRecommendation } from '../services/SpeedDatePerformanceAnalyzer';
+import { useNavigate } from 'react-router-dom';
 
 // CV Analytics Types
 type CVAnalyticsMode = 'none' | 'eye-contact' | 'posture' | 'combined';
@@ -430,36 +433,31 @@ const DougieSpeedDateV3: React.FC = () => {
   
   // Eye tracking state for avatar interaction
   const [isEyeTrackingEnabled, setIsEyeTrackingEnabled] = useState(false);
-  const [isLookingAtAvatar, setIsLookingAtAvatar] = useState(false);
   const [eyeContactPercentage, setEyeContactPercentage] = useState(0);
   const [gazeCalibrated, setGazeCalibrated] = useState(false);
+  const [eyeContactTotal, setEyeContactTotal] = useState(0);
+  const [eyeContactSamples, setEyeContactSamples] = useState(0);
+  const [lookAwayCount, setLookAwayCount] = useState(0);
+  const [isLookingAtAvatar, setIsLookingAtAvatar] = useState(false);
   
   // Refs for eye tracking
   const webgazerRef = useRef<any>(null);
   const gazeDataRef = useRef({ totalSamples: 0, onTargetSamples: 0 });
   const avatarBoundsRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const isLookingAtAvatarRef = useRef(false);
-
   const controlsRef = useRef<any>(null);
 
   // Enhanced analytics tracking
-  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
-  const [currentSegmentStart, setCurrentSegmentStart] = useState<number | null>(null);
-  const [lastSpeechEvent, setLastSpeechEvent] = useState<{ speaker: 'user' | 'dougie', timestamp: number } | null>(null);
-
-  // Analytics view state
-  const [analyticsViewMode, setAnalyticsViewMode] = useState<'speaker' | 'listener' | 'combined'>('combined');
-  const [showDetailedAnalytics, setShowDetailedAnalytics] = useState(false);
-
-  // Real-time analysis state
-  const [listeningQuality, setListeningQuality] = useState(0);
-
-  // Engagement analytics state
   const [engagementAnalytics, setEngagementAnalytics] = useState<EngagementAnalytics | null>(null);
+  
+  // Performance analysis states
+  const [performanceMetrics, setPerformanceMetrics] = useState<SpeedDatePerformanceMetrics | null>(null);
+  const [lessonRecommendations, setLessonRecommendations] = useState<LessonRecommendation[]>([]);
 
   // CV Analytics State
   const [cvAnalyticsMode, setCvAnalyticsMode] = useState<CVAnalyticsMode>('none'); // Default to none to prevent camera interference
   const [cvAnalyticsData, setCvAnalyticsData] = useState<CVAnalyticsData | null>(null);
+  const [eyeTrackingInitialized, setEyeTrackingInitialized] = useState(false);
   const [showCVPanel, setShowCVPanel] = useState(false);
 
   // Service references
@@ -778,719 +776,110 @@ const DougieSpeedDateV3: React.FC = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (emotionSnapshotRef.current) clearInterval(emotionSnapshotRef.current);
 
-    // Use connection manager for proper cleanup
-    humeConnectionManager.releaseConnection('DougieSpeedDateV3').catch(err => 
-      console.warn('[DougieSpeedDateV3] Connection cleanup failed:', err)
-    );
+    setDateEnded(true);
+    setAnimationName('idle');
 
-    if (expressionServiceRef.current) expressionServiceRef.current.stopTracking();
-    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-      audioContextRef.current.close();
+    // Send closing message
+    if (voiceServiceRef.current && isConnected) {
+      voiceServiceRef.current.sendMessage(
+        "Wow, time really flies when you're having fun! This has been wonderful. I'd love to see you again!"
+      );
     }
-    stopCVAnalytics();
-    
-    // Reset engagement analytics
-    trackingCoordinator.resetEngagementTracking();
-    setEngagementAnalytics(null);
-  };
 
-  // Emergency reset
-  const emergencyReset = () => {
-    console.log('[DougieSpeedDateV3] Emergency reset triggered');
-    cleanup();
-    window.location.reload();
-  };
-
-  // CV Analytics Functions
-  const initializeCVAnalytics = async (mode: CVAnalyticsMode) => {
-    console.log('[DougieSpeedDateV3] ===== CV ANALYTICS INIT START =====');
-    console.log('[DougieSpeedDateV3] Mode requested:', mode);
-    console.log('[DougieSpeedDateV3] Current cvAnalyticsMode state:', cvAnalyticsMode);
-    console.log('[DougieSpeedDateV3] cvVideoRef.current exists?:', !!cvVideoRef.current);
-    console.log('[DougieSpeedDateV3] eyeTrackingRef.current:', eyeTrackingRef.current);
-    console.log('[DougieSpeedDateV3] postureServiceRef.current:', postureServiceRef.current);
-    
-    if (!cvVideoRef.current) {
-      console.error('[DougieSpeedDateV3] No CV video element available - ABORTING');
-      return;
-    }
-    
-    try {
-      if (mode === 'none') {
-        await stopCVAnalytics();
-        return;
+    // Automatically disconnect after sending the closing message
+    setTimeout(() => {
+      if (isConnected) {
+        console.log('[DougieSpeedDateV3] Auto-disconnecting after date end...');
+        handleDisconnect();
       }
+    }, 2000);
 
-      // Stop existing analytics before starting new ones
-      await stopCVAnalytics();
+    // Analyze performance and generate recommendations
+    if (emotionHistory.length > 0 || transcriptSegments.length > 0) {
+      console.log('[DougieSpeedDateV3] Analyzing date performance...');
+      const analyzer = new SpeedDatePerformanceAnalyzer();
       
-      console.log('[DougieSpeedDateV3] Starting CV analytics initialization...');
+      // Convert emotion history to the format expected by the analyzer
+      const formattedEmotionHistory = emotionHistory.map(e => ({
+        timestamp: e.timestamp,
+        participant: e.participant,
+        emotions: e.emotions,
+        dominantEmotion: Object.entries(e.emotions).reduce((a, b) => 
+          (a as [string, number])[1] > (b as [string, number])[1] ? (a as [string, number]) : (b as [string, number])
+        )[0] as string,
+        valence: 0,
+        arousal: 0
+      }));
       
-      // Ensure video element has camera stream
-      if (!cvVideoRef.current?.srcObject) {
-        console.log('[DougieSpeedDateV3] No camera stream attached to video element');
-        
-        // Check if we already have a camera stream from PiP
-        if (cameraStream) {
-          console.log('[DougieSpeedDateV3] Using existing camera stream from PiP');
-          cvVideoRef.current!.srcObject = cameraStream;
-        } else {
-          console.log('[DougieSpeedDateV3] Requesting camera access...');
-          
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-              video: { 
-                width: 640, 
-                height: 480,
-                facingMode: 'user'
-              } 
-            });
-            
-            cvVideoRef.current!.srcObject = stream;
-            setCameraStream(stream); // Store the stream in state
-            console.log('[DougieSpeedDateV3] Camera stream attached to video element');
-          } catch (cameraError) {
-            console.error('[DougieSpeedDateV3] Camera access failed:', cameraError);
-            alert('Camera access failed. Please allow camera permissions.');
-            return;
-          }
-        }
-        
-        // CRITICAL: Wait for video to actually start playing
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('Video failed to start playing within 5 seconds'));
-          }, 5000);
-          
-          cvVideoRef.current!.onloadedmetadata = () => {
-            console.log('[DougieSpeedDateV3] Video metadata loaded');
-            cvVideoRef.current!.play().then(() => {
-              clearTimeout(timeout);
-              console.log('[DougieSpeedDateV3] Video playing successfully');
-              resolve(true);
-            }).catch(reject);
-          };
-        });
-        
-      } else {
-        console.log('[DougieSpeedDateV3] Video element already has camera stream');
-      }
+      // Convert transcript segments to include id
+      const formattedTranscripts = transcriptSegments.map((seg, idx) => ({
+        id: `segment-${idx}`,
+        text: seg.text,
+        speaker: seg.speaker === 'user' || seg.speaker === 'assistant' ? seg.speaker : 'user' as 'user' | 'assistant',
+        timestamp: new Date(seg.timestamp).toISOString(),
+        emotion: seg.emotions
+      }));
       
-      // Wait for video to be fully ready with actual dimensions
-      await new Promise(resolve => {
-        const checkReady = () => {
-          if (cvVideoRef.current && 
-              cvVideoRef.current.readyState >= 3 && 
-              cvVideoRef.current.videoWidth > 0 && 
-              cvVideoRef.current.videoHeight > 0) {
-            console.log('[DougieSpeedDateV3] Video fully ready with dimensions:', 
-                       cvVideoRef.current.videoWidth, 'x', cvVideoRef.current.videoHeight);
-            resolve(true);
-          } else {
-            console.log('[DougieSpeedDateV3] Waiting for video... readyState:', 
-                       cvVideoRef.current?.readyState, 'dimensions:', 
-                       cvVideoRef.current?.videoWidth, 'x', cvVideoRef.current?.videoHeight);
-            setTimeout(checkReady, 100);
-          }
-        };
-        checkReady();
-      });
+      const metrics = analyzer.analyzePerformance(
+        formattedEmotionHistory,
+        formattedTranscripts,
+        eyeContactPercentage,
+        cvAnalyticsData?.posture?.confidenceScore || 0,
+        SPEED_DATE_DURATION - timeRemaining
+      );
       
-      // Initialize eye tracking if needed
-      if (mode === 'eye-contact' || mode === 'combined') {
-        await initializeEyeTracking();
-      }
-
-      // Initialize posture tracking if needed
-      if (mode === 'posture' || mode === 'combined') {
-        postureServiceRef.current = new PostureTrackingService();
-        await postureServiceRef.current.startTracking(cvVideoRef.current);
-        
-        console.log('[DougieSpeedDateV3] Setting up posture results callback...');
-        postureServiceRef.current.onResults((postureData: any) => {
-          console.log('[DougieSpeedDateV3] POSTURE DATA RECEIVED:', postureData);
-          updatePostureAnalytics(postureData);
-        });
-        
-        console.log('[DougieSpeedDateV3] POSTURE TRACKING INITIALIZED SUCCESSFULLY!');
-      }
+      const recommendations = analyzer.generateLessonRecommendations(metrics);
       
-      // CRITICAL: Only set the mode after successful initialization
-      // This was missing and causing the state to remain 'none'
-      console.log('[DougieSpeedDateV3] CV Analytics initialization complete. Setting mode to:', mode);
-      setCvAnalyticsMode(mode);
+      setPerformanceMetrics(metrics);
+      setLessonRecommendations(recommendations);
       
-    } catch (error: unknown) {
-      console.error('[DougieSpeedDateV3] CV ANALYTICS INITIALIZATION FAILED:', error);
-      if (error instanceof Error) {
-        console.error('Error details:', {
-          message: error.message,
-          stack: error.stack,
-          type: error.constructor.name
-        });
-      }
+      console.log('[DougieSpeedDateV3] Performance metrics:', metrics);
+      console.log('[DougieSpeedDateV3] Lesson recommendations:', recommendations);
     }
+
+    // Show report after a delay
+    setTimeout(() => {
+      setShowReport(true);
+    }, 3000);
   };
 
-  const initializeEyeTracking = async () => {
-    try {
-      console.log('[DougieSpeedDateV3] Starting eye tracking initialization...');
-      console.log('window object:', window);
-      console.log('window.webgazer exists?', 'webgazer' in window);
-      console.log('window.webgazer value:', window.webgazer);
-      
-      // Initialize WebGazer
-      if (window.webgazer) {
-        console.log('[DougieSpeedDateV3] WebGazer found, initializing...');
-        
-        const webgazer = window.webgazer;
-        webgazerRef.current = webgazer;
-        
-        // Stop any existing instance
-        try {
-          await webgazer.end();
-          console.log('[DougieSpeedDateV3] Stopped existing WebGazer instance');
-        } catch (e) {
-          console.log('[DougieSpeedDateV3] No existing instance to stop');
-        }
-        
-        eyeTrackingRef.current = webgazer;
-        
-        // Configure WebGazer
-        console.log('[DougieSpeedDateV3] Configuring WebGazer...');
-        await webgazer.setRegression('ridge');
-        webgazer.showPredictionPoints(false);
-        webgazer.showVideoPreview(false);
-        webgazer.showFaceOverlay(false);
-        webgazer.showFaceFeedbackBox(false);
-        
-        // Set up gaze listener
-        console.log('[DougieSpeedDateV3] Setting up gaze listener...');
-        webgazer.setGazeListener((data: any, clock: number) => {
-          if (data) {
-            console.log('[DougieSpeedDateV3] Gaze data received:', data);
-            updateEyeContactAnalytics(data);
-          }
-        });
-        
-        // Start WebGazer
-        console.log('[DougieSpeedDateV3] Starting WebGazer...');
-        await webgazer.begin();
-        console.log('[DougieSpeedDateV3] WebGazer started successfully!');
-        
-        // Check if it's actually running
-        setTimeout(() => {
-          const isReady = webgazer.isReady && webgazer.isReady();
-          console.log('[DougieSpeedDateV3] WebGazer ready status:', isReady);
-          if (!isReady) {
-            console.error('[DougieSpeedDateV3] WebGazer failed to initialize properly');
-          }
-        }, 2000);
-        
-      } else {
-        console.error('[DougieSpeedDateV3] WebGazer not found on window object!');
-        console.error('Make sure WebGazer script is loaded in index.html');
-      }
-    } catch (error: unknown) {
-      console.error('[DougieSpeedDateV3] Eye tracking initialization error:', error);
-      if (error instanceof Error) {
-        console.error('Error details:', {
-          message: error.message,
-          stack: error.stack,
-          type: error.constructor.name
-        });
-      }
+  const handleCVPanelToggle = () => {
+    console.log('CV PANEL BUTTON CLICKED!!!');
+    console.log('CV PANEL BUTTON CLICKED!!!');
+    console.log('CV PANEL BUTTON CLICKED!!!');
+    alert('CV PANEL BUTTON CLICKED! Check console...');
+    
+    if (!showSidebar) {
+      setShowSidebar(true);
     }
+    setActiveLeftTab('analytics');
+    
+    // User must select tracking mode via CV panel
+    console.log('[DougieSpeedDateV3] Analytics opened - use CV panel to select tracking mode');
   };
 
-  const updateEyeContactAnalytics = (gazeData: any) => {
-    if (!gazeData || !canvasRef.current) return;
+  // Get engagement level from analytics data
+  const getEngagementLevelFromAnalytics = (): string => {
+    if (!cvAnalyticsData) return 'Unknown';
     
-    // Get canvas dimensions
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
+    const eyeContactScore = cvAnalyticsData.eyeContact.percentage;
+    const postureScore = cvAnalyticsData.posture.shoulderAlignment;
+    const overallScore = (eyeContactScore + postureScore) / 2;
     
-    // Check if gaze is within canvas bounds (looking at avatar)
-    const gazeOnTarget = gazeData.x >= rect.left && 
-                        gazeData.x <= rect.right && 
-                        gazeData.y >= rect.top && 
-                        gazeData.y <= rect.bottom;
-    
-    // Update eye contact statistics
-    setCvAnalyticsData(prev => {
-      const currentData = prev || {
-        eyeContact: {
-          percentage: 0,
-          gazeOnTarget: false,
-          lookAwayCount: 0,
-          averageContactDuration: 0
-        },
-        posture: {
-          shoulderAlignment: 0,
-          headPosition: { x: 0, y: 0 },
-          bodyOpenness: 0,
-          leaning: 'neutral' as const,
-          confidenceScore: 0
-        }
-      };
-      
-      // Track look away events
-      const lookAwayCount = !currentData.eyeContact.gazeOnTarget && gazeOnTarget 
-        ? currentData.eyeContact.lookAwayCount 
-        : currentData.eyeContact.gazeOnTarget && !gazeOnTarget 
-          ? currentData.eyeContact.lookAwayCount + 1 
-          : currentData.eyeContact.lookAwayCount;
-      
-      // Update percentage (simple moving average)
-      const percentage = gazeOnTarget 
-        ? Math.min(100, currentData.eyeContact.percentage + 1)
-        : Math.max(0, currentData.eyeContact.percentage - 0.5);
-      
-      return {
-        ...currentData,
-        eyeContact: {
-          percentage: parseFloat(percentage.toFixed(1)),
-          gazeOnTarget,
-          lookAwayCount,
-          averageContactDuration: currentData.eyeContact.averageContactDuration
-        }
-      };
-    });
+    if (overallScore >= 80) return 'High';
+    if (overallScore >= 50) return 'Medium';
+    return 'Low';
   };
 
-  const updatePostureAnalytics = (postureData: any) => {
-    if (!postureData || !postureData.keypoints) return;
-    
-    console.log('[DougieSpeedDateV3] Processing posture data:', {
-      confidence: postureData.confidence,
-      keypointsAvailable: Object.keys(postureData.keypoints).length
-    });
-    
-    // Extract keypoints from PostureData format
-    const leftShoulder = postureData.keypoints.leftShoulder;
-    const rightShoulder = postureData.keypoints.rightShoulder;
-    const nose = postureData.keypoints.nose;
-    
-    if (!leftShoulder || !rightShoulder || !nose) {
-      console.log('[DougieSpeedDateV3] Missing essential keypoints:', {
-        leftShoulder: !!leftShoulder,
-        rightShoulder: !!rightShoulder,
-        nose: !!nose
-      });
-      return;
+  // Get engagement color from analytics data
+  const getEngagementColorFromAnalytics = (): string => {
+    const level = getEngagementLevelFromAnalytics();
+    switch (level) {
+      case 'High': return '#22c55e';
+      case 'Medium': return '#f59e0b';
+      case 'Low': return '#ef4444';
+      default: return '#6b7280';
     }
-    
-    // Calculate shoulder alignment
-    const shoulderYDiff = Math.abs(leftShoulder.y - rightShoulder.y);
-    const shoulderAlignment = Math.max(0, 100 - (shoulderYDiff * 2));
-    
-    // Calculate body openness based on shoulder width
-    const shoulderWidth = Math.abs(rightShoulder.x - leftShoulder.x);
-    const bodyOpenness = Math.min(100, shoulderWidth / 2);
-    
-    // Determine leaning based on nose position relative to shoulder center
-    const shoulderCenterX = (leftShoulder.x + rightShoulder.x) / 2;
-    const noseLeanOffset = nose.x - shoulderCenterX;
-    let leaning: 'neutral' | 'forward' | 'backward' | 'left' | 'right' = 'neutral';
-    if (noseLeanOffset > 20) leaning = 'right';
-    else if (noseLeanOffset < -20) leaning = 'left';
-    
-    const confidenceScore = postureData.confidence * 100;
-    
-    console.log('[DougieSpeedDateV3] Calculated posture metrics:', {
-      shoulderAlignment,
-      bodyOpenness,
-      leaning,
-      confidenceScore
-    });
-    
-    setCvAnalyticsData(prev => {
-      const currentData = prev || {
-        eyeContact: {
-          percentage: 0,
-          gazeOnTarget: false,
-          lookAwayCount: 0,
-          averageContactDuration: 0
-        },
-        posture: {
-          shoulderAlignment: 0,
-          headPosition: { x: 0, y: 0 },
-          bodyOpenness: 0,
-          leaning: 'neutral' as const,
-          confidenceScore: 0
-        }
-      };
-      
-      return {
-        ...currentData,
-        posture: {
-          shoulderAlignment,
-          headPosition: { x: nose.x || 0, y: nose.y || 0 },
-          bodyOpenness,
-          leaning,
-          confidenceScore
-        }
-      };
-    });
-  };
-
-  const stopCVAnalytics = async () => {
-    console.log('[DougieSpeedDateV3] Stopping CV analytics...');
-    
-    // Stop WebGazer
-    if (eyeTrackingRef.current && window.webgazer) {
-      try {
-        await window.webgazer.end();
-        console.log('[DougieSpeedDateV3] WebGazer stopped successfully');
-      } catch (error) {
-        console.warn('[DougieSpeedDateV3] Error stopping WebGazer (might already be stopped):', error);
-      }
-      eyeTrackingRef.current = null;
-    }
-    
-    // Stop posture tracking
-    if (postureServiceRef.current) {
-      postureServiceRef.current.stopTracking();
-      postureServiceRef.current = null;
-    }
-    
-    setCvAnalyticsData(null);
-  };
-
-  // Zoom camera to face
-  const handleZoomToFace = () => {
-    if (cameraRef.current && controlsRef.current) {
-      const targetPosition = cameraZoomed ? [0, 1.6, 1.8] : [0, 1.65, 1.2];
-      const targetFOV = cameraZoomed ? 50 : 25;
-      const targetLookAt = cameraZoomed ? [0, 1.6, 0] : [0, 1.7, 0];
-      
-      // Animate camera position
-      const startPosition = cameraRef.current.position.clone();
-      const startFOV = cameraRef.current.fov;
-      const startTarget = controlsRef.current.target.clone();
-      const duration = 1000; // 1 second animation
-      const startTime = Date.now();
-      
-      const animate = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const easeProgress = 1 - Math.pow(1 - progress, 3); // Ease out cubic
-        
-        // Interpolate position
-        cameraRef.current.position.x = startPosition.x + (targetPosition[0] - startPosition.x) * easeProgress;
-        cameraRef.current.position.y = startPosition.y + (targetPosition[1] - startPosition.y) * easeProgress;
-        cameraRef.current.position.z = startPosition.z + (targetPosition[2] - startPosition.z) * easeProgress;
-        
-        // Interpolate FOV
-        cameraRef.current.fov = startFOV + (targetFOV - startFOV) * easeProgress;
-        cameraRef.current.updateProjectionMatrix();
-        
-        // Interpolate controls target
-        controlsRef.current.target.x = startTarget.x + (targetLookAt[0] - startTarget.x) * easeProgress;
-        controlsRef.current.target.y = startTarget.y + (targetLookAt[1] - startTarget.y) * easeProgress;
-        controlsRef.current.target.z = startTarget.z + (targetLookAt[2] - startTarget.z) * easeProgress;
-        controlsRef.current.update();
-        
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        }
-      };
-      
-      animate();
-      setCameraZoomed(!cameraZoomed);
-    }
-  };
-
-  // Format time remaining
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  // Update refs for eye tracking
-  useEffect(() => {
-    isLookingAtAvatarRef.current = isLookingAtAvatar;
-  }, [isLookingAtAvatar]);
-
-  useEffect(() => {
-    return () => {
-      console.log('[DougieSpeedDateV3] Component unmounting, cleaning up WebGazer...');
-      if (eyeTrackingRef.current) {
-        try {
-          eyeTrackingRef.current.end();
-        } catch (error) {
-          console.warn('[DougieSpeedDateV3] WebGazer cleanup error on unmount:', error);
-        }
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const setViewportHeight = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
-      
-      // Also force the main container to exact window height
-      const container = document.querySelector('.dougie-speed-date-v3') as HTMLElement;
-      if (container) {
-        container.style.height = `${window.innerHeight}px`;
-      }
-    };
-
-    setViewportHeight();
-    window.addEventListener('resize', setViewportHeight);
-    
-    return () => window.removeEventListener('resize', setViewportHeight);
-  }, []);
-
-  // Don't auto-initialize posture tracking - user controls via CV panel
-  console.log('[DougieSpeedDateV3] Skipping auto-posture init - user must select via CV panel');
-  console.log('[DougieSpeedDateV3] Current CV mode:', cvAnalyticsMode);
-
-  // Initialize CV analytics if mode is already set (e.g., from previous session)
-  useEffect(() => {
-    if (cvAnalyticsMode !== 'none') {
-      console.log('[DougieSpeedDateV3] CV mode is already set to:', cvAnalyticsMode, '- initializing...');
-      // Use a timeout to ensure video element is ready
-      const initTimer = setTimeout(() => {
-        initializeCVAnalytics(cvAnalyticsMode);
-      }, 1000);
-      
-      return () => clearTimeout(initTimer);
-    }
-  }, []); // Only run once on mount
-
-  useEffect(() => {
-    // Add periodic CV analytics update
-    if (cvAnalyticsMode !== 'none' && dateStarted) {
-      console.log('[DougieSpeedDateV3] Starting periodic engagement analytics updates...');
-      
-      const interval = setInterval(() => {
-        console.log('[DougieSpeedDateV3] Checking engagement analytics...');
-        console.log('[DougieSpeedDateV3] Tracking coordinator available:', !!trackingCoordinator);
-        
-        // Update engagement analytics periodically
-        const currentEngagement = trackingCoordinator.getCurrentEngagement();
-        console.log('[DougieSpeedDateV3] Current engagement data:', currentEngagement);
-        
-        if (currentEngagement) {
-          console.log('[DougieSpeedDateV3] Periodic engagement analytics update:', currentEngagement);
-          setEngagementAnalytics(currentEngagement);
-        } else {
-          console.log('[DougieSpeedDateV3] No engagement analytics available from tracking coordinator');
-        }
-      }, 2000); // Update every 2 seconds
-
-      return () => {
-        console.log('[DougieSpeedDateV3] Stopping periodic engagement analytics updates');
-        clearInterval(interval);
-      };
-    }
-  }, [cvAnalyticsMode, dateStarted]);
-
-  // Handle face zoom video setup
-  useEffect(() => {
-    if (faceZoomVideoRef.current && cvVideoRef.current && cvVideoRef.current.srcObject) {
-      faceZoomVideoRef.current.srcObject = cvVideoRef.current.srcObject;
-    }
-  }, [cvVideoRef.current?.srcObject, activeLeftTab]); // Re-run when stream changes or tab changes
-
-  useEffect(() => {
-    let lipSyncInterval: NodeJS.Timeout | null = null;
-    
-    if (isSpeaking && audioData.every(val => val === 0)) {
-      console.log('[DougieSpeedDateV3] Starting fallback lip sync - no audio data available');
-      
-      // Create dynamic fallback lip sync
-      const createFallbackLipSync = () => {
-        const data = new Uint8Array(128);
-        const intensity = 60 + Math.random() * 80; // 60-140 intensity
-        
-        // Jaw movement (first 64 bytes)
-        for (let i = 0; i < 64; i++) {
-          data[i] = intensity + Math.sin(Date.now() * 0.01 + i * 0.1) * 20;
-        }
-        
-        // Mouth shapes (next 64 bytes)  
-        for (let i = 64; i < 128; i++) {
-          data[i] = intensity * 0.8 + Math.cos(Date.now() * 0.008 + i * 0.05) * 15;
-        }
-        
-        return data;
-      };
-      
-      lipSyncInterval = setInterval(() => {
-        if (isSpeaking) {
-          setAudioData(createFallbackLipSync());
-        }
-      }, 80); // Update every 80ms for smooth animation
-      
-    } else if (!isSpeaking && lipSyncInterval) {
-      console.log('[DougieSpeedDateV3] Stopping fallback lip sync');
-      clearInterval(lipSyncInterval);
-      setAudioData(new Uint8Array(128)); // Reset to silence
-    }
-
-    return () => {
-      if (lipSyncInterval) {
-        clearInterval(lipSyncInterval);
-      }
-    };
-  }, [isSpeaking, audioData]);
-
-  useEffect(() => {
-    if (voiceServiceRef.current) {
-      voiceServiceRef.current.onUserMessage((message: any) => {
-        console.log('[DougieSpeedDateV3] User message received:', message);
-        console.log('[DougieSpeedDateV3] Current user emotions:', userEmotions);
-        console.log('[DougieSpeedDateV3] User detailed emotions:', userDetailedEmotions.slice(0, 3));
-        
-        // Create transcript segment for user message
-        const userSegment: TranscriptSegment = {
-          timestamp: Date.now(),
-          speaker: 'user',
-          text: typeof message === 'string' ? message : (message.content || message.text || ''),
-          emotions: [],
-          prosodyEmotions: undefined,
-          facialEmotions: userEmotions.length > 0 ? [...userEmotions] : undefined,
-          emotionalScores: userDetailedEmotions.length > 0 ? [...userDetailedEmotions] : undefined
-        };
-        
-        console.log('[DougieSpeedDateV3] User segment created with:', {
-          facialEmotions: userSegment.facialEmotions,
-          emotionalScores: userSegment.emotionalScores?.slice(0, 3)
-        });
-        
-        setTranscriptSegments(prev => [...prev, userSegment]);
-        setCurrentTranscript(prev => prev + ' [User]: ' + userSegment.text);
-      });
-      
-      voiceServiceRef.current.onMessage((message: any) => {
-        console.log('[DougieSpeedDateV3] Assistant message received:', message);
-        
-        // Create transcript segment for assistant response
-        const assistantSegment: TranscriptSegment = {
-          timestamp: Date.now(),
-          speaker: 'assistant',
-          text: typeof message === 'string' ? message : (message.content || message.text || ''),
-          emotions: [],
-          prosodyEmotions: undefined,
-          facialEmotions: dougieEmotions.length > 0 ? dougieEmotions.map(e => ({ name: e, score: 1 })) : undefined
-        };
-        
-        setTranscriptSegments(prev => [...prev, assistantSegment]);
-        setCurrentTranscript(prev => prev + ' [Dougie]: ' + assistantSegment.text);
-      });
-      
-      voiceServiceRef.current.onEmotion((emotions: any) => {
-        console.log('[DougieSpeedDateV3] Dougie emotions received:', emotions);
-        
-        // Convert emotions to blendshapes for avatar
-        const blendshapes: Record<string, number> = {};
-        
-        if (emotions && Array.isArray(emotions)) {
-          emotions.forEach((emotion: any) => {
-            const emotionName = emotion.name?.toLowerCase() || '';
-            const value = emotion.score || 0;
-            
-            switch (emotionName) {
-              case 'joy':
-              case 'happiness':
-                blendshapes['mouthSmileLeft'] = value * 0.8;
-                blendshapes['mouthSmileRight'] = value * 0.8;
-                break;
-              case 'surprise':
-                blendshapes['browInnerUp'] = value * 0.7;
-                blendshapes['eyeWideLeft'] = value * 0.6;
-                blendshapes['eyeWideRight'] = value * 0.6;
-                break;
-              case 'confusion':
-                blendshapes['browDownLeft'] = value * 0.4;
-                blendshapes['browDownRight'] = value * 0.4;
-                break;
-              case 'interest':
-                blendshapes['browOuterUpLeft'] = value * 0.3;
-                blendshapes['browOuterUpRight'] = value * 0.3;
-                break;
-              case 'love':
-              case 'adoration':
-                blendshapes['mouthSmileLeft'] = value * 0.6;
-                blendshapes['mouthSmileRight'] = value * 0.6;
-                blendshapes['cheekSquintLeft'] = value * 0.3;
-                blendshapes['cheekSquintRight'] = value * 0.3;
-                break;
-              case 'excitement':
-                blendshapes['mouthOpen'] = value * 0.4;
-                blendshapes['eyeWideLeft'] = value * 0.5;
-                blendshapes['eyeWideRight'] = value * 0.5;
-                break;
-              case 'sadness':
-                blendshapes['mouthFrownLeft'] = value * 0.6;
-                blendshapes['mouthFrownRight'] = value * 0.6;
-                break;
-              case 'contempt':
-                blendshapes['mouthLeft'] = value * 0.4;
-                blendshapes['noseSneerLeft'] = value * 0.3;
-                break;
-              case 'disgust':
-                blendshapes['noseSneerLeft'] = value * 0.5;
-                blendshapes['noseSneerRight'] = value * 0.5;
-                blendshapes['mouthPucker'] = value * 0.3;
-                break;
-            }
-          });
-        } else if (emotions && typeof emotions === 'object') {
-          Object.entries(emotions).forEach(([emotion, intensity]: [string, any]) => {
-            const value = typeof intensity === 'number' ? intensity : 0;
-            // Same switch logic as above...
-          });
-        }
-        
-        // Set emotional blendshapes for avatar
-        setEmotionalBlendshapes(blendshapes);
-        
-        // Update the most recent user transcript segment with emotion data
-        setTranscriptSegments(prev => {
-          if (prev.length > 0) {
-            const updated = [...prev];
-            const lastSegment = updated[updated.length - 1];
-            if (lastSegment.speaker === 'assistant') {
-              lastSegment.prosodyEmotions = emotions;
-            }
-            return updated;
-          }
-          return prev;
-        });
-      });
-      
-      console.log('[DougieSpeedDateV3] All voice service callbacks registered');
-    }
-  }, [voiceServiceRef]);
-
-  // Helper functions for engagement indicator
-  const getEngagementLevel = (score: number): string => {
-    if (score >= 80) return 'Excellent';
-    if (score >= 60) return 'Good';  
-    if (score >= 40) return 'Fair';
-    return 'Needs Focus';
-  };
-
-  const getEngagementColor = (score: number): string => {
-    if (score >= 80) return 'excellent'; // Green
-    if (score >= 60) return 'good';      // Yellow
-    if (score >= 40) return 'fair';      // Orange
-    return 'poor';                       // Red
-  };
-
-  const getEngagementLevelFromAnalytics = (analytics: EngagementAnalytics | null): string => {
-    if (!analytics) return 'Unknown';
-    return getEngagementLevel(analytics.overallEngagement);
-  };
-
-  const getEngagementColorFromAnalytics = (analytics: EngagementAnalytics | null): string => {
-    if (!analytics) return 'unknown';
-    return getEngagementColor(analytics.overallEngagement);
   };
 
   // Audio playback queue system (matching coach sessions)
@@ -1595,25 +984,380 @@ const DougieSpeedDateV3: React.FC = () => {
       );
     }
 
+    // Automatically disconnect after sending the closing message
+    setTimeout(() => {
+      if (isConnected) {
+        console.log('[DougieSpeedDateV3] Auto-disconnecting after date end...');
+        handleDisconnect();
+      }
+    }, 2000);
+
+    // Analyze performance and generate recommendations
+    if (emotionHistory.length > 0 || transcriptSegments.length > 0) {
+      console.log('[DougieSpeedDateV3] Analyzing date performance...');
+      const analyzer = new SpeedDatePerformanceAnalyzer();
+      
+      // Convert emotion history to the format expected by the analyzer
+      const formattedEmotionHistory = emotionHistory.map(e => ({
+        timestamp: e.timestamp,
+        participant: e.participant,
+        emotions: e.emotions,
+        dominantEmotion: Object.entries(e.emotions).reduce((a, b) => 
+          (a as [string, number])[1] > (b as [string, number])[1] ? (a as [string, number]) : (b as [string, number])
+        )[0] as string,
+        valence: 0,
+        arousal: 0
+      }));
+      
+      // Convert transcript segments to include id
+      const formattedTranscripts = transcriptSegments.map((seg, idx) => ({
+        id: `segment-${idx}`,
+        text: seg.text,
+        speaker: seg.speaker === 'user' || seg.speaker === 'assistant' ? seg.speaker : 'user' as 'user' | 'assistant',
+        timestamp: new Date(seg.timestamp).toISOString(),
+        emotion: seg.emotions
+      }));
+      
+      const metrics = analyzer.analyzePerformance(
+        formattedEmotionHistory,
+        formattedTranscripts,
+        eyeContactPercentage,
+        cvAnalyticsData?.posture?.confidenceScore || 0,
+        SPEED_DATE_DURATION - timeRemaining
+      );
+      
+      const recommendations = analyzer.generateLessonRecommendations(metrics);
+      
+      setPerformanceMetrics(metrics);
+      setLessonRecommendations(recommendations);
+      
+      console.log('[DougieSpeedDateV3] Performance metrics:', metrics);
+      console.log('[DougieSpeedDateV3] Lesson recommendations:', recommendations);
+    }
+
     // Show report after a delay
     setTimeout(() => {
       setShowReport(true);
     }, 3000);
   };
 
-  const handleCVPanelToggle = () => {
-    console.log('CV PANEL BUTTON CLICKED!!!');
-    console.log('CV PANEL BUTTON CLICKED!!!');
-    console.log('CV PANEL BUTTON CLICKED!!!');
-    alert('CV PANEL BUTTON CLICKED! Check console...');
+  // Initialize CV analytics based on mode
+  const initializeCVAnalytics = async (mode: CVAnalyticsMode) => {
+    console.log('[DougieSpeedDateV3] ===== CV ANALYTICS INIT START =====');
+    console.log('[DougieSpeedDateV3] Mode requested:', mode);
+    console.log('[DougieSpeedDateV3] cvVideoRef.current exists?:', !!cvVideoRef.current);
     
-    if (!showSidebar) {
-      setShowSidebar(true);
+    if (!cvVideoRef.current) {
+      console.error('[DougieSpeedDateV3] No CV video element available - ABORTING');
+      return;
     }
-    setActiveLeftTab('analytics');
     
-    // User must select tracking mode via CV panel
-    console.log('[DougieSpeedDateV3] Analytics opened - use CV panel to select tracking mode');
+    try {
+      if (mode === 'none') {
+        await stopCVAnalytics();
+        return;
+      }
+
+      // Stop existing analytics before starting new ones
+      await stopCVAnalytics();
+      
+      // Ensure video element has camera stream
+      if (!cvVideoRef.current?.srcObject) {
+        console.log('[DougieSpeedDateV3] No camera stream attached to video element');
+        
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              width: 640, 
+              height: 480,
+              facingMode: 'user'
+            } 
+          });
+          
+          cvVideoRef.current!.srcObject = stream;
+          setCameraStream(stream);
+          console.log('[DougieSpeedDateV3] Camera stream attached to video element');
+        } catch (cameraError) {
+          console.error('[DougieSpeedDateV3] Camera access failed:', cameraError);
+          alert('Camera access failed. Please allow camera permissions.');
+          return;
+        }
+      }
+      
+      // Initialize eye tracking if needed
+      if (mode === 'eye-contact' || mode === 'combined') {
+        console.log('[DougieSpeedDateV3] CALLING initializeEyeTracking()');
+        await initializeEyeTracking();
+      }
+
+      // Initialize posture tracking if needed
+      if (mode === 'posture' || mode === 'combined') {
+        postureServiceRef.current = new PostureTrackingService();
+        await postureServiceRef.current.startTracking(cvVideoRef.current);
+        
+        postureServiceRef.current.onResults((postureData: any) => {
+          updatePostureAnalytics(postureData);
+        });
+      }
+      
+      setCvAnalyticsMode(mode);
+      
+    } catch (error: unknown) {
+      console.error('[DougieSpeedDateV3] CV ANALYTICS INITIALIZATION FAILED:', error);
+    }
+  };
+
+  // Initialize eye tracking
+  const initializeEyeTracking = async () => {
+    try {
+      console.log('[DougieSpeedDateV3] Starting eye tracking initialization...');
+      
+      if (!window.webgazer) {
+        console.error('[DougieSpeedDateV3] WebGazer not found!');
+        alert('Eye tracking library not loaded. Please refresh the page.');
+        return;
+      }
+      
+      const webgazer = window.webgazer;
+      webgazerRef.current = webgazer;
+      
+      // Stop any existing instance
+      try {
+        await webgazer.end();
+      } catch (e) {
+        console.log('[DougieSpeedDateV3] No existing instance to stop');
+      }
+      
+      eyeTrackingRef.current = webgazer;
+      
+      // Configure WebGazer
+      await webgazer.setRegression('ridge');
+      webgazer.showPredictionPoints(true);
+      webgazer.showVideoPreview(true);
+      webgazer.showFaceOverlay(true);
+      webgazer.showFaceFeedbackBox(true);
+      
+      // Set up gaze listener
+      webgazer.setGazeListener((data: any, clock: number) => {
+        if (data) {
+          updateEyeContactAnalytics(data);
+        }
+      });
+      
+      // Start WebGazer
+      await webgazer.begin();
+      
+      // Initialize cvAnalyticsData if not already set
+      setCvAnalyticsData(prev => prev || {
+        eyeContact: {
+          percentage: 0,
+          gazeOnTarget: false,
+          lookAwayCount: 0,
+          averageContactDuration: 0
+        },
+        posture: {
+          shoulderAlignment: 0,
+          headPosition: { x: 0, y: 0 },
+          bodyOpenness: 0,
+          leaning: 'neutral' as const,
+          confidenceScore: 0
+        }
+      });
+      
+      setEyeTrackingInitialized(true);
+      console.log('[DougieSpeedDateV3] Eye tracking initialization complete');
+      
+    } catch (error) {
+      console.error('[DougieSpeedDateV3] Eye tracking initialization failed:', error);
+      alert('Failed to initialize eye tracking: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+
+  // Update eye contact analytics based on gaze data
+  const updateEyeContactAnalytics = (gazeData: any) => {
+    if (!gazeData || gazeData.x === null || gazeData.y === null || !canvasRef.current) {
+      return;
+    }
+    
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    
+    // Check if gaze is within canvas bounds (looking at avatar)
+    const gazeOnTarget = gazeData.x >= rect.left && 
+                        gazeData.x <= rect.right && 
+                        gazeData.y >= rect.top && 
+                        gazeData.y <= rect.bottom;
+    
+    // Update eye contact statistics
+    setCvAnalyticsData(prev => {
+      const currentData = prev || {
+        eyeContact: {
+          percentage: 0,
+          gazeOnTarget: false,
+          lookAwayCount: 0,
+          averageContactDuration: 0
+        },
+        posture: {
+          shoulderAlignment: 0,
+          headPosition: { x: 0, y: 0 },
+          bodyOpenness: 0,
+          leaning: 'neutral' as const,
+          confidenceScore: 0
+        }
+      };
+      
+      // Track look away events
+      const lookAwayCount = !currentData.eyeContact.gazeOnTarget && gazeOnTarget 
+        ? currentData.eyeContact.lookAwayCount 
+        : currentData.eyeContact.gazeOnTarget && !gazeOnTarget 
+          ? currentData.eyeContact.lookAwayCount + 1 
+          : currentData.eyeContact.lookAwayCount;
+      
+      // Update percentage (simple moving average)
+      const percentage = gazeOnTarget 
+        ? Math.min(100, currentData.eyeContact.percentage + 1)
+        : Math.max(0, currentData.eyeContact.percentage - 0.5);
+      
+      return {
+        ...currentData,
+        eyeContact: {
+          percentage: parseFloat(percentage.toFixed(1)),
+          gazeOnTarget,
+          lookAwayCount,
+          averageContactDuration: currentData.eyeContact.averageContactDuration
+        }
+      };
+    });
+  };
+
+  // Update posture analytics
+  const updatePostureAnalytics = (postureData: any) => {
+    if (!postureData || !postureData.keypoints) return;
+    
+    const leftShoulder = postureData.keypoints.leftShoulder;
+    const rightShoulder = postureData.keypoints.rightShoulder;
+    const nose = postureData.keypoints.nose;
+    
+    if (!leftShoulder || !rightShoulder || !nose) {
+      return;
+    }
+    
+    // Calculate metrics
+    const shoulderYDiff = Math.abs(leftShoulder.y - rightShoulder.y);
+    const shoulderAlignment = Math.max(0, 100 - (shoulderYDiff * 2));
+    const shoulderWidth = Math.abs(rightShoulder.x - leftShoulder.x);
+    const bodyOpenness = Math.min(100, shoulderWidth / 2);
+    
+    const shoulderCenterX = (leftShoulder.x + rightShoulder.x) / 2;
+    const noseLeanOffset = nose.x - shoulderCenterX;
+    let leaning: 'neutral' | 'forward' | 'backward' | 'left' | 'right' = 'neutral';
+    if (noseLeanOffset > 20) leaning = 'right';
+    else if (noseLeanOffset < -20) leaning = 'left';
+    
+    const confidenceScore = postureData.confidence * 100;
+    
+    setCvAnalyticsData(prev => {
+      const currentData = prev || {
+        eyeContact: {
+          percentage: 0,
+          gazeOnTarget: false,
+          lookAwayCount: 0,
+          averageContactDuration: 0
+        },
+        posture: {
+          shoulderAlignment: 0,
+          headPosition: { x: 0, y: 0 },
+          bodyOpenness: 0,
+          leaning: 'neutral' as const,
+          confidenceScore: 0
+        }
+      };
+      
+      return {
+        ...currentData,
+        posture: {
+          shoulderAlignment,
+          headPosition: { x: nose.x || 0, y: nose.y || 0 },
+          bodyOpenness,
+          leaning,
+          confidenceScore
+        }
+      };
+    });
+  };
+
+  // Stop CV analytics
+  const stopCVAnalytics = async () => {
+    console.log('[DougieSpeedDateV3] Stopping CV analytics...');
+    
+    if (eyeTrackingRef.current && window.webgazer) {
+      try {
+        await window.webgazer.end();
+        console.log('[DougieSpeedDateV3] WebGazer stopped successfully');
+      } catch (error) {
+        console.warn('[DougieSpeedDateV3] Error stopping WebGazer:', error);
+      }
+      eyeTrackingRef.current = null;
+    }
+    
+    if (postureServiceRef.current) {
+      postureServiceRef.current.stopTracking();
+      postureServiceRef.current = null;
+    }
+    
+    setCvAnalyticsData(null);
+    setEyeTrackingInitialized(false);
+  };
+
+  // Zoom camera to face
+  const handleZoomToFace = () => {
+    if (cameraRef.current && controlsRef.current) {
+      const targetPosition = cameraZoomed ? [0, 1.6, 1.8] : [0, 1.65, 1.2];
+      const targetFOV = cameraZoomed ? 50 : 25;
+      const targetLookAt = cameraZoomed ? [0, 1.6, 0] : [0, 1.7, 0];
+      
+      // Animate camera position
+      const startPosition = cameraRef.current.position.clone();
+      const startFOV = cameraRef.current.fov;
+      const startTarget = controlsRef.current.target.clone();
+      const duration = 1000; // 1 second animation
+      const startTime = Date.now();
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeProgress = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+        
+        // Interpolate position
+        cameraRef.current.position.x = startPosition.x + (targetPosition[0] - startPosition.x) * easeProgress;
+        cameraRef.current.position.y = startPosition.y + (targetPosition[1] - startPosition.y) * easeProgress;
+        cameraRef.current.position.z = startPosition.z + (targetPosition[2] - startPosition.z) * easeProgress;
+        
+        // Interpolate FOV
+        cameraRef.current.fov = startFOV + (targetFOV - startFOV) * easeProgress;
+        cameraRef.current.updateProjectionMatrix();
+        
+        // Interpolate controls target
+        controlsRef.current.target.x = startTarget.x + (targetLookAt[0] - startTarget.x) * easeProgress;
+        controlsRef.current.target.y = startTarget.y + (targetLookAt[1] - startTarget.y) * easeProgress;
+        controlsRef.current.target.z = startTarget.z + (targetLookAt[2] - startTarget.z) * easeProgress;
+        controlsRef.current.update();
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+      
+      animate();
+      setCameraZoomed(!cameraZoomed);
+    }
+  };
+
+  // Format time remaining
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   // Audio analysis for lip sync (matching coach sessions)
@@ -1656,6 +1400,13 @@ const DougieSpeedDateV3: React.FC = () => {
     };
   }, [isSpeaking]);
 
+  const navigate = useNavigate();
+
+  const handleStartLesson = (recommendation: LessonRecommendation) => {
+    console.log('[DougieSpeedDateV3] Starting lesson:', recommendation);
+    navigate('/coach/lessons', { state: { lesson: recommendation } });
+  };
+
   return (
     <div className="dougie-speed-date-v3">
       {/* Top Bar - Toggle Controls */}
@@ -1694,10 +1445,10 @@ const DougieSpeedDateV3: React.FC = () => {
           </button>
           <div 
             className="engagement-indicator"
-            title={`Engagement: ${getEngagementLevelFromAnalytics(engagementAnalytics)}`}
+            title={`Engagement: ${getEngagementLevelFromAnalytics()}`}
           >
             <div 
-              className={`engagement-dot ${getEngagementColorFromAnalytics(engagementAnalytics)}`}
+              className={`engagement-dot ${getEngagementColorFromAnalytics()}`}
             />
           </div>
           {practiceMode && (
@@ -1796,19 +1547,19 @@ const DougieSpeedDateV3: React.FC = () => {
                   <h4>🎮 Voice & Date Controls</h4>
                   
                   <div className="control-group">
-                    <h5>Connection</h5>
+                    <h5>Step 1: Connection</h5>
                     <div className="control-buttons">
                       <button 
                         className={`control-btn ${isConnected ? 'connected' : ''}`}
                         onClick={() => handleConnectClick()}
-                        disabled={isConnected}
+                        disabled={isConnected || dateStarted}
                       >
-                        {isConnected ? '✅ Connected' : '🎤 Connect Voice'}
+                        {isConnected ? '✅ Connected' : '🎤 Open Connection'}
                       </button>
                       <button 
                         className={`control-btn ${!isConnected ? 'disabled' : ''}`}
                         onClick={() => handleDisconnect()}
-                        disabled={!isConnected}
+                        disabled={!isConnected || dateStarted}
                       >
                         📞 Disconnect
                       </button>
@@ -1816,23 +1567,34 @@ const DougieSpeedDateV3: React.FC = () => {
                   </div>
 
                   <div className="control-group">
-                    <h5>Date Session</h5>
+                    <h5>Step 2: Date Session</h5>
                     <div className="control-buttons">
                       <button 
-                        className={`control-btn ${dateStarted ? 'active' : ''}`}
+                        className={`control-btn ${dateStarted && !dateEnded ? 'active' : ''} ${dateEnded ? 'completed' : ''}`}
                         onClick={() => startDate()}
-                        disabled={!isConnected || dateStarted || dateEnded}
+                        disabled={!isConnected || dateStarted}
                       >
-                        {dateStarted ? '▶️ Date Active' : '💕 Start Date'}
+                        {dateEnded ? '✅ Date Completed' : dateStarted ? '▶️ Date in Progress' : '💕 Start Date'}
                       </button>
                       <button 
-                        className={`control-btn ${!dateStarted ? 'disabled' : ''}`}
+                        className={`control-btn ${!dateStarted || dateEnded ? 'disabled' : ''}`}
                         onClick={() => endDate()}
                         disabled={!dateStarted || dateEnded}
                       >
-                        ⏹️ End Date
+                        ⏹️ End Date Early
                       </button>
                     </div>
+                    {dateStarted && !dateEnded && (
+                      <div className="date-status">
+                        <span className="status-indicator active">● Date Active</span>
+                        <span className="time-remaining">{Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')} remaining</span>
+                      </div>
+                    )}
+                    {dateEnded && (
+                      <div className="date-status">
+                        <span className="status-indicator completed">● Date Complete - Report Available</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="control-group">
@@ -1843,27 +1605,6 @@ const DougieSpeedDateV3: React.FC = () => {
                     >
                       🚨 Emergency Reset
                     </button>
-                  </div>
-
-                  <div className="control-status">
-                    <div className="status-item">
-                      <span>Connection:</span>
-                      <span className={isConnected ? 'status-good' : 'status-warning'}>
-                        {isConnected ? 'Connected' : 'Disconnected'}
-                      </span>
-                    </div>
-                    <div className="status-item">
-                      <span>Date Status:</span>
-                      <span className={dateStarted ? 'status-active' : 'status-inactive'}>
-                        {dateStarted ? 'Active' : dateEnded ? 'Ended' : 'Not Started'}
-                      </span>
-                    </div>
-                    {timeRemaining > 0 && (
-                      <div className="status-item">
-                        <span>Time Left:</span>
-                        <span className="status-timer">{formatTime(timeRemaining)}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
@@ -1940,7 +1681,7 @@ const DougieSpeedDateV3: React.FC = () => {
                   </div>
 
                   <div className="pip-camera-controls">
-                    <h5 style={{ color: '#333', marginBottom: '10px' }}>PiP Camera Controls</h5>
+                    <h5>Camera Controls</h5>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       <div>
                         <label style={{ color: '#333', display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Camera X: {pipCameraX.toFixed(2)}</label>
@@ -2266,13 +2007,6 @@ const DougieSpeedDateV3: React.FC = () => {
                   minDistance={0.8}
                   maxDistance={4}
                   maxPolarAngle={Math.PI / 2}
-                  onStart={() => {
-                    // Prevent any external camera position changes
-                    if (controlsRef.current) {
-                      controlsRef.current.object.position.set(0, 1.6, 1.8);
-                      controlsRef.current.target.set(0, 1.6, 0);
-                    }
-                  }}
                 />
                 <ambientLight intensity={0.5} />
                 <directionalLight position={[5, 5, 5]} />
@@ -2314,14 +2048,89 @@ const DougieSpeedDateV3: React.FC = () => {
           {/* Hidden video element for CV analytics */}
           <video
             ref={cvVideoRef}
-            style={{ display: 'none' }}
+            style={{ 
+              position: 'fixed',
+              bottom: '20px',
+              right: '20px',
+              width: '240px',
+              height: '180px',
+              border: '2px solid #007bff',
+              borderRadius: '8px',
+              zIndex: 1000,
+              backgroundColor: '#000',
+              objectFit: 'cover'
+            }}
             autoPlay
             muted
             playsInline
             width={640}
             height={480}
+            onLoadedMetadata={() => {
+              console.log('[DougieSpeedDateV3] CV video metadata loaded');
+              if (cvAnalyticsMode !== 'none') {
+                console.log('[DougieSpeedDateV3] Triggering CV analytics init on video ready');
+                initializeCVAnalytics(cvAnalyticsMode);
+              }
+            }}
           />
-
+          
+          {/* PiP Toggle Button */}
+          {cvVideoRef.current && cameraStream && (
+            <button
+              style={{
+                position: 'fixed',
+                bottom: '210px',
+                right: '20px',
+                padding: '8px 16px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                zIndex: 1001
+              }}
+              onClick={async () => {
+                try {
+                  if (cvVideoRef.current) {
+                    if (document.pictureInPictureElement) {
+                      await document.exitPictureInPicture();
+                    } else {
+                      await cvVideoRef.current.requestPictureInPicture();
+                    }
+                  }
+                } catch (error) {
+                  console.error('PiP error:', error);
+                }
+              }}
+            >
+              Toggle PiP
+            </button>
+          )}
+          
+          {/* Manual Eye Tracking Init Button (for debugging) */}
+          {cvAnalyticsMode === 'eye-contact' && !eyeTrackingInitialized && (
+            <button
+              style={{
+                position: 'fixed',
+                bottom: '260px',
+                right: '20px',
+                padding: '8px 16px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                zIndex: 1001
+              }}
+              onClick={async () => {
+                console.log('[DougieSpeedDateV3] Manual eye tracking init triggered');
+                await initializeEyeTracking();
+              }}
+            >
+              Init Eye Tracking
+            </button>
+          )}
+          
           {/* Bottom Chat Area */}
           {showChat && (
             <div className={`bottom-chat-v3 ${!showSidebar ? 'full-width' : ''}`}>
@@ -2362,7 +2171,6 @@ const DougieSpeedDateV3: React.FC = () => {
               <label>Tracking Mode:</label>
               <select 
                 value={cvAnalyticsMode} 
-                onClick={() => console.log('[DougieSpeedDateV3] DROPDOWN CLICKED!')}
                 onChange={(e) => {
                   console.log('[DougieSpeedDateV3] DROPDOWN CHANGED TO:', e.target.value);
                   const mode = e.target.value as CVAnalyticsMode;
@@ -2437,7 +2245,7 @@ const DougieSpeedDateV3: React.FC = () => {
       {/* Chemistry Report Modal */}
       {showReport && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          <div className="modal-content" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
             <ChemistryReport
               emotionHistory={emotionHistory}
               participant1Name="You"
@@ -2457,8 +2265,18 @@ const DougieSpeedDateV3: React.FC = () => {
                 setAnimationName('idle');
                 setIsSpeaking(false);
                 setShowPiP(false);
+                setPerformanceMetrics(null);
+                setLessonRecommendations([]);
               }}
             />
+            
+            {/* Lesson Recommendations based on performance */}
+            {lessonRecommendations.length > 0 && (
+              <LessonRecommendations 
+                recommendations={lessonRecommendations}
+                onStartLesson={handleStartLesson}
+              />
+            )}
           </div>
         </div>
       )}

@@ -34,19 +34,42 @@
     <!-- ML5.js 0.12.2 - Proven working version -->
     <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
     <!-- WebGazer 2.1.0 - Load AFTER our TF.js to preserve face tracking -->
-    <script src="https://unpkg.com/webgazer@2.1.0/dist/webgazer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/webgazer@2.1.0/dist/webgazer.min.js"></script>
     <script>
+      console.log('[index.html] Script block executing...');
+      
       // Initialize TensorFlow.js backend before other libraries use it
       if (typeof tf !== 'undefined') {
+        console.log('[index.html] TensorFlow found, initializing...');
         tf.ready().then(() => {
           console.log('[index.html] TensorFlow.js backend ready:', tf.getBackend());
         }).catch(err => {
           console.error('[index.html] TensorFlow.js initialization error:', err);
         });
+      } else {
+        console.error('[index.html] TensorFlow not found!');
       }
       
       // Debug ML5 loading
       console.log('[index.html] ML5 version:', typeof ml5 !== 'undefined' ? ml5.version : 'Not loaded');
+      
+      // Debug WebGazer loading
+      console.log('[index.html] WebGazer loaded:', typeof webgazer !== 'undefined');
+      if (typeof webgazer !== 'undefined') {
+        console.log('[index.html] WebGazer object:', webgazer);
+        window.webgazer = webgazer; // Ensure it's on window object
+      } else {
+        console.error('[index.html] WebGazer failed to load!');
+      }
+      
+      // Check again after a delay in case it loads asynchronously
+      setTimeout(() => {
+        console.log('[index.html] WebGazer check after 2s:', typeof webgazer !== 'undefined');
+        if (typeof webgazer !== 'undefined' && !window.webgazer) {
+          console.log('[index.html] Adding WebGazer to window object');
+          window.webgazer = webgazer;
+        }
+      }, 2000);
       
       // Make ml5 globally available if it exists
       if (typeof ml5 !== 'undefined') {
