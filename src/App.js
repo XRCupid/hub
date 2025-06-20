@@ -130,6 +130,12 @@ import PasswordProtection from './components/PasswordProtection';
 import './App.css';
 import './global.css';
 import './services/nuclearHumeOverride';
+import WebGazerTest from './pages/webgazer-test';
+import WebGazerTestManual from './pages/webgazer-manual';
+import SeeSoTestPage from './pages/seeso-test';
+import EyeGesturesTestPage from './pages/eyegestures-test';
+import ML5EyeTrackerTestPage from './pages/ml5-eyetracker-test';
+import JeelizGlanceTestPage from './pages/jeeliz-glance-test';
 
 // Make testBlendshapeCompositor, testRPMIntegration, and testRPMAvatars available globally
 window.testBlendshapeCompositor = testBlendshapeCompositor;
@@ -258,6 +264,12 @@ const AppContent = () => {
           <Route path="/test-pip-versions" element={<TestPiPVersions />} />
           <Route path="/test-face-tracking" element={<TestBasicFaceTracking />} />
           <Route path="/test-ml5" element={<TestML5Direct />} />
+          <Route path="/webgazer-test" element={<WebGazerTest />} />
+          <Route path="/webgazer-manual" element={<WebGazerTestManual />} />
+          <Route path="/seeso-test" element={<SeeSoTestPage />} />
+          <Route path="/eyegestures-test" element={<EyeGesturesTestPage />} />
+          <Route path="/ml5-eyetracker" element={<ML5EyeTrackerTestPage />} />
+          <Route path="/jeeliz-glance" element={<JeelizGlanceTestPage />} />
           {/* Enhanced Coach Sessions */}
           <Route path="/enhanced-coach" element={<EnhancedCoachSession />} />
           <Route path="/coaching-demo" element={<CoachingSessionDemo />} />

@@ -22,9 +22,13 @@ import { UserAvatarPiP } from './UserAvatarPiP';
 import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';
 import { SpeedDatePerformanceAnalyzer, SpeedDatePerformanceMetrics, LessonRecommendation } from '../services/SpeedDatePerformanceAnalyzer';
 import { useNavigate } from 'react-router-dom';
+import { JeelizGlanceTracker } from './JeelizGlanceTracker';
+import { EyeGesturesTracker } from './EyeGesturesTracker';
+import { WebGazerTracker } from './WebGazerTracker';
 
 // CV Analytics Types
 type CVAnalyticsMode = 'none' | 'eye-contact' | 'posture' | 'combined';
+type EyeTrackerType = 'none' | 'jeeliz' | 'eyegestures' | 'webgazer';
 
 interface CVAnalyticsData {
   eyeContact: {
@@ -152,7 +156,7 @@ const DOUGIE_CONFIG = {
 };
 
 const DougieSpeedDateV3: React.FC = () => {
-  console.log('DougieSpeedDateV3 component initialized');
+  // console.log('DougieSpeedDateV3 component initialized'); // Commented out to reduce console spam
 
   // Add global test function for browser console debugging
   useEffect(() => {
@@ -187,6 +191,12 @@ const DougieSpeedDateV3: React.FC = () => {
   const [practiceMode, setPracticeMode] = useState(false); // New practice mode toggle
   const [cameraZoomed, setCameraZoomed] = useState(false);
   const [delayedShowPiP, setDelayedShowPiP] = useState(false); // Delayed PiP to avoid WebGL conflicts
+
+  // Eye tracking state
+  const [isLookingAtScreen, setIsLookingAtScreen] = useState(false);
+  const [lookingHistory, setLookingHistory] = useState<boolean[]>([]);
+  const [showEyeTracker, setShowEyeTracker] = useState(false);
+  const [eyeTrackerType, setEyeTrackerType] = useState<EyeTrackerType>('none');
 
   // Camera permission state (needed for PiP)
   const [hasPermissions, setHasPermissions] = useState(false);
@@ -457,14 +467,12 @@ const DougieSpeedDateV3: React.FC = () => {
   // CV Analytics State
   const [cvAnalyticsMode, setCvAnalyticsMode] = useState<CVAnalyticsMode>('none'); // Default to none to prevent camera interference
   const [cvAnalyticsData, setCvAnalyticsData] = useState<CVAnalyticsData | null>(null);
-  const [eyeTrackingInitialized, setEyeTrackingInitialized] = useState(false);
   const [showCVPanel, setShowCVPanel] = useState(false);
 
   // Service references
   const voiceServiceRef = useRef<HybridVoiceService | null>(null);
   const expressionServiceRef = useRef<HumeExpressionService | null>(null);
   const postureServiceRef = useRef<PostureTrackingService | null>(null);
-  const eyeTrackingRef = useRef<any>(null); // WebGazer instance
   const cvVideoRef = useRef<HTMLVideoElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -763,6 +771,27 @@ const DougieSpeedDateV3: React.FC = () => {
           setEmotionHistory(prev => [...prev, snapshot]);
         }, 5000); // Every 5 seconds
 
+        // Start eye tracking engagement update
+        const eyeTrackingInterval = setInterval(() => {
+          if (lookingHistory.length > 0) {
+            const recentLooks = lookingHistory.slice(-30); // Last 30 samples
+            const lookingPercentage = recentLooks.filter(looking => looking).length / recentLooks.length;
+            setCurrentEngagementLevel(prev => prev * 0.7 + lookingPercentage * 0.3); // Weighted average
+            
+            // Log engagement periodically
+            if (Math.random() < 0.1) { // 10% of the time
+              console.log('[DougieSpeedDateV3] Eye tracking engagement:', {
+                isLooking: isLookingAtScreen,
+                lookingPercentage: Math.round(lookingPercentage * 100),
+                engagementLevel: Math.round(currentEngagementLevel * 100)
+              });
+            }
+          }
+        }, 1000); // Every second
+
+        // Store interval ref for cleanup
+        (window as any).eyeTrackingInterval = eyeTrackingInterval;
+
       }, 1500);
 
     } catch (error) {
@@ -775,6 +804,10 @@ const DougieSpeedDateV3: React.FC = () => {
   const cleanup = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (emotionSnapshotRef.current) clearInterval(emotionSnapshotRef.current);
+    if ((window as any).eyeTrackingInterval) {
+      clearInterval((window as any).eyeTrackingInterval);
+      delete (window as any).eyeTrackingInterval;
+    }
 
     setDateEnded(true);
     setAnimationName('idle');
@@ -1043,191 +1076,73 @@ const DougieSpeedDateV3: React.FC = () => {
 
   // Initialize CV analytics based on mode
   const initializeCVAnalytics = async (mode: CVAnalyticsMode) => {
-    console.log('[DougieSpeedDateV3] ===== CV ANALYTICS INIT START =====');
-    console.log('[DougieSpeedDateV3] Mode requested:', mode);
-    console.log('[DougieSpeedDateV3] cvVideoRef.current exists?:', !!cvVideoRef.current);
+    console.log('[CV ANALYTICS] initializeCVAnalytics called with mode:', mode);
     
     if (!cvVideoRef.current) {
-      console.error('[DougieSpeedDateV3] No CV video element available - ABORTING');
+      console.log('[CV ANALYTICS] No video ref, aborting');
       return;
     }
     
-    try {
-      if (mode === 'none') {
-        await stopCVAnalytics();
-        return;
-      }
-
-      // Stop existing analytics before starting new ones
+    if (mode === 'none') {
+      console.log('[CV ANALYTICS] Mode is none, stopping analytics');
       await stopCVAnalytics();
-      
-      // Ensure video element has camera stream
-      if (!cvVideoRef.current?.srcObject) {
-        console.log('[DougieSpeedDateV3] No camera stream attached to video element');
+      return;
+    }
+    
+    // Stop any existing analytics first
+    console.log('[CV ANALYTICS] Stopping existing analytics before starting new ones');
+    await stopCVAnalytics();
+    
+    try {
+      // Ensure camera stream is available
+      if (!cvVideoRef.current.srcObject) {
+        console.log('[CV ANALYTICS] No video stream, requesting camera access...');
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'user' } 
+        });
+        cvVideoRef.current.srcObject = stream;
+        setCameraStream(stream);
+        console.log('[CV ANALYTICS] Camera stream obtained');
         
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { 
-              width: 640, 
-              height: 480,
-              facingMode: 'user'
-            } 
-          });
+        // Wait for video to be ready
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            console.log('[CV ANALYTICS] Video ready timeout');
+            reject(new Error('Video ready timeout'));
+          }, 5000);
           
-          cvVideoRef.current!.srcObject = stream;
-          setCameraStream(stream);
-          console.log('[DougieSpeedDateV3] Camera stream attached to video element');
-        } catch (cameraError) {
-          console.error('[DougieSpeedDateV3] Camera access failed:', cameraError);
-          alert('Camera access failed. Please allow camera permissions.');
-          return;
-        }
+          const checkReady = () => {
+            if (cvVideoRef.current && cvVideoRef.current.readyState >= 2) {
+              clearTimeout(timeout);
+              console.log('[CV ANALYTICS] Video is ready');
+              resolve();
+            } else {
+              requestAnimationFrame(checkReady);
+            }
+          };
+          checkReady();
+        });
+      } else {
+        console.log('[CV ANALYTICS] Video stream already exists');
       }
       
-      // Initialize eye tracking if needed
-      if (mode === 'eye-contact' || mode === 'combined') {
-        console.log('[DougieSpeedDateV3] CALLING initializeEyeTracking()');
-        await initializeEyeTracking();
-      }
-
-      // Initialize posture tracking if needed
+      // Initialize based on mode
       if (mode === 'posture' || mode === 'combined') {
+        console.log('[CV ANALYTICS] Initializing posture tracking...');
         postureServiceRef.current = new PostureTrackingService();
         await postureServiceRef.current.startTracking(cvVideoRef.current);
-        
         postureServiceRef.current.onResults((postureData: any) => {
           updatePostureAnalytics(postureData);
         });
+        console.log('[CV ANALYTICS] Posture tracking initialized');
       }
       
       setCvAnalyticsMode(mode);
-      
-    } catch (error: unknown) {
-      console.error('[DougieSpeedDateV3] CV ANALYTICS INITIALIZATION FAILED:', error);
-    }
-  };
-
-  // Initialize eye tracking
-  const initializeEyeTracking = async () => {
-    try {
-      console.log('[DougieSpeedDateV3] Starting eye tracking initialization...');
-      
-      if (!window.webgazer) {
-        console.error('[DougieSpeedDateV3] WebGazer not found!');
-        alert('Eye tracking library not loaded. Please refresh the page.');
-        return;
-      }
-      
-      const webgazer = window.webgazer;
-      webgazerRef.current = webgazer;
-      
-      // Stop any existing instance
-      try {
-        await webgazer.end();
-      } catch (e) {
-        console.log('[DougieSpeedDateV3] No existing instance to stop');
-      }
-      
-      eyeTrackingRef.current = webgazer;
-      
-      // Configure WebGazer
-      await webgazer.setRegression('ridge');
-      webgazer.showPredictionPoints(true);
-      webgazer.showVideoPreview(true);
-      webgazer.showFaceOverlay(true);
-      webgazer.showFaceFeedbackBox(true);
-      
-      // Set up gaze listener
-      webgazer.setGazeListener((data: any, clock: number) => {
-        if (data) {
-          updateEyeContactAnalytics(data);
-        }
-      });
-      
-      // Start WebGazer
-      await webgazer.begin();
-      
-      // Initialize cvAnalyticsData if not already set
-      setCvAnalyticsData(prev => prev || {
-        eyeContact: {
-          percentage: 0,
-          gazeOnTarget: false,
-          lookAwayCount: 0,
-          averageContactDuration: 0
-        },
-        posture: {
-          shoulderAlignment: 0,
-          headPosition: { x: 0, y: 0 },
-          bodyOpenness: 0,
-          leaning: 'neutral' as const,
-          confidenceScore: 0
-        }
-      });
-      
-      setEyeTrackingInitialized(true);
-      console.log('[DougieSpeedDateV3] Eye tracking initialization complete');
-      
+      console.log('[CV ANALYTICS] Mode set to:', mode);
     } catch (error) {
-      console.error('[DougieSpeedDateV3] Eye tracking initialization failed:', error);
-      alert('Failed to initialize eye tracking: ' + (error instanceof Error ? error.message : String(error)));
+      console.error('[CV ANALYTICS] Initialization error:', error);
+      alert('Failed to initialize CV analytics: ' + (error instanceof Error ? error.message : String(error)));
     }
-  };
-
-  // Update eye contact analytics based on gaze data
-  const updateEyeContactAnalytics = (gazeData: any) => {
-    if (!gazeData || gazeData.x === null || gazeData.y === null || !canvasRef.current) {
-      return;
-    }
-    
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    
-    // Check if gaze is within canvas bounds (looking at avatar)
-    const gazeOnTarget = gazeData.x >= rect.left && 
-                        gazeData.x <= rect.right && 
-                        gazeData.y >= rect.top && 
-                        gazeData.y <= rect.bottom;
-    
-    // Update eye contact statistics
-    setCvAnalyticsData(prev => {
-      const currentData = prev || {
-        eyeContact: {
-          percentage: 0,
-          gazeOnTarget: false,
-          lookAwayCount: 0,
-          averageContactDuration: 0
-        },
-        posture: {
-          shoulderAlignment: 0,
-          headPosition: { x: 0, y: 0 },
-          bodyOpenness: 0,
-          leaning: 'neutral' as const,
-          confidenceScore: 0
-        }
-      };
-      
-      // Track look away events
-      const lookAwayCount = !currentData.eyeContact.gazeOnTarget && gazeOnTarget 
-        ? currentData.eyeContact.lookAwayCount 
-        : currentData.eyeContact.gazeOnTarget && !gazeOnTarget 
-          ? currentData.eyeContact.lookAwayCount + 1 
-          : currentData.eyeContact.lookAwayCount;
-      
-      // Update percentage (simple moving average)
-      const percentage = gazeOnTarget 
-        ? Math.min(100, currentData.eyeContact.percentage + 1)
-        : Math.max(0, currentData.eyeContact.percentage - 0.5);
-      
-      return {
-        ...currentData,
-        eyeContact: {
-          percentage: parseFloat(percentage.toFixed(1)),
-          gazeOnTarget,
-          lookAwayCount,
-          averageContactDuration: currentData.eyeContact.averageContactDuration
-        }
-      };
-    });
   };
 
   // Update posture analytics
@@ -1290,23 +1205,12 @@ const DougieSpeedDateV3: React.FC = () => {
   const stopCVAnalytics = async () => {
     console.log('[DougieSpeedDateV3] Stopping CV analytics...');
     
-    if (eyeTrackingRef.current && window.webgazer) {
-      try {
-        await window.webgazer.end();
-        console.log('[DougieSpeedDateV3] WebGazer stopped successfully');
-      } catch (error) {
-        console.warn('[DougieSpeedDateV3] Error stopping WebGazer:', error);
-      }
-      eyeTrackingRef.current = null;
-    }
-    
     if (postureServiceRef.current) {
       postureServiceRef.current.stopTracking();
       postureServiceRef.current = null;
     }
     
     setCvAnalyticsData(null);
-    setEyeTrackingInitialized(false);
   };
 
   // Zoom camera to face
@@ -1866,29 +1770,6 @@ const DougieSpeedDateV3: React.FC = () => {
                           <div className="cv-analytics">
                             <h5>Computer Vision Analytics</h5>
                             
-                            {/* Eye Contact Analytics */}
-                            {(cvAnalyticsMode === 'eye-contact' || cvAnalyticsMode === 'combined') && (
-                              <div className="cv-analytics-section">
-                                <h6>👁️ Eye Contact</h6>
-                                <div className="analytics-metric">
-                                  <span className="metric-label">Success Rate:</span>
-                                  <span className={`metric-value ${cvAnalyticsData.eyeContact.percentage > 70 ? 'good' : cvAnalyticsData.eyeContact.percentage > 40 ? 'moderate' : 'poor'}`}>
-                                    {cvAnalyticsData.eyeContact.percentage.toFixed(1)}%
-                                  </span>
-                                </div>
-                                <div className="analytics-metric">
-                                  <span className="metric-label">Currently Looking:</span>
-                                  <span className={`metric-value ${cvAnalyticsData.eyeContact.gazeOnTarget ? 'active' : 'inactive'}`}>
-                                    {cvAnalyticsData.eyeContact.gazeOnTarget ? 'At Avatar ✓' : 'Away ✗'}
-                                  </span>
-                                </div>
-                                <div className="analytics-metric">
-                                  <span className="metric-label">Look Away Count:</span>
-                                  <span className="metric-value">{cvAnalyticsData.eyeContact.lookAwayCount}</span>
-                                </div>
-                              </div>
-                            )}
-                            
                             {/* Posture Analytics */}
                             {(cvAnalyticsMode === 'posture' || cvAnalyticsMode === 'combined') && cvAnalyticsData.posture && (
                               <div className="cv-analytics-section">
@@ -1988,8 +1869,13 @@ const DougieSpeedDateV3: React.FC = () => {
               <Canvas 
                 className="three-canvas" 
                 ref={canvasRef}
+                data-keep-context="true"
                 onCreated={(state) => {
                   console.log('Canvas created successfully');
+                  // Mark the canvas element to preserve its context
+                  if (state.gl.domElement) {
+                    state.gl.domElement.dataset.keepContext = 'true';
+                  }
                 }}
                 gl={{ 
                   preserveDrawingBuffer: false, 
@@ -2107,30 +1993,98 @@ const DougieSpeedDateV3: React.FC = () => {
             </button>
           )}
           
-          {/* Manual Eye Tracking Init Button (for debugging) */}
-          {cvAnalyticsMode === 'eye-contact' && !eyeTrackingInitialized && (
-            <button
-              style={{
-                position: 'fixed',
-                bottom: '260px',
-                right: '20px',
-                padding: '8px 16px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                zIndex: 1001
+          {/* Eye Tracking Toggle */}
+          <div style={{
+            position: 'absolute',
+            top: showPipCameraControls ? '290px' : '60px',
+            right: '10px',
+            zIndex: 1000
+          }}>
+            <select 
+              value={eyeTrackerType}
+              onChange={(e) => {
+                setEyeTrackerType(e.target.value as EyeTrackerType);
+                setShowEyeTracker(e.target.value !== 'none');
               }}
-              onClick={async () => {
-                console.log('[DougieSpeedDateV3] Manual eye tracking init triggered');
-                await initializeEyeTracking();
+              style={{
+                padding: '8px',
+                borderRadius: '4px',
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                color: 'white',
+                border: '1px solid #666',
+                cursor: 'pointer',
+                fontSize: '14px'
               }}
             >
-              Init Eye Tracking
-            </button>
-          )}
+              <option value="none">👁️ No Eye Tracking</option>
+              <option value="jeeliz">👀 Jeeliz (Simple)</option>
+              <option value="eyegestures">🎯 EyeGestures (Advanced)</option>
+              <option value="webgazer">👀 WebGazer (Advanced)</option>
+            </select>
+          </div>
           
+          {/* JeelizGlanceTracker - Overlay in top right */}
+          {showEyeTracker && eyeTrackerType === 'jeeliz' && (
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              width: '400px',
+              zIndex: 1000,
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              borderRadius: '8px',
+              overflow: 'hidden'
+            }}>
+              <JeelizGlanceTracker 
+                showVideo={true}
+                onWatchingChange={(isWatching) => {
+                  setIsLookingAtScreen(isWatching);
+                  setLookingHistory(prev => [...prev.slice(-299), isWatching]); // Keep last 300 samples
+                }}
+              />
+            </div>
+          )}
+          {showEyeTracker && eyeTrackerType === 'eyegestures' && (
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              width: '400px',
+              zIndex: 1000,
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              borderRadius: '8px',
+              overflow: 'hidden'
+            }}>
+              <EyeGesturesTracker 
+                showVideo={true}
+                onGazeChange={(gazeData) => {
+                  setIsLookingAtScreen(gazeData.looking);
+                  setLookingHistory(prev => [...prev.slice(-299), gazeData.looking]); // Keep last 300 samples
+                }}
+              />
+            </div>
+          )}
+          {showEyeTracker && eyeTrackerType === 'webgazer' && (
+            <div style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              width: '400px',
+              zIndex: 1000,
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              borderRadius: '8px',
+              overflow: 'hidden'
+            }}>
+              <WebGazerTracker 
+                showVideo={true}
+                onGazeChange={(gazeData) => {
+                  setIsLookingAtScreen(gazeData.looking);
+                  setLookingHistory(prev => [...prev.slice(-299), gazeData.looking]); // Keep last 300 samples
+                }}
+              />
+            </div>
+          )}
+
           {/* Bottom Chat Area */}
           {showChat && (
             <div className={`bottom-chat-v3 ${!showSidebar ? 'full-width' : ''}`}>
@@ -2186,9 +2140,8 @@ const DougieSpeedDateV3: React.FC = () => {
                 className="w-full p-1 border rounded bg-white/10 text-xs"
               >
                 <option value="none">None</option>
-                <option value="eye-contact">Eye Tracking Only</option>
-                <option value="posture">Posture Only</option>
-                <option value="combined">Combined (Eye + Posture)</option>
+                <option value="posture">Posture</option>
+                <option value="combined">Combined</option>
               </select>
             </div>
             
@@ -2196,12 +2149,6 @@ const DougieSpeedDateV3: React.FC = () => {
               <div className="status-item">
                 <span className="status-label">Mode:</span>
                 <strong>{cvAnalyticsMode === 'none' ? 'Disabled' : cvAnalyticsMode}</strong>
-              </div>
-              <div className="status-item">
-                <span className="status-label">Eye Tracking:</span>
-                <span className={`status-indicator ${(cvAnalyticsMode === 'eye-contact' || cvAnalyticsMode === 'combined') && eyeTrackingRef.current ? 'active' : 'inactive'}`}>
-                  {(cvAnalyticsMode === 'eye-contact' || cvAnalyticsMode === 'combined') && eyeTrackingRef.current ? '✅ Active' : '❌ Inactive'}
-                </span>
               </div>
               <div className="status-item">
                 <span className="status-label">Posture Tracking:</span>
@@ -2219,14 +2166,6 @@ const DougieSpeedDateV3: React.FC = () => {
               {cvAnalyticsData && (
                 <div className="cv-live-stats">
                   <h4>Live Stats</h4>
-                  {cvAnalyticsData.eyeContact && (cvAnalyticsMode === 'eye-contact' || cvAnalyticsMode === 'combined') && (
-                    <div className="live-stat">
-                      <span>Eye Contact:</span>
-                      <strong className={cvAnalyticsData.eyeContact.percentage > 70 ? 'good' : cvAnalyticsData.eyeContact.percentage > 40 ? 'moderate' : 'poor'}>
-                        {cvAnalyticsData.eyeContact.percentage.toFixed(1)}%
-                      </strong>
-                    </div>
-                  )}
                   {cvAnalyticsData.posture && (cvAnalyticsMode === 'posture' || cvAnalyticsMode === 'combined') && (
                     <div className="live-stat">
                       <span>Posture Score:</span>

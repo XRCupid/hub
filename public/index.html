@@ -33,8 +33,16 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.7.4/dist/tf.min.js"></script>
     <!-- ML5.js 0.12.2 - Proven working version -->
     <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
-    <!-- WebGazer 2.1.0 - Load AFTER our TF.js to preserve face tracking -->
-    <script src="https://cdn.jsdelivr.net/npm/webgazer@2.1.0/dist/webgazer.min.js"></script>
+    <!-- EyeGestures dependencies -->
+    <script src="https://www.lactame.com/lib/ml/6.0.0/ml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
+    <!-- EyeGestures SDK -->
+    <link rel="stylesheet" href="https://eyegestures.com/eyegestures.css">
+    <script src="https://eyegestures.com/eyegestures.js"></script>
+    <!-- Jeeliz GlanceTracker -->
+    <script src="https://cdn.jsdelivr.net/gh/jeeliz/jeelizGlanceTracker/dist/jeelizGlanceTracker.js"></script>
+    <!-- WebGazer 1.1.0 for compatibility with TensorFlow.js 1.7.4 -->
+    <script src="https://webgazer.cs.brown.edu/webgazer.js?v=1.1.0"></script>
     <script>
       console.log('[index.html] Script block executing...');
       
@@ -53,22 +61,12 @@
       // Debug ML5 loading
       console.log('[index.html] ML5 version:', typeof ml5 !== 'undefined' ? ml5.version : 'Not loaded');
       
-      // Debug WebGazer loading
-      console.log('[index.html] WebGazer loaded:', typeof webgazer !== 'undefined');
-      if (typeof webgazer !== 'undefined') {
-        console.log('[index.html] WebGazer object:', webgazer);
-        window.webgazer = webgazer; // Ensure it's on window object
-      } else {
-        console.error('[index.html] WebGazer failed to load!');
-      }
+      // Debug EyeGestures loading
+      console.log('[index.html] EyeGestures loaded:', typeof EyeGestures !== 'undefined');
       
       // Check again after a delay in case it loads asynchronously
       setTimeout(() => {
-        console.log('[index.html] WebGazer check after 2s:', typeof webgazer !== 'undefined');
-        if (typeof webgazer !== 'undefined' && !window.webgazer) {
-          console.log('[index.html] Adding WebGazer to window object');
-          window.webgazer = webgazer;
-        }
+        console.log('[index.html] EyeGestures check after 2s:', typeof EyeGestures !== 'undefined');
       }, 2000);
       
       // Make ml5 globally available if it exists
