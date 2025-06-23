@@ -1,0 +1,933 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import FaceMesh from '@mediapipe/face_mesh';
+import VideoCallAnalyzer from '../services/VideoCallAnalyzer';
+import { HumeVoiceServiceWrapper } from '../services/HumeVoiceServiceWrapper';
+import { EmotionScore, PostureScore, TranscriptEntry, AnalyticsSnapshot, VideoCallAnalyticsProps, CallReport, PerformanceMetrics, Recommendation } from '../types/VideoCallTypes';
+import { Eye, Activity, TrendingUp, Heart, Users, Mic, MicOff, PhoneOff, Clock, MessageSquare, Award, Camera, Share2 } from 'lucide-react';
+import Peer from 'simple-peer';
+import QRCode from 'qrcode';
+import { firestoreConferenceService } from '../services/firestoreConferenceService';
+import { mockFirebaseConference } from '../services/mockFirebaseConference';
+import { isRealFirebase } from '../firebaseConfig';
+import './VideoCallAnalytics.css';
+
+const EMOTION_COLORS: Record<string, string> = {
+  joy: '#FFD700',
+  excitement: '#FF6B6B',
+  interest: '#4ECDC4',
+  love: '#FF69B4',
+  contentment: '#98D8C8',
+  surprise: '#FFE66D',
+  confusion: '#B39BC8',
+  sadness: '#6C8EBF',
+  fear: '#9B59B6',
+  anger: '#E74C3C',
+  disgust: '#95A5A6',
+  contempt: '#34495E',
+  neutral: '#BDC3C7'
+};
+
+export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose, partnerName = 'Partner' }) => {
+  // Video call states
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [userVideo, setUserVideo] = useState<MediaStream | null>(null);
+  const [partnerVideo, setPartnerVideo] = useState<MediaStream | null>(null);
+  
+  // Room management states
+  const [roomId, setRoomId] = useState('');
+  const [isHost, setIsHost] = useState(false);
+  const [isInRoom, setIsInRoom] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('Not connected');
+  const [currentUserName, setCurrentUserName] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [showQrCode, setShowQrCode] = useState(false);
+  const [joinRoomId, setJoinRoomId] = useState('');
+  const [userName, setUserName] = useState('');
+  const [guestName, setGuestName] = useState('');
+  
+  // WebRTC refs
+  const peerRef = useRef<any>(null);
+  const myPeerIdRef = useRef<string>('');
+  const roomRef = useRef<string | null>(null);
+
+  // Existing states
+  const [isCallActive, setIsCallActive] = useState(false);
+  const [callStartTime, setCallStartTime] = useState<number | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsSnapshot[]>([]);
+  const [callReport, setCallReport] = useState<CallReport | null>(null);
+  const [activeTab, setActiveTab] = useState<'emotions' | 'metrics' | 'recommendations' | 'summary'>('emotions');
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  
+  const userVideoRef = useRef<HTMLVideoElement>(null);
+  const partnerVideoRef = useRef<HTMLVideoElement>(null);
+  const voiceServiceRef = useRef<HumeVoiceServiceWrapper | null>(null);
+  const analyticsIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const webgazerRef = useRef<any>(null);
+  const poseNetRef = useRef<any>(null);
+  const faceMeshRef = useRef<any>(null);
+
+  // Use Firestore service for real Firebase, mock for development
+  const firebaseService = isRealFirebase() ? firestoreConferenceService : mockFirebaseConference;
+
+  // Initialize media streams
+  const initializeMedia = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+      setLocalStream(stream);
+      setUserVideo(stream);
+      if (userVideoRef.current) {
+        userVideoRef.current.srcObject = stream;
+      }
+      return stream;
+    } catch (error) {
+      console.error('Failed to access media devices:', error);
+      setConnectionStatus('Media access denied');
+      return null;
+    }
+  };
+
+  // Create a new room
+  const createRoom = async (userName: string) => {
+    if (!userName.trim()) {
+      alert('Please enter your name');
+      return;
+    }
+
+    const stream = await initializeMedia();
+    if (!stream) return;
+
+    console.log('Creating room...');
+    const createdRoomId = await firebaseService.createRoom(userName);
+    
+    if (!createdRoomId) {
+      console.error('Failed to create room');
+      return;
+    }
+
+    setRoomId(createdRoomId);
+    roomRef.current = createdRoomId;
+    myPeerIdRef.current = 'host-peer';
+    setIsHost(true);
+    setCurrentUserName(userName);
+    setIsInRoom(true);
+    setConnectionStatus('Waiting for partner...');
+
+    // Generate QR code
+    try {
+      const joinUrl = `${window.location.origin}/video-analytics?room=${createdRoomId}`;
+      const qrDataUrl = await QRCode.toDataURL(joinUrl, {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      setQrCodeUrl(qrDataUrl);
+      setShowQrCode(true);
+    } catch (err) {
+      console.error('Error generating QR code:', err);
+    }
+
+    // Listen for guest
+    const unsubscribe = firebaseService.onRoomUpdate(createdRoomId, (roomData: any) => {
+      if (roomData.participants && roomData.participants.length > 1 && !peerRef.current) {
+        const guest = roomData.participants.find((p: string) => p !== userName);
+        if (guest) {
+          console.log('Guest joined:', guest);
+          setGuestName(guest);
+          setConnectionStatus('Partner joined, connecting...');
+          setShowQrCode(false);
+          createPeer(true, 'guest-peer');
+        }
+      }
+    });
+
+    // Listen for signals
+    firebaseService.onSnapshot(
+      `conference-rooms/${createdRoomId}/signals`,
+      (signals: any) => {
+        if (signals && signals['guest-peer'] && signals['guest-peer']['host-peer']) {
+          const signal = signals['guest-peer']['host-peer'];
+          if (peerRef.current && signal.timestamp > Date.now() - 30000) {
+            peerRef.current.signal(signal.data);
+          }
+        }
+      }
+    );
+  };
+
+  // Join an existing room
+  const joinRoom = async (roomId: string, userName: string) => {
+    if (!userName.trim() || !roomId.trim()) {
+      alert('Please enter your name and room ID');
+      return;
+    }
+
+    const stream = await initializeMedia();
+    if (!stream) return;
+
+    console.log('Joining room:', roomId);
+    const joined = await firebaseService.joinRoom(roomId, userName);
+    
+    if (!joined) {
+      alert('Failed to join room');
+      return;
+    }
+
+    roomRef.current = roomId;
+    myPeerIdRef.current = 'guest-peer';
+    setIsHost(false);
+    setCurrentUserName(userName);
+    setIsInRoom(true);
+    setConnectionStatus('Connecting to host...');
+
+    // Get host name from room data
+    const roomData = await firebaseService.getRoom(roomId);
+    if (roomData && roomData.participants && roomData.participants.length > 0) {
+      const hostName = roomData.participants.find((p: string) => p !== userName);
+      if (hostName) {
+        setGuestName(hostName);
+      }
+    }
+
+    // Create peer connection
+    createPeer(false, 'host-peer');
+
+    // Listen for signals
+    firebaseService.onSnapshot(
+      `conference-rooms/${roomId}/signals`,
+      (signals: any) => {
+        if (signals && signals['host-peer'] && signals['host-peer']['guest-peer']) {
+          const signal = signals['host-peer']['guest-peer'];
+          if (peerRef.current && signal.timestamp > Date.now() - 30000) {
+            peerRef.current.signal(signal.data);
+          }
+        }
+      }
+    );
+  };
+
+  // Create WebRTC peer connection
+  const createPeer = (initiator: boolean, targetPeerId: string) => {
+    const peer = new Peer({
+      initiator,
+      trickle: false,
+      stream: localStream || undefined,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
+    });
+
+    peer.on('signal', (data: any) => {
+      if (roomRef.current) {
+        firebaseService.sendSignal(roomRef.current, myPeerIdRef.current, targetPeerId, data);
+      }
+    });
+
+    peer.on('connect', () => {
+      setConnectionStatus('Connected');
+      startCall();
+    });
+
+    peer.on('stream', (stream: MediaStream) => {
+      console.log('Received remote stream');
+      setRemoteStream(stream);
+      setPartnerVideo(stream);
+      if (partnerVideoRef.current) {
+        partnerVideoRef.current.srcObject = stream;
+      }
+    });
+
+    peer.on('close', () => {
+      setConnectionStatus('Disconnected');
+      endCall();
+    });
+
+    peer.on('error', (err: Error) => {
+      console.error('Peer error:', err);
+      setConnectionStatus('Connection error');
+    });
+
+    peerRef.current = peer;
+  };
+
+  // Toggle mute
+  const toggleMute = () => {
+    if (localStream) {
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
+    }
+  };
+
+  // Toggle video
+  const toggleVideo = () => {
+    if (localStream) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoEnabled(videoTrack.enabled);
+      }
+    }
+  };
+
+  // Leave room
+  const leaveRoom = () => {
+    if (peerRef.current) {
+      peerRef.current.destroy();
+      peerRef.current = null;
+    }
+
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+
+    if (roomRef.current && currentUserName) {
+      // Since leaveRoom doesn't exist, we'll just clean up locally
+      // The Firebase cleanup would need to be implemented in conferenceFirebaseService
+    }
+
+    setIsInRoom(false);
+    setConnectionStatus('Not connected');
+    setRoomId('');
+    setLocalStream(null);
+    setRemoteStream(null);
+    setUserVideo(null);
+    setPartnerVideo(null);
+    endCall();
+  };
+
+  // Check for room ID in URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roomFromUrl = params.get('room');
+    if (roomFromUrl) {
+      setJoinRoomId(roomFromUrl);
+    }
+  }, []);
+
+  // Initialize video streams when call becomes active
+  const initializeVideoStreams = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { width: 1280, height: 720 }, 
+        audio: true 
+      });
+      setUserVideo(stream);
+      if (userVideoRef.current) {
+        userVideoRef.current.srcObject = stream;
+      }
+      
+      // Initialize WebGazer with latest version (no conflicts!)
+      if ((window as any).webgazer) {
+        webgazerRef.current = (window as any).webgazer
+          .setGazeListener((data: any, clock: number) => {
+            // Process eye gaze data
+          })
+          .begin();
+      }
+      
+      // Initialize PoseNet
+      if ((window as any).ml5?.poseNet) {
+        poseNetRef.current = (window as any).ml5.poseNet(userVideoRef.current, () => {
+          console.log('PoseNet initialized');
+        });
+        poseNetRef.current.on('pose', (results: any) => {
+          // Process pose data
+        });
+      }
+      
+      // Initialize FaceMesh for facial emotions
+      if ((window as any).ml5?.faceMesh) {
+        faceMeshRef.current = (window as any).ml5.faceMesh(userVideoRef.current, () => {
+          console.log('FaceMesh initialized');
+        });
+        faceMeshRef.current.on('predict', (results: any) => {
+          // Process facial emotion data
+        });
+      }
+    } catch (error) {
+      console.error('Failed to initialize video streams:', error);
+    }
+  };
+
+  // Start the call
+  const startCall = async () => {
+    setIsCallActive(true);
+    setCallStartTime(Date.now());
+    setAnalyticsData([]);
+    
+    await initializeVideoStreams();
+    
+    // Start analytics collection
+    analyticsIntervalRef.current = setInterval(() => {
+      collectAnalyticsSnapshot();
+    }, 100 as number); // Collect data every 100ms for smooth visualization
+    
+    // Initialize Hume voice service for prosody analysis
+    voiceServiceRef.current = new HumeVoiceServiceWrapper();
+    await voiceServiceRef.current.connect();
+    
+    // Set up voice event handlers using public API
+    voiceServiceRef.current.onEmotion((emotions: any) => {
+      // Handle real-time emotion updates
+    });
+    voiceServiceRef.current.onTranscript((transcript: any) => {
+      // Handle transcript updates
+    });
+  };
+
+  // End the call and generate report
+  const endCall = async () => {
+    setIsCallActive(false);
+    
+    // Stop analytics collection
+    if (analyticsIntervalRef.current) {
+      clearInterval(analyticsIntervalRef.current);
+    }
+    
+    // Stop video streams
+    if (userVideo) {
+      userVideo.getTracks().forEach(track => track.stop());
+    }
+    
+    // Stop tracking services
+    if (webgazerRef.current) {
+      webgazerRef.current.end();
+    }
+    
+    // Disconnect voice service
+    if (voiceServiceRef.current) {
+      await voiceServiceRef.current.disconnect();
+    }
+    
+    // Generate comprehensive report
+    const report = await generateCallReport();
+    setCallReport(report);
+  };
+
+  // Collect real-time analytics snapshot
+  const collectAnalyticsSnapshot = () => {
+    const userFaces = faceMeshRef.current?.results || [];
+    const partnerFaces = faceMeshRef.current?.results || [];
+    const userPose = poseNetRef.current?.results || [];
+    const partnerPose = poseNetRef.current?.results || [];
+    const userGaze = webgazerRef.current?.results || [];
+    const partnerGaze = webgazerRef.current?.results || [];
+    const userAudioData = voiceServiceRef.current?.getAudioData() || {};
+    const partnerAudioData = voiceServiceRef.current?.getAudioData() || {};
+
+    const snapshot: AnalyticsSnapshot = {
+      timestamp: Date.now(),
+      userEmotions: getCurrentEmotions(userFaces),
+      partnerEmotions: getCurrentEmotions(partnerFaces),
+      userPosture: calculatePostureScore(userPose),
+      partnerPosture: calculatePostureScore(partnerPose),
+      userEyeContact: isLookingAtCamera(userGaze),
+      partnerEyeContact: isLookingAtCamera(partnerGaze),
+      userSpeaking: isSpeaking(userAudioData),
+      partnerSpeaking: isSpeaking(partnerAudioData),
+      userVolume: (userAudioData && typeof userAudioData === 'object' && 'volume' in userAudioData) ? (userAudioData.volume as number) : 0,
+      partnerVolume: (partnerAudioData && typeof partnerAudioData === 'object' && 'volume' in partnerAudioData) ? (partnerAudioData.volume as number) : 0,
+    };
+    
+    setAnalyticsData(prev => [...prev, snapshot]);
+  };
+
+  // Generate comprehensive call report
+  const generateCallReport = async (): Promise<CallReport> => {
+    const analyzer = new VideoCallAnalyzer();
+    
+    // Add all analytics data to analyzer
+    analyticsData.forEach(snapshot => {
+      analyzer.addAnalyticsSnapshot(snapshot);
+    });
+    
+    // Get the full report from analyzer
+    const analyzerReport = await analyzer.generateReport();
+    
+    // Map the analyzer report to our CallReport structure
+    const report: CallReport = {
+      overallScore: analyzerReport.overallChemistry,
+      userMetrics: calculatePerformanceMetrics(analyticsData, 'user'),
+      partnerMetrics: calculatePerformanceMetrics(analyticsData, 'partner'),
+      chemistryScore: analyzerReport.overallChemistry,
+      recommendations: analyzerReport.recommendations,
+      aiSummary: analyzerReport.aiSummary.joint, // Use just the joint summary
+      emotionTimeline: analyticsData.map(snapshot => ({
+        time: snapshot.timestamp,
+        engagement: 0.7, // Placeholder
+        posture: (snapshot.userPosture.overall + snapshot.partnerPosture.overall) / 2,
+        eyeContact: ((snapshot.userEyeContact ? 1 : 0) + (snapshot.partnerEyeContact ? 1 : 0)) / 2,
+        emotions: snapshot.userEmotions
+      })),
+      transcript: analyzerReport.transcript
+    };
+    
+    return report;
+  };
+
+  // Helper functions
+  const getCurrentEmotions = (faces: any[]): EmotionScore[] => {
+    if (!faces || faces.length === 0) return [];
+    
+    const face = faces[0];
+    const emotions: EmotionScore[] = [];
+    
+    // Extract emotions from face mesh expressions
+    if (face.expressions) {
+      const emotionMap: Record<string, string> = {
+        happy: 'joy',
+        sad: 'sadness',
+        angry: 'anger',
+        surprised: 'surprise',
+        disgusted: 'disgust',
+        fearful: 'fear',
+        neutral: 'neutral'
+      };
+      
+      Object.entries(face.expressions).forEach(([emotion, score]) => {
+        if (typeof score === 'number' && score > 0.1) {
+          emotions.push({
+            name: emotionMap[emotion] || emotion,
+            score: score as number,
+            color: getEmotionColor(emotionMap[emotion] || emotion)
+          });
+        }
+      });
+    }
+    
+    // Sort by score and return top 3
+    return emotions.sort((a, b) => b.score - a.score).slice(0, 3);
+  };
+
+  const calculatePostureScore = (pose: any): PostureScore => {
+    if (!pose || !pose.keypoints) {
+      return { confidence: 0, alignment: 0, openness: 0, overall: 0 };
+    }
+    
+    const keypoints = pose.keypoints;
+    
+    // Find key body points
+    const nose = keypoints.find((kp: any) => kp.part === 'nose');
+    const leftShoulder = keypoints.find((kp: any) => kp.part === 'leftShoulder');
+    const rightShoulder = keypoints.find((kp: any) => kp.part === 'rightShoulder');
+    const leftElbow = keypoints.find((kp: any) => kp.part === 'leftElbow');
+    const rightElbow = keypoints.find((kp: any) => kp.part === 'rightElbow');
+    
+    // Calculate confidence based on keypoint confidence scores
+    const avgConfidence = keypoints.reduce((sum: number, kp: any) => sum + kp.score, 0) / keypoints.length;
+    
+    // Calculate alignment (shoulders level)
+    let alignment = 0;
+    if (leftShoulder && rightShoulder) {
+      const shoulderDiff = Math.abs(leftShoulder.position.y - rightShoulder.position.y);
+      alignment = Math.max(0, 1 - shoulderDiff / 50); // Normalize difference
+    }
+    
+    // Calculate openness (arms not crossed)
+    let openness = 1; // Default to open
+    if (leftElbow && rightElbow && leftShoulder && rightShoulder) {
+      const shoulderWidth = Math.abs(leftShoulder.position.x - rightShoulder.position.x);
+      const elbowDistance = Math.abs(leftElbow.position.x - rightElbow.position.x);
+      
+      // If elbows are closer than shoulders, posture is more closed
+      if (elbowDistance < shoulderWidth * 0.8) {
+        openness = elbowDistance / shoulderWidth;
+      }
+    }
+    
+    // Calculate overall score
+    const overall = (avgConfidence * 0.3 + alignment * 0.3 + openness * 0.4);
+    
+    return {
+      confidence: avgConfidence,
+      alignment,
+      openness,
+      overall
+    };
+  };
+
+  const isLookingAtCamera = (gazeData: any): boolean => {
+    if (!gazeData || !userVideoRef.current) return false;
+    
+    const { x, y } = gazeData;
+    const video = userVideoRef.current;
+    const rect = video.getBoundingClientRect();
+    
+    // Check if gaze is within video bounds (with some margin)
+    const margin = 50;
+    return (
+      x > rect.left - margin &&
+      x < rect.right + margin &&
+      y > rect.top - margin &&
+      y < rect.bottom + margin
+    );
+  };
+
+  const isSpeaking = (audioData: any): boolean => {
+    if (!audioData || !audioData.volume) return false;
+    
+    // Simple volume threshold detection
+    const SPEAKING_THRESHOLD = 0.02;
+    return audioData.volume > SPEAKING_THRESHOLD;
+  };
+
+  const getAudioVolume = (audioData: any): number => {
+    if (!audioData || !audioData.volume) return 0;
+    return Math.min(audioData.volume, 1); // Normalize to 0-1
+  };
+
+  const getTranscript = (): TranscriptEntry[] => {
+    if (!voiceServiceRef.current) return [];
+    
+    const messages = voiceServiceRef.current.getMessages();
+    const transcript: TranscriptEntry[] = [];
+    
+    messages.forEach((message, index) => {
+      if (message.type === 'user_message' || message.type === 'assistant_message') {
+        transcript.push({
+          speaker: message.type === 'user_message' ? 'user' : 'partner',
+          text: message.message?.content || '',
+          emotions: message.models?.prosody?.scores || [],
+          timestamp: message.receivedAt || Date.now(),
+          duration: 0 // Will be calculated from next message
+        });
+      }
+    });
+    
+    // Calculate durations
+    for (let i = 0; i < transcript.length - 1; i++) {
+      transcript[i].duration = transcript[i + 1].timestamp - transcript[i].timestamp;
+    }
+    
+    return transcript;
+  };
+
+  const getEmotionColor = (emotion: string): string => {
+    const colors: Record<string, string> = {
+      joy: '#FFD700',
+      excitement: '#FF6B6B',
+      interest: '#4ECDC4',
+      surprise: '#FFE66D',
+      contentment: '#98D8C8',
+      love: '#FF69B4',
+      sadness: '#6495ED',
+      fear: '#9370DB',
+      anger: '#DC143C',
+      disgust: '#8B7355',
+      contempt: '#696969',
+      neutral: '#A0A0A0'
+    };
+    return colors[emotion] || '#A0A0A0';
+  };
+
+  const calculatePerformanceMetrics = (data: AnalyticsSnapshot[], participant: 'user' | 'partner'): PerformanceMetrics => {
+    if (data.length === 0) {
+      return {
+        eyeContactPercentage: 0,
+        postureScore: 0,
+        speakingRatio: 0,
+        responseTime: 1.5,
+        emotionalEngagement: 0,
+        activeListening: 0
+      };
+    }
+    
+    let eyeContactCount = 0;
+    let avgPosture = 0;
+    let speakingTime = 0;
+    const emotionVariety = new Set<string>();
+    
+    data.forEach(snapshot => {
+      const isUser = participant === 'user';
+      
+      if (isUser ? snapshot.userEyeContact : snapshot.partnerEyeContact) {
+        eyeContactCount++;
+      }
+      
+      avgPosture += isUser ? snapshot.userPosture.overall : snapshot.partnerPosture.overall;
+      
+      if (isUser ? snapshot.userSpeaking : snapshot.partnerSpeaking) {
+        speakingTime++;
+      }
+      
+      const emotions = isUser ? snapshot.userEmotions : snapshot.partnerEmotions;
+      emotions.forEach(e => emotionVariety.add(e.name));
+    });
+    
+    const totalFrames = data.length;
+    const metrics = {
+      eyeContactPercentage: (eyeContactCount / totalFrames) * 100,
+      postureScore: avgPosture / totalFrames,
+      speakingRatio: speakingTime / analyticsData.length,
+      responseTime: 1.5, // Placeholder
+      emotionalEngagement: emotionVariety.size / 10, // Normalize to 0-1
+      activeListening: 0.7 // Placeholder
+    };
+    
+    return metrics;
+  };
+
+  return (
+    <div className="video-call-analytics">
+      {/* Room creation/joining UI */}
+      {!isInRoom && (
+        <div className="room-controls">
+          <h2>Video Call Analytics Demo</h2>
+          <div className="room-options">
+            <div className="create-room">
+              <h3>Create a Room</h3>
+              <input
+                type="text"
+                placeholder="Your name"
+                value={currentUserName}
+                onChange={(e) => setCurrentUserName(e.target.value)}
+              />
+              <button onClick={() => createRoom(currentUserName)} disabled={!currentUserName}>
+                Create Room
+              </button>
+            </div>
+            
+            <div className="divider">OR</div>
+            
+            <div className="join-room">
+              <h3>Join a Room</h3>
+              <input
+                type="text"
+                placeholder="Room ID"
+                value={joinRoomId}
+                onChange={(e) => setJoinRoomId(e.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Your name"
+                value={currentUserName}
+                onChange={(e) => setCurrentUserName(e.target.value)}
+              />
+              <button onClick={() => joinRoom(joinRoomId, currentUserName)} disabled={!joinRoomId || !currentUserName}>
+                Join Room
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code display for room sharing */}
+      {showQrCode && qrCodeUrl && (
+        <div className="qr-code-modal">
+          <div className="qr-content">
+            <h3>Share Room</h3>
+            <p>Room ID: {roomId}</p>
+            <img src={qrCodeUrl} alt="Room QR Code" />
+            <button onClick={() => setShowQrCode(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* Main video call interface */}
+      {isInRoom && (
+        <div className="video-call-container">
+          <div className="connection-status">
+            <span className={`status-indicator ${connectionStatus === 'Connected' ? 'connected' : 'connecting'}`}></span>
+            {connectionStatus}
+          </div>
+
+          <div className="video-grid">
+            <div className="local-video-container">
+              <video
+                ref={userVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className="local-video"
+              />
+              <div className="video-label">You ({currentUserName})</div>
+              <div className="local-controls">
+                <button onClick={toggleMute} className={`control-btn ${isMuted ? 'disabled' : ''}`}>
+                  <Mic className={isMuted ? 'off' : ''} size={20} />
+                </button>
+                <button onClick={toggleVideo} className={`control-btn ${!isVideoEnabled ? 'disabled' : ''}`}>
+                  <Camera className={isVideoEnabled ? '' : 'off'} size={20} />
+                </button>
+              </div>
+            </div>
+
+            <div className="remote-video-container">
+              <video
+                ref={partnerVideoRef}
+                autoPlay
+                playsInline
+                className="remote-video"
+              />
+              {guestName && <div className="video-label">{guestName}</div>}
+            </div>
+          </div>
+
+          {/* Call controls */}
+          <div className="call-controls">
+            <button className="end-call-btn" onClick={endCall}>
+              <PhoneOff size={24} />
+              End Call
+            </button>
+            {isHost && (
+              <button className="share-btn" onClick={() => setShowQrCode(true)}>
+                <Share2 size={20} />
+                Share Room
+              </button>
+            )}
+          </div>
+
+          {/* Analytics visualization */}
+          {isCallActive && (
+            <div className="analytics-panel">
+              <h3>Live Analytics</h3>
+              <div className="metrics-grid">
+                <div className="metric">
+                  <Eye size={16} />
+                  <span>Eye Contact</span>
+                  <div className="metric-value">
+                    {analyticsData.length > 0 && analyticsData[analyticsData.length - 1].userEyeContact ? '✓' : '✗'}
+                  </div>
+                </div>
+                <div className="metric">
+                  <Users size={16} />
+                  <span>Posture</span>
+                  <div className="metric-value">
+                    {analyticsData.length > 0 ? 
+                      `${Math.round(analyticsData[analyticsData.length - 1].userPosture.overall * 100)}%` : 
+                      '0%'
+                    }
+                  </div>
+                </div>
+                <div className="metric">
+                  <Heart size={16} />
+                  <span>Emotion</span>
+                  <div className="metric-value">
+                    {analyticsData.length > 0 && analyticsData[analyticsData.length - 1].userEmotions.length > 0 ? 
+                      analyticsData[analyticsData.length - 1].userEmotions[0].name : 
+                      'Neutral'
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Call report display */}
+      {callReport && <CallReportView report={callReport} onClose={() => setCallReport(null)} />}
+    </div>
+  );
+};
+
+// Separate component for the comprehensive report
+const CallReportView: React.FC<{ report: CallReport; onClose: () => void }> = ({ report, onClose }) => {
+  return (
+    <div className="call-report">
+      <div className="report-header">
+        <h2>Call Analysis Report</h2>
+        <button onClick={onClose} className="close-button">
+          <PhoneOff size={20} />
+        </button>
+      </div>
+      
+      <div className="chemistry-score">
+        <h3>Chemistry Score</h3>
+        <div className="score-display">
+          <div className="score-value">{Math.round(report.chemistryScore * 100)}%</div>
+          <div className="score-label">Overall Chemistry</div>
+        </div>
+      </div>
+      
+      <div className="metrics-comparison">
+        <div className="participant-metrics">
+          <h4>Your Performance</h4>
+          <MetricsList metrics={report.userMetrics} />
+        </div>
+        <div className="participant-metrics">
+          <h4>Partner Performance</h4>
+          <MetricsList metrics={report.partnerMetrics} />
+        </div>
+      </div>
+      
+      <div className="recommendations-section">
+        <h3><Award className="icon" /> Recommendations</h3>
+        {report.recommendations.map(rec => (
+          <RecommendationCard key={rec.id} recommendation={rec} />
+        ))}
+      </div>
+      
+      <div className="ai-summary">
+        <h3><MessageSquare className="icon" /> AI Summary</h3>
+        <p>{report.aiSummary}</p>
+      </div>
+    </div>
+  );
+};
+
+const MetricsList: React.FC<{ metrics: PerformanceMetrics }> = ({ metrics }) => {
+  return (
+    <div className="metrics-list">
+      <div className="metric-item">
+        <Eye className="metric-icon" />
+        <span>Eye Contact: {Math.round(metrics.eyeContactPercentage)}%</span>
+      </div>
+      <div className="metric-item">
+        <Users className="metric-icon" />
+        <span>Posture Score: {(metrics.postureScore * 100).toFixed(0)}%</span>
+      </div>
+      <div className="metric-item">
+        <Mic className="metric-icon" />
+        <span>Speaking Ratio: {(metrics.speakingRatio * 100).toFixed(0)}%</span>
+      </div>
+      <div className="metric-item">
+        <Heart className="metric-icon" />
+        <span>Engagement: {(metrics.emotionalEngagement * 100).toFixed(0)}%</span>
+      </div>
+    </div>
+  );
+};
+
+const RecommendationCard: React.FC<{ recommendation: Recommendation }> = ({ recommendation }) => {
+  const priorityColors = {
+    high: '#FF6B6B',
+    medium: '#FFD93D',
+    low: '#4ECDC4'
+  };
+  
+  return (
+    <div className="recommendation-card">
+      <div className="rec-header">
+        <span className="rec-category">{recommendation.category}</span>
+        <span 
+          className="rec-priority" 
+          style={{ backgroundColor: priorityColors[recommendation.priority] }}
+        >
+          {recommendation.priority}
+        </span>
+      </div>
+      <h4>{recommendation.title}</h4>
+      <p>{recommendation.description}</p>
+      {recommendation.coach && (
+        <div className="rec-coach">
+          <span>Recommended Coach: {recommendation.coach}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default VideoCallAnalytics;

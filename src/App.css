@@ -132,6 +132,27 @@ body {
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
+  background: 
+    conic-gradient(from 0deg at center, 
+      transparent 0deg,
+      rgba(255, 255, 255, 0.08) 30deg,
+      transparent 90deg,
+      rgba(255, 255, 255, 0.05) 150deg,
+      transparent 210deg,
+      rgba(255, 255, 255, 0.1) 270deg,
+      transparent 330deg,
+      transparent 360deg
+    );
+  animation: majesticallyRotate 180s linear infinite;
+}
+
+@keyframes majesticallyRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Floating Hearts */

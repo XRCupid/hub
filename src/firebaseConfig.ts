@@ -1,6 +1,6 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth, signInAnonymously } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 import { getDatabase, Database } from 'firebase/database';
 
 // Firebase configuration from environment variables
@@ -21,10 +21,10 @@ console.log('- Project ID:', process.env.REACT_APP_FIREBASE_PROJECT_ID);
 console.log('- Database URL:', process.env.REACT_APP_FIREBASE_DATABASE_URL);
 
 // Initialize Firebase
-let app;
+let app: FirebaseApp;
 let db: Database | null = null;
-let firestore;
-let auth;
+let firestore: Firestore;
+let auth: Auth;
 let database: Database | null = null;
 
 // Flag to prevent duplicate initialization
@@ -37,7 +37,11 @@ if (!isInitialized) {
     console.log('✅ Firebase app initialized:', app);
     
     console.log('🚀 Attempting to get database...');
-    database = getDatabase(app);
+    if (process.env.REACT_APP_FIREBASE_DATABASE_URL) {
+      database = getDatabase(app, process.env.REACT_APP_FIREBASE_DATABASE_URL);
+    } else {
+      database = getDatabase(app);
+    }
     db = database;
     console.log('✅ Database initialized:', database);
     
@@ -48,6 +52,15 @@ if (!isInitialized) {
     console.log('🚀 Attempting to get auth...');
     auth = getAuth(app);
     console.log('✅ Auth initialized:', auth);
+    
+    // Sign in anonymously for Firestore/Database access
+    signInAnonymously(auth)
+      .then(() => {
+        console.log('✅ Signed in anonymously');
+      })
+      .catch((error) => {
+        console.error('❌ Anonymous auth error:', error);
+      });
     
     console.log('✅ Firebase initialized successfully with real credentials');
     isInitialized = true;
@@ -70,6 +83,11 @@ export { app, db, database, firestore, auth };
 
 // Helper function to check if we're using real Firebase
 export const isRealFirebase = () => {
+  // Check if explicitly set to use real Firebase
+  if (process.env.REACT_APP_USE_REAL_FIREBASE === 'false') {
+    return false;
+  }
+  
   return !!process.env.REACT_APP_FIREBASE_API_KEY && 
          process.env.REACT_APP_FIREBASE_API_KEY !== 'mock' &&
          process.env.REACT_APP_FIREBASE_API_KEY !== '';

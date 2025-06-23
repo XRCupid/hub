@@ -98,6 +98,7 @@ import { PerformanceToProgress } from './components/PerformanceToProgress';
 import { CoachingSessionDemo } from './components/CoachingSessionDemo';
 import AvatarCreationHub from './pages/AvatarCreationHub';
 import ConferenceDemoLauncher from './components/ConferenceDemoLauncher';
+import VideoCallAnalytics from './components/VideoCallAnalytics';
 import { SkillTreeDiagram } from './components/SkillTreeDiagram';
 import { InteractiveCurriculumOverview } from './components/InteractiveCurriculumOverview';
 import { InteractiveCurriculumOverviewSimple } from './components/InteractiveCurriculumOverviewSimple';
@@ -276,6 +277,9 @@ const AppContent = () => {
           
           {/* Avatar Creation Hub */}
           <Route path="/avatar-creation-hub" element={<AvatarCreationHub />} />
+          
+          {/* Video Call Analytics */}
+          <Route path="/video-analytics" element={<VideoCallAnalytics />} />
           
           {/* Practice Date with NPC */}
           <Route path="/practice-date/:npcId" element={<PracticeDate />} />
