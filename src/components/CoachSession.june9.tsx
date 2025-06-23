@@ -53,8 +53,8 @@ const CoachSession: React.FC = () => {
       playAudioWithAnalysis(audioBlob);
     });
 
-    humeVoiceService.setOnEmotionCallback((emotions: EmotionalState) => {
-      setCurrentEmotion(emotions);
+    humeVoiceService.setOnEmotionCallback((emotions: any[]) => {
+      setCurrentEmotion(emotions as unknown as EmotionalState);
     });
 
     humeVoiceService.setOnMessageCallback((message: any) => {
