@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';
 import './FacePuppetingDemo.css';
 
-const trackingService = new CombinedFaceTrackingService();
+const trackingService = CombinedFaceTrackingService.getInstance();
 
 export const SimpleFaceTrackingDemo: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);

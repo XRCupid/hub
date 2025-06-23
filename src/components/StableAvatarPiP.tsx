@@ -131,7 +131,7 @@ export const StableAvatarPiP: React.FC<StableAvatarPiPProps> = ({
         // Initialize tracking service
         if (!trackingService.current) {
           console.log('[DEBUG] Creating new CombinedFaceTrackingService');
-          trackingService.current = new CombinedFaceTrackingService();
+          trackingService.current = CombinedFaceTrackingService.getInstance();
           console.log('[DEBUG] Initializing tracking service...');
           await trackingService.current.initialize();
           console.log('[DEBUG] Tracking service initialized');
@@ -191,7 +191,7 @@ export const StableAvatarPiP: React.FC<StableAvatarPiPProps> = ({
     
     if (!trackingService.current) {
       console.error('[DEBUG] Tracking service not initialized, creating new instance');
-      trackingService.current = new CombinedFaceTrackingService();
+      trackingService.current = CombinedFaceTrackingService.getInstance();
       try {
         await trackingService.current.initialize();
         console.log('[DEBUG] Tracking service initialized');

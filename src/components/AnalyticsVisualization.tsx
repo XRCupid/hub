@@ -112,12 +112,12 @@ export const AnalyticsVisualization: React.FC<AnalyticsVisualizationProps> = ({ 
     g.append('g')
       .attr('transform', `translate(0,${height})`)
       .call(d3.axisBottom(xScale)
-        .tickFormat(d => `${Math.floor(d / 60000)}:${String(Math.floor((d % 60000) / 1000)).padStart(2, '0')}`))
+        .tickFormat((d, i) => `${Math.floor(+d / 60000)}:${String(Math.floor((+d % 60000) / 1000)).padStart(2, '0')}`))
       .attr('class', 'x-axis');
 
     g.append('g')
       .call(d3.axisLeft(yScale)
-        .tickFormat(d => `${(d * 100).toFixed(0)}%`))
+        .tickFormat((d, i) => `${(+d * 100).toFixed(0)}%`))
       .attr('class', 'y-axis');
 
     // Create lines for different metrics

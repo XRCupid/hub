@@ -120,7 +120,7 @@ const ComputerVisionDemo: React.FC = () => {
     // Initialize services
     postureService.current = new PostureTrackingService();
     faceService.current = new ML5FaceMeshService();
-    combinedService.current = new CombinedFaceTrackingService();
+    combinedService.current = CombinedFaceTrackingService.getInstance();
 
     return () => {
       // Cleanup

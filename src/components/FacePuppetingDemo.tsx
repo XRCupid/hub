@@ -29,9 +29,7 @@ export const FacePuppetingDemo: React.FC = () => {
         setStatus('Initializing tracking services...');
         
         // Initialize the combined service first
-        if (!trackingService.current) {
-          trackingService.current = new CombinedFaceTrackingService();
-        }
+        trackingService.current = CombinedFaceTrackingService.getInstance();
         await trackingService.current.initialize();
         setStatus('Tracking services initialized');
         

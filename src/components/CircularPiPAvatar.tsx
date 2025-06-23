@@ -173,7 +173,7 @@ export const CircularPiPAvatar: React.FC<CircularPiPAvatarProps> = ({
           // Initialize face tracking service
           if (!trackingService.current) {
             console.log('🎥 PiP creating tracking service...');
-            trackingService.current = new CombinedFaceTrackingService();
+            trackingService.current = CombinedFaceTrackingService.getInstance();
             console.log('🎥 PiP tracking service created');
           }
           

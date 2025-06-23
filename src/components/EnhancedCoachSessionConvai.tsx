@@ -150,8 +150,9 @@ const EnhancedCoachSessionConvai: React.FC = () => {
   useEffect(() => {
     const initializeTracking = async () => {
       try {
+        console.log('[EnhancedCoachSessionConvai] Initializing tracking services');
         ml5ServiceRef.current = new ML5FaceMeshService();
-        combinedServiceRef.current = new CombinedFaceTrackingService();
+        combinedServiceRef.current = CombinedFaceTrackingService.getInstance();
         
         await ml5ServiceRef.current.initialize();
         

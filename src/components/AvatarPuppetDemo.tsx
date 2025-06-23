@@ -73,7 +73,7 @@ export default function AvatarPuppetDemo() {
   useEffect(() => {
     // Initialize services
     postureService.current = new PostureTrackingService();
-    faceService.current = new CombinedFaceTrackingService();
+    faceService.current = CombinedFaceTrackingService.getInstance();
     
     // Initialize face tracking service
     const initializeFaceTracking = async () => {
