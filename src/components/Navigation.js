@@ -21,6 +21,7 @@ const Navigation = () => {
     { path: '/dating-simulation', label: 'XR Dating Sim', icon: <HeartIcon size={20} /> },
     { path: '/coach-call', label: 'AI Coach', icon: <SparkleIcon size={20} /> },
     { path: '/avatar-creation-hub', label: 'Avatar Studio', icon: <SparkleIcon size={20} /> },
+    { path: '/video-analytics', label: 'Video Calls', icon: <RadiatingHeartIcon size={20} /> },
     { path: '/dashboard', label: 'Dashboard', icon: <WingedHeartIcon size={20} /> }
   ];
 
