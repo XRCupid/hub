@@ -42,7 +42,6 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [showQrCode, setShowQrCode] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState('');
-  const [userName, setUserName] = useState('');
   const [guestName, setGuestName] = useState('');
   
   // WebRTC refs
@@ -180,12 +179,22 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
   const createRoom = async () => {
     console.log('🔥 [CREATE ROOM] Button clicked!');
     console.log('🔥 [CREATE ROOM] localStream:', !!localStream);
-    console.log('🔥 [CREATE ROOM] userName:', userName);
+    console.log('🔥 [CREATE ROOM] currentUserName:', currentUserName);
     console.log('🔥 [CREATE ROOM] database:', !!database);
     
-    if (!localStream || !userName.trim()) {
-      console.log('❌ [CREATE ROOM] Missing requirements - localStream:', !!localStream, 'userName:', userName);
-      alert('Please enter your name and ensure camera access');
+    // Initialize camera if not available
+    if (!localStream) {
+      console.log('🎥 [CREATE ROOM] Initializing camera...');
+      const stream = await initializeMedia();
+      if (!stream) {
+        alert('Camera access required to create a room');
+        return;
+      }
+    }
+    
+    if (!currentUserName.trim()) {
+      console.log('❌ [CREATE ROOM] Missing name:', currentUserName);
+      alert('Please enter your name');
       return;
     }
 
@@ -207,7 +216,7 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
 
       // Set up room info like the working conference demo
       await set(ref(database, `rooms/${createdRoomId}/info`), {
-        hostName: userName,
+        hostName: currentUserName,
         hostPeerId: myPeerIdRef.current,
         createdAt: Date.now(),
         isActive: true
