@@ -287,7 +287,8 @@ const AppContent = () => {
           <Route path="/live-demo-controller" element={<LiveDemoController />} />
           <Route path="/demo-controller" element={<LiveDemoController />} />
           
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Temporarily commented out to debug VideoCallAnalytics routing */}
+          {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
         </Routes>
       </main>
     </>

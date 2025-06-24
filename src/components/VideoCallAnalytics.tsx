@@ -6,9 +6,8 @@ import { EmotionScore, PostureScore, TranscriptEntry, AnalyticsSnapshot, VideoCa
 import { Eye, Activity, TrendingUp, Heart, Users, Mic, MicOff, PhoneOff, Clock, MessageSquare, Award, Camera, Share2 } from 'lucide-react';
 import Peer from 'simple-peer';
 import QRCode from 'qrcode';
-import { firestoreConferenceService } from '../services/firestoreConferenceService';
-import { mockFirebaseConference } from '../services/mockFirebaseConference';
-import { isRealFirebase } from '../firebaseConfig';
+import { database } from '../firebaseConfig';
+import { ref, push, set, onValue, get, update } from 'firebase/database';
 import './VideoCallAnalytics.css';
 
 const EMOTION_COLORS: Record<string, string> = {
@@ -67,9 +66,6 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
   const webgazerRef = useRef<any>(null);
   const poseNetRef = useRef<any>(null);
   const faceMeshRef = useRef<any>(null);
-
-  // Use Firestore service for real Firebase, mock for development
-  const firebaseService = isRealFirebase() ? firestoreConferenceService : mockFirebaseConference;
 
   // Ensure video element gets the stream when available
   useEffect(() => {
@@ -191,84 +187,107 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
     if (!stream) return;
 
     console.log('Creating room...');
-    const createdRoomId = await firebaseService.createRoom(userName);
-    
-    if (!createdRoomId) {
-      console.error('Failed to create room');
-      return;
-    }
-
-    setRoomId(createdRoomId);
-    roomRef.current = createdRoomId;
-    myPeerIdRef.current = 'host-peer';
-    setIsHost(true);
-    setCurrentUserName(userName);
-    setIsInRoom(true);
-    setConnectionStatus('Waiting for partner...');
-
-    // Generate QR code
     try {
-      const joinUrl = `${window.location.origin}/video-analytics?room=${createdRoomId}`;
-      const qrDataUrl = await QRCode.toDataURL(joinUrl, {
-        width: 300,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        }
-      });
-      setQrCodeUrl(qrDataUrl);
-      setShowQrCode(true);
-    } catch (err) {
-      console.error('Error generating QR code:', err);
-    }
-
-    // Listen for guest
-    const unsubscribe = firebaseService.onRoomUpdate(createdRoomId, (roomData: any) => {
-      if (roomData.participants && roomData.participants.length > 1 && !peerRef.current) {
-        const guest = roomData.participants.find((p: string) => p !== userName);
-        if (guest) {
-          console.log('Guest joined:', guest);
-          setGuestName(guest);
-          setConnectionStatus('Partner joined, connecting...');
-          setShowQrCode(false);
-          createPeer(true, 'guest-peer');
-        }
+      const createdRoomId = await push(ref(database, 'rooms'), { participants: [userName] }).key;
+      console.log('Room creation result:', createdRoomId);
+      
+      if (!createdRoomId) {
+        console.error('Failed to create room - no room ID returned');
+        alert('Failed to create room. Please check your internet connection and try again.');
+        return;
       }
-    });
 
-    // Listen for signals
-    firebaseService.onSnapshot(
-      `conference-rooms/${createdRoomId}/signals`,
-      (signals: any) => {
-        if (signals && signals['guest-peer'] && signals['guest-peer']['host-peer']) {
-          const signal = signals['guest-peer']['host-peer'];
-          if (peerRef.current && signal.timestamp > Date.now() - 30000) {
-            peerRef.current.signal(signal.data);
+      console.log('Room created successfully:', createdRoomId);
+      setRoomId(createdRoomId);
+      roomRef.current = createdRoomId;
+      myPeerIdRef.current = 'host-peer';
+      setIsHost(true);
+      setCurrentUserName(userName);
+      setIsInRoom(true);
+      setConnectionStatus('Waiting for partner...');
+
+      // Generate QR code
+      try {
+        const joinUrl = `${window.location.origin}/hub#/video-analytics?room=${createdRoomId}`;
+        const qrDataUrl = await QRCode.toDataURL(joinUrl, {
+          width: 300,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        });
+        setQrCodeUrl(qrDataUrl);
+        setShowQrCode(true);
+      } catch (err) {
+        console.error('Error generating QR code:', err);
+      }
+
+      // Listen for guest
+      onValue(ref(database, `rooms/${createdRoomId}/participants`), (snapshot) => {
+        if (snapshot.val() && snapshot.val().length > 1 && !peerRef.current) {
+          const guest = snapshot.val().find((p: string) => p !== userName);
+          if (guest) {
+            console.log('Guest joined:', guest);
+            setGuestName(guest);
+            setConnectionStatus('Partner joined, connecting...');
+            setShowQrCode(false);
+            createPeer(true, 'guest-peer');
           }
         }
-      }
-    );
+      });
+
+      // Listen for signals from guest
+      onValue(ref(database, `rooms/${createdRoomId}/signals/guest-peer`), (snapshot) => {
+        const signal = snapshot.val();
+        if (signal && peerRef.current && signal.timestamp > Date.now() - 30000) {
+          console.log('🎯 [HOST] Received signal from guest:', signal);
+          peerRef.current.signal(signal.data);
+        }
+      });
+    } catch (error) {
+      console.error('Error creating room:', error);
+      alert('Failed to create room. Please check your internet connection and try again.');
+    }
   };
 
   // Join an existing room
   const joinRoom = async (roomId: string, userName: string) => {
-    if (!userName.trim() || !roomId.trim()) {
+    console.log('🔄 [JOIN] Starting room join process:', { roomId, userName });
+    
+    if (!roomId.trim() || !userName.trim()) {
+      console.error('❌ [JOIN] Missing room ID or username');
       alert('Please enter your name and room ID');
       return;
     }
 
     const stream = await initializeMedia();
-    if (!stream) return;
-
-    console.log('Joining room:', roomId);
-    const joined = await firebaseService.joinRoom(roomId, userName);
-    
-    if (!joined) {
-      alert('Failed to join room');
+    if (!stream) {
+      console.error('❌ [JOIN] Failed to initialize media');
       return;
     }
 
+    console.log('✅ [JOIN] Media initialized, attempting to join room:', roomId);
+    const participantsSnapshot = await get(ref(database, `rooms/${roomId}/participants`));
+    const currentParticipants = participantsSnapshot.val() || [];
+    
+    if (currentParticipants.length >= 2) {
+      alert('Room is full!');
+      return;
+    }
+    
+    // Add ourselves to participants
+    const updatedParticipants = [...currentParticipants, userName];
+    await set(ref(database, `rooms/${roomId}/participants`), updatedParticipants);
+    
+    console.log('🔄 [JOIN] Successfully joined room');
+    
+    if (!updatedParticipants.includes(userName)) {
+      alert('Failed to join room. Please try again.');
+      return;
+    }
+
+    console.log('✅ [JOIN] Successfully joined room, setting up peer connection');
     roomRef.current = roomId;
     myPeerIdRef.current = 'guest-peer';
     setIsHost(false);
@@ -277,9 +296,9 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
     setConnectionStatus('Connecting to host...');
 
     // Get host name from room data
-    const roomData = await firebaseService.getRoom(roomId);
-    if (roomData && roomData.participants && roomData.participants.length > 0) {
-      const hostName = roomData.participants.find((p: string) => p !== userName);
+    const roomData = await get(ref(database, `rooms/${roomId}`));
+    if (roomData.val() && roomData.val().participants && roomData.val().participants.length > 0) {
+      const hostName = roomData.val().participants.find((p: string) => p !== userName);
       if (hostName) {
         setGuestName(hostName);
       }
@@ -288,18 +307,14 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
     // Create peer connection
     createPeer(false, 'host-peer');
 
-    // Listen for signals
-    firebaseService.onSnapshot(
-      `conference-rooms/${roomId}/signals`,
-      (signals: any) => {
-        if (signals && signals['host-peer'] && signals['host-peer']['guest-peer']) {
-          const signal = signals['host-peer']['guest-peer'];
-          if (peerRef.current && signal.timestamp > Date.now() - 30000) {
-            peerRef.current.signal(signal.data);
-          }
-        }
+    // Listen for signals from host
+    onValue(ref(database, `rooms/${roomId}/signals/host-peer`), (snapshot) => {
+      const signal = snapshot.val();
+      if (signal && peerRef.current && signal.timestamp > Date.now() - 30000) {
+        console.log('🎯 [GUEST] Received signal from host:', signal);
+        peerRef.current.signal(signal.data);
       }
-    );
+    });
   };
 
   // Create WebRTC peer connection
@@ -318,7 +333,10 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
 
     peer.on('signal', (data: any) => {
       if (roomRef.current) {
-        firebaseService.sendSignal(roomRef.current, myPeerIdRef.current, targetPeerId, data);
+        set(ref(database, `rooms/${roomRef.current}/signals/${myPeerIdRef.current}`), {
+          data,
+          timestamp: Date.now()
+        });
       }
     });
 
@@ -383,8 +401,13 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
     }
 
     if (roomRef.current && currentUserName) {
-      // Since leaveRoom doesn't exist, we'll just clean up locally
-      // The Firebase cleanup would need to be implemented in conferenceFirebaseService
+      const participantsRef = ref(database, `rooms/${roomRef.current}/participants`);
+      get(participantsRef).then((snapshot) => {
+        if (snapshot.val()) {
+          const updatedParticipants = snapshot.val().filter((p: string) => p !== currentUserName);
+          update(participantsRef, updatedParticipants);
+        }
+      });
     }
 
     setIsInRoom(false);
@@ -399,9 +422,12 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
 
   // Check for room ID in URL on mount
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const roomFromUrl = params.get('room');
-    if (roomFromUrl) {
+    const urlHash = window.location.hash;
+    console.log('🔍 [URL] Current hash:', urlHash);
+    const roomMatch = urlHash.match(/[?&]room=([^&]+)/);
+    if (roomMatch) {
+      const roomFromUrl = roomMatch[1];
+      console.log('✅ [URL] Found room in URL:', roomFromUrl);
       setJoinRoomId(roomFromUrl);
     }
   }, []);
@@ -922,7 +948,7 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
 
           {/* Call controls */}
           <div className="call-controls">
-            <button className="end-call-btn" onClick={endCall}>
+            <button className="end-call-btn" onClick={leaveRoom}>
               <PhoneOff size={24} />
               End Call
             </button>
