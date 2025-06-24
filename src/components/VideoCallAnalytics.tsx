@@ -1,14 +1,45 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ref, push, set, onValue, remove, get, update } from 'firebase/database';
+import { database } from '../firebaseConfig';
+import { conferenceFirebaseService } from '../services/conferenceFirebaseService';
+import { isRealFirebase } from '../firebaseConfig';
+import Peer from 'simple-peer';
+import QRCode from 'qrcode';
+import { HumeVoiceService } from '../services/humeVoiceService';
+import { HumeCredentialsService } from '../services/humeCredentialsService';
+import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';
+import { collectAnalytics } from '../services/analyticsService';
+import { aiModelService } from '../services/aiModelService';
+import { saveCallData } from '../services/callDataService';
+import { VideoCallTypes } from '../types/VideoCallTypes';
+import { callReportService } from '../services/callReportService';
+import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
+import { PostureTrackingService } from '../services/PostureTrackingService';
+import { FaceTrackingDebugService } from '../services/FaceTrackingDebugService';
+import { ExpressionsService } from '../services/ExpressionsService';
+import { AnalyticsService } from '../services/AnalyticsService';
+import { HumeExpressionService } from '../services/HumeExpressionService';
+import { EyeContactService } from '../services/EyeContactService';
+import { gestureService } from '../services/gestureService';
+import { HeadRotationService } from '../services/HeadRotationService';
+import { performanceService } from '../services/performanceService';
+import { CallReport } from '../types/CallReport';
+import { CallAnalytics } from '../types/CallAnalytics';
+import { EmotionScore } from '../types/EmotionScore';
+import { TranscriptSegment } from '../types/TranscriptSegment';
+import { VideoCallAnalyticsStyles } from '../styles/VideoCallAnalyticsStyles';
+import { ChemistryScore } from '../types/ChemistryScore';
+import { NetworkQualityType } from '../types/NetworkQualityType';
+import { UserFeedback } from '../types/UserFeedback';
+import { VideoQuality } from '../types/VideoQuality';
+import { PerformanceMetrics } from '../types/PerformanceMetrics';
+import { CoachingRecommendation } from '../types/CoachingRecommendation';
+import { logger } from '../services/logger';
 import FaceMesh from '@mediapipe/face_mesh';
 import VideoCallAnalyzer from '../services/VideoCallAnalyzer';
 import { HumeVoiceServiceWrapper } from '../services/HumeVoiceServiceWrapper';
 import { EmotionScore, PostureScore, TranscriptEntry, AnalyticsSnapshot, VideoCallAnalyticsProps, CallReport, PerformanceMetrics, Recommendation } from '../types/VideoCallTypes';
 import { Eye, Activity, TrendingUp, Heart, Users, Mic, MicOff, PhoneOff, Clock, MessageSquare, Award, Camera, Share2 } from 'lucide-react';
-import Peer from 'simple-peer';
-import QRCode from 'qrcode';
-import { database } from '../firebaseConfig';
-import { ref, push, set, onValue, get, update } from 'firebase/database';
-import './VideoCallAnalytics.css';
 
 const EMOTION_COLORS: Record<string, string> = {
   joy: '#FFD700',
@@ -27,6 +58,10 @@ const EMOTION_COLORS: Record<string, string> = {
 };
 
 export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose, partnerName = 'Partner' }) => {
+  // Firebase service instance
+  const firebaseService = conferenceFirebaseService;
+  const usingRealFirebase = isRealFirebase();
+
   // Video call states
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -175,96 +210,97 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
     }
   };
 
+  // Setup guest listener function
+  const setupGuestListener = (roomId: string) => {
+    console.log('👥 [GUEST LISTENER] Setting up for room:', roomId);
+    
+    const unsubscribe = firebaseService.onRoomUpdate(roomId, (roomData: any) => {
+      console.log('👥 [GUEST LISTENER] Room update received:', roomData);
+      if (roomData.participants && roomData.participants.length > 1 && !peerRef.current) {
+        const guestName = roomData.participants.find((p: string) => p !== currentUserName);
+        if (guestName) {
+          console.log('👥 [GUEST LISTENER] Guest joined:', guestName);
+          setGuestName(guestName);
+          setConnectionStatus('Guest joined, connecting...');
+          setShowQrCode(false);
+          createPeer(true, 'guest-peer');
+        }
+      }
+    });
+  };
+
   // Create a new room
   const createRoom = async () => {
     console.log('🔥 [CREATE ROOM] Button clicked!');
-    console.log('🔥 [CREATE ROOM] localStream:', !!localStream);
     console.log('🔥 [CREATE ROOM] currentUserName:', currentUserName);
-    console.log('🔥 [CREATE ROOM] database:', !!database);
-    
-    // Initialize camera if not available
-    if (!localStream) {
-      console.log('🎥 [CREATE ROOM] Initializing camera...');
-      const stream = await initializeMedia();
-      if (!stream) {
-        alert('Camera access required to create a room');
-        return;
-      }
-    }
+    console.log('🔥 [CREATE ROOM] Using Firebase service:', 'Real');
     
     if (!currentUserName.trim()) {
-      console.log('❌ [CREATE ROOM] Missing name:', currentUserName);
-      alert('Please enter your name');
+      console.log('❌ [CREATE ROOM] Missing user name');
       return;
     }
 
-    if (!database) {
-      console.log('❌ [CREATE ROOM] Database is null');
-      alert('Database connection failed. Please check your internet connection.');
-      return;
+    if (!localStream) {
+      console.log('🎥 [CREATE ROOM] Initializing camera...');
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: true 
+        });
+        setLocalStream(stream);
+        if (userVideoRef.current) {
+          userVideoRef.current.srcObject = stream;
+        }
+        console.log('✅ [CREATE ROOM] Camera initialized');
+      } catch (error) {
+        console.error('❌ [CREATE ROOM] Camera access failed:', error);
+        return;
+      }
     }
 
-    console.log('Creating room...');
     try {
-      const createdRoomId = (await push(ref(database, 'rooms'), {})).key;
-      console.log('Room creation result:', createdRoomId);
+      console.log('Creating room...');
+      const createdRoomId = await firebaseService.createRoom(currentUserName);
+      console.log('✅ [CREATE ROOM] Room created with ID:', createdRoomId);
       
       if (!createdRoomId) {
-        alert('Failed to create room - no room ID returned');
+        console.error('❌ [CREATE ROOM] Failed to create room');
         return;
       }
 
-      // Set up room info like the working conference demo
-      await set(ref(database, `rooms/${createdRoomId}/info`), {
-        hostName: currentUserName,
-        hostPeerId: myPeerIdRef.current,
-        createdAt: Date.now(),
-        isActive: true
-      });
-
-      // Clear old signals
-      await set(ref(database, `rooms/${createdRoomId}/signals`), null);
-
       setRoomId(createdRoomId);
-      roomRef.current = createdRoomId;
-      setIsInRoom(true);
       setIsHost(true);
-      setGuestName('');
+      setIsInRoom(true);
+      setCallStartTime(Date.now());
       
-      // Generate QR code
-      const qrUrl = `https://xrcupid.github.io/hub#/video-analytics?room=${createdRoomId}`;
-      console.log('🔗 QR URL:', qrUrl);
+      // Generate QR code for mobile joining
       try {
-        const qr = await QRCode.toDataURL(qrUrl);
-        setQrCodeUrl(qr);
-      } catch (error) {
-        console.error('QR generation failed:', error);
-      }
-
-      // Listen for guest joining (conference demo pattern)
-      onValue(ref(database, `rooms/${createdRoomId}/guest`), (snapshot) => {
-        const guestData = snapshot.val();
-        if (guestData && !peerRef.current) {
-          console.log('Guest joined, creating peer connection');
-          setGuestName(guestData.name || 'Guest');
-          createPeer(true, 'guest-peer');
-        }
-      });
-
-      // Listen for signals from guest
-      onValue(ref(database, `rooms/${createdRoomId}/signals`), (snapshot) => {
-        const signals = snapshot.val();
-        if (signals && signals['guest-peer'] && signals['guest-peer']['host-peer']) {
-          const signal = signals['guest-peer']['host-peer'];
-          if (peerRef.current && signal.timestamp > Date.now() - 30000) {
-            console.log('🎯 [HOST] Received signal from guest:', signal);
-            peerRef.current.signal(JSON.parse(signal.signal));
+        const mobileUrl = firebaseService.getMobileJoinUrl ? 
+          firebaseService.getMobileJoinUrl(createdRoomId) : 
+          `${window.location.origin}/hub/#/video-analytics?room=${createdRoomId}`;
+        
+        console.log('🔗 [CREATE ROOM] Generating QR code for URL:', mobileUrl);
+        
+        const qrDataUrl = await QRCode.toDataURL(mobileUrl, {
+          width: 300,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
           }
-        }
-      });
+        });
+        setQrCodeUrl(qrDataUrl);
+        setShowQrCode(true);
+      } catch (err) {
+        console.error('❌ [CREATE ROOM] Error generating QR code:', err);
+      }
+      
+      // Setup guest listener
+      console.log('👥 [CREATE ROOM] Setting up guest listener...');
+      setupGuestListener(createdRoomId);
+      
     } catch (error) {
-      console.error('Error creating room:', error);
-      alert('Failed to create room. Please check your internet connection and try again.');
+      console.error('❌ [CREATE ROOM] Error:', error);
     }
   };
 
