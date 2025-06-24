@@ -177,13 +177,20 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
   };
 
   // Create a new room
-  const createRoom = async (userName: string) => {
+  const createRoom = async () => {
+    console.log('🔥 [CREATE ROOM] Button clicked!');
+    console.log('🔥 [CREATE ROOM] localStream:', !!localStream);
+    console.log('🔥 [CREATE ROOM] userName:', userName);
+    console.log('🔥 [CREATE ROOM] database:', !!database);
+    
     if (!localStream || !userName.trim()) {
+      console.log('❌ [CREATE ROOM] Missing requirements - localStream:', !!localStream, 'userName:', userName);
       alert('Please enter your name and ensure camera access');
       return;
     }
 
     if (!database) {
+      console.log('❌ [CREATE ROOM] Database is null');
       alert('Database connection failed. Please check your internet connection.');
       return;
     }
@@ -845,7 +852,7 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
                 value={currentUserName}
                 onChange={(e) => setCurrentUserName(e.target.value)}
               />
-              <button onClick={() => createRoom(currentUserName)} disabled={!currentUserName}>
+              <button onClick={() => createRoom()} disabled={!currentUserName}>
                 Create Room
               </button>
             </div>
