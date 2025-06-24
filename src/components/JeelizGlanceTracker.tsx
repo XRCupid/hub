@@ -62,7 +62,7 @@ export const JeelizGlanceTracker: React.FC<JeelizGlanceTrackerProps> = ({
           if (canvas !== canvasRef.current && canvas.id !== 'avatar-canvas') {
             const ctx = canvas.getContext('webgl') || canvas.getContext('webgl2') || canvas.getContext('experimental-webgl');
             if (ctx) {
-              const loseContext = ctx.getExtension('WEBGL_lose_context');
+              const loseContext = (ctx as WebGLRenderingContext).getExtension('WEBGL_lose_context');
               if (loseContext && !canvas.dataset.keepContext) {
                 console.log(`[JeelizGlanceTracker] Releasing context on canvas ${index}`);
                 loseContext.loseContext();

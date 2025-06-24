@@ -287,7 +287,7 @@ const DougieSpeedDateV3: React.FC = () => {
             setUserDetailedEmotions(comprehensiveData.emotions);
             
             // Also map to simple emotion strings for backward compatibility
-            const emotions = mapBlendshapesToEmotions(comprehensiveData.blendshapes);
+            const emotions = mapBlendshapesToEmotions(comprehensiveData.blendshapes as unknown as Record<string, number>);
             if (emotions.length > 0) {
               console.log('[DougieSpeedDateV3] User emotions detected:', emotions, 'Detailed:', comprehensiveData.emotions.slice(0, 3));
               setUserEmotions(emotions);
@@ -876,6 +876,83 @@ const DougieSpeedDateV3: React.FC = () => {
     }, 3000);
   };
 
+  // Emergency reset function
+  const emergencyReset = () => {
+    console.log('[DougieSpeedDateV3] Emergency reset triggered');
+    
+    // Stop all timers and intervals
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (emotionSnapshotRef.current) clearInterval(emotionSnapshotRef.current);
+    if ((window as any).eyeTrackingInterval) {
+      clearInterval((window as any).eyeTrackingInterval);
+      delete (window as any).eyeTrackingInterval;
+    }
+    
+    // Reset all state
+    setIsConnected(false);
+    setDateStarted(false);
+    setDateEnded(false);
+    setShowReport(false);
+    setUserEmotions([]);
+    setDougieEmotions(['happy']);
+    setTranscriptSegments([]);
+    setEmotionHistory([]);
+    setConversationSegments([]);
+    setCurrentEngagementLevel(0);
+    setConversationFlow(0);
+    setShowSidebar(true);
+    setShowChat(true);
+    setShowPiP(false);
+    setPipSize('medium');
+    setShowControls(true);
+    setShowEngagementDashboard(false);
+    setPracticeMode(false);
+    setCameraZoomed(false);
+    setDelayedShowPiP(false);
+    setIsLookingAtScreen(false);
+    setLookingHistory([]);
+    setShowEyeTracker(false);
+    setEyeTrackerType('none');
+    setHasPermissions(false);
+    setCameraStream(null);
+    setUserBlendshapes({});
+    setUserDetailedEmotions([]);
+    setShowChemistryReport(false);
+    setChemistryData(null);
+    setPipCameraX(0.70);
+    setPipCameraY(1.70);
+    setPipCameraZ(1.80);
+    setPipCameraFOV(25);
+    setPipTargetX(0);
+    setPipTargetY(1.0);
+    setPipTargetZ(0);
+    setShowPipCameraControls(false);
+    setCurrentCameraValues('');
+    setShowTrackingPreferences(false);
+    setTrackingPreferences(null);
+    setTrackingConfiguration(null);
+    setTrackingInsights(null);
+    setIsEyeTrackingEnabled(false);
+    setEyeContactPercentage(0);
+    setGazeCalibrated(false);
+    setEyeContactTotal(0);
+    setEyeContactSamples(0);
+    setLookAwayCount(0);
+    setIsLookingAtAvatar(false);
+    setEngagementAnalytics(null);
+    setPerformanceMetrics(null);
+    setLessonRecommendations([]);
+    setCvAnalyticsMode('none');
+    setCvAnalyticsData(null);
+    setShowCVPanel(false);
+    
+    // Cleanup services
+    safeCleanup();
+    
+    alert('Emergency reset completed. All systems reset.');
+  };
+
+  // CV Panel toggle function
   const handleCVPanelToggle = () => {
     console.log('CV PANEL BUTTON CLICKED!!!');
     console.log('CV PANEL BUTTON CLICKED!!!');

@@ -56,6 +56,41 @@ const SimplifiedHome: React.FC = () => {
               🎭 Launch Conference Demo
             </button>
           </div>
+
+          {/* Video Call Analytics Demo */}
+          <div className="video-call-demo-highlight" style={{
+            backgroundColor: '#4ecdc4',
+            padding: '15px 25px',
+            borderRadius: '12px',
+            margin: '20px 0',
+            border: '3px solid #26d0ce',
+            textAlign: 'center',
+            boxShadow: '0 4px 12px rgba(78, 205, 196, 0.3)'
+          }}>
+            <h2 style={{ color: 'white', margin: '0 0 10px 0', fontSize: '1.3em' }}>
+              📹 Video Call Analytics
+            </h2>
+            <p style={{ color: 'white', margin: '0 0 15px 0', opacity: 0.9 }}>
+              WebRTC video calls with real-time emotion tracking and chemistry analysis
+            </p>
+            <button 
+              className="btn-primary"
+              style={{
+                backgroundColor: 'white',
+                color: '#4ecdc4',
+                fontWeight: 'bold',
+                fontSize: '1.1em',
+                padding: '12px 30px',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+              }}
+              onClick={() => navigate('/video-analytics')}
+            >
+              🎥 Launch Video Call Demo
+            </button>
+          </div>
         </div>
         
         <div className="core-features">

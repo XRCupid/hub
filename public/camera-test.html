@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Test</title>
+</head>
+<body>
+    <h1>Simple Camera Test</h1>
+    <video id="video" width="640" height="480" autoplay muted playsinline style="border: 3px solid red;"></video>
+    <div id="status">Loading...</div>
+    
+    <script>
+        async function startCamera() {
+            try {
+                console.log('Requesting camera...');
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                
+                console.log('Camera granted!');
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                document.getElementById('status').innerHTML = 'Camera working!';
+                console.log('Video should be showing now');
+                
+            } catch (error) {
+                console.error('Camera failed:', error);
+                document.getElementById('status').innerHTML = 'Camera failed: ' + error.message;
+            }
+        }
+        
+        startCamera();
+    </script>
+</body>
+</html>

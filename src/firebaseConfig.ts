@@ -83,14 +83,30 @@ export { app, db, database, firestore, auth };
 
 // Helper function to check if we're using real Firebase
 export const isRealFirebase = () => {
+  // Always use real Firebase in production deployment
+  if (window.location.hostname === 'xrcupid.github.io') {
+    console.log('🌐 Production deployment detected - forcing real Firebase');
+    return true;
+  }
+  
   // Check if explicitly set to use real Firebase
   if (process.env.REACT_APP_USE_REAL_FIREBASE === 'false') {
+    console.log('🔧 REACT_APP_USE_REAL_FIREBASE is false - using mock Firebase');
     return false;
   }
   
-  return !!process.env.REACT_APP_FIREBASE_API_KEY && 
+  const hasValidApiKey = !!process.env.REACT_APP_FIREBASE_API_KEY && 
          process.env.REACT_APP_FIREBASE_API_KEY !== 'mock' &&
          process.env.REACT_APP_FIREBASE_API_KEY !== '';
+  
+  console.log('🔑 Firebase API key check:', {
+    hasApiKey: !!process.env.REACT_APP_FIREBASE_API_KEY,
+    isNotMock: process.env.REACT_APP_FIREBASE_API_KEY !== 'mock',
+    isNotEmpty: process.env.REACT_APP_FIREBASE_API_KEY !== '',
+    finalResult: hasValidApiKey
+  });
+  
+  return hasValidApiKey;
 };
 
 console.log('🔥 Using real Firebase:', isRealFirebase());

@@ -71,22 +71,111 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
   // Use Firestore service for real Firebase, mock for development
   const firebaseService = isRealFirebase() ? firestoreConferenceService : mockFirebaseConference;
 
+  // Ensure video element gets the stream when available
+  useEffect(() => {
+    if (localStream && userVideoRef.current && isInRoom) {
+      console.log('🔄 Applying stream to video element via useEffect');
+      console.log('📺 Video element exists:', !!userVideoRef.current);
+      console.log('🎬 Setting srcObject and adding event listeners');
+      
+      userVideoRef.current.srcObject = localStream;
+      
+      // Add event listeners for debugging
+      userVideoRef.current.onloadedmetadata = () => {
+        console.log('✅ Video metadata loaded, dimensions:', 
+          userVideoRef.current?.videoWidth, 'x', userVideoRef.current?.videoHeight);
+      };
+      
+      userVideoRef.current.oncanplay = () => {
+        console.log('✅ Video can play');
+      };
+      
+      userVideoRef.current.onplay = () => {
+        console.log('✅ Video started playing');
+      };
+      
+      userVideoRef.current.onerror = (e) => {
+        console.error('❌ Video element error:', e);
+      };
+      
+      // Force play
+      userVideoRef.current.play().then(() => {
+        console.log('✅ Video play() succeeded');
+      }).catch(e => {
+        console.log('UseEffect video play error:', e);
+      });
+    } else {
+      console.log('🔍 Video setup conditions:', {
+        hasLocalStream: !!localStream,
+        hasVideoRef: !!userVideoRef.current,
+        isInRoom: isInRoom
+      });
+    }
+  }, [localStream, isInRoom]);
+
   // Initialize media streams
   const initializeMedia = async () => {
     try {
+      console.log('🎥 Requesting camera access...');
+      
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.error('❌ getUserMedia not supported');
+        setConnectionStatus('Camera not supported');
+        return null;
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: { width: 640, height: 480 },
         audio: true
       });
+      
+      console.log('✅ Camera access granted:', stream);
+      console.log('📹 Video tracks:', stream.getVideoTracks());
+      console.log('🎤 Audio tracks:', stream.getAudioTracks());
+      console.log('🔍 Stream active:', stream.active);
+      console.log('🔍 Video track enabled:', stream.getVideoTracks()[0]?.enabled);
+      
       setLocalStream(stream);
       setUserVideo(stream);
-      if (userVideoRef.current) {
-        userVideoRef.current.srcObject = stream;
-      }
+      
+      // FORCE VIDEO SETUP IMMEDIATELY - NO DELAYS OR CONDITIONS
+      const forceVideoSetup = () => {
+        console.log('🎯 FORCE: Setting up video element');
+        const videoElement = document.querySelector('#user-video-element') as HTMLVideoElement;
+        
+        if (videoElement) {
+          console.log('✅ FORCE: Video element found by ID');
+          videoElement.srcObject = stream;
+          videoElement.play().then(() => {
+            console.log('✅ FORCE: Video playing successfully!');
+          }).catch(e => {
+            console.log('❌ FORCE: Video play failed:', e);
+          });
+        } else {
+          console.log('❌ FORCE: Video element not found');
+        }
+      };
+      
+      // Try immediately
+      forceVideoSetup();
+      
+      // Try again after 100ms
+      setTimeout(forceVideoSetup, 100);
+      
+      // Try again after 500ms
+      setTimeout(forceVideoSetup, 500);
+      
       return stream;
-    } catch (error) {
-      console.error('Failed to access media devices:', error);
-      setConnectionStatus('Media access denied');
+    } catch (error: any) {
+      console.error('❌ Failed to access media devices:', error);
+      if (error.name === 'NotAllowedError') {
+        setConnectionStatus('Camera permission denied');
+      } else if (error.name === 'NotFoundError') {
+        setConnectionStatus('No camera found');
+      } else {
+        setConnectionStatus('Camera access failed: ' + error.message);
+      }
       return null;
     }
   };
@@ -449,6 +538,9 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
   const generateCallReport = async (): Promise<CallReport> => {
     const analyzer = new VideoCallAnalyzer();
     
+    // Initialize the analyzer with a call start
+    analyzer.startCall();
+    
     // Add all analytics data to analyzer
     analyticsData.forEach(snapshot => {
       analyzer.addAnalyticsSnapshot(snapshot);
@@ -682,7 +774,38 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
 
   return (
     <div className="video-call-analytics">
-      {/* Room creation/joining UI */}
+      <h2>Video Call Analytics</h2>
+      
+      {/* SIMPLE VIDEO TEST - ALWAYS VISIBLE */}
+      <div style={{ 
+        position: 'fixed', 
+        top: '10px', 
+        right: '10px', 
+        zIndex: 9999,
+        background: 'white',
+        border: '3px solid #00ff00',
+        borderRadius: '8px',
+        padding: '10px'
+      }}>
+        <div>Camera Feed:</div>
+        <video
+          id="user-video-element"
+          ref={userVideoRef}
+          autoPlay
+          muted
+          playsInline
+          style={{
+            width: '200px',
+            height: '150px',
+            border: '2px solid black',
+            objectFit: 'cover'
+          }}
+        />
+        <div style={{ fontSize: '10px', marginTop: '5px' }}>
+          {localStream ? 'CAMERA ACTIVE' : 'NO CAMERA'}
+        </div>
+      </div>
+
       {!isInRoom && (
         <div className="room-controls">
           <h2>Video Call Analytics Demo</h2>
@@ -745,15 +868,37 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
           </div>
 
           <div className="video-grid">
-            <div className="local-video-container">
+            <div className="local-video-container" style={{ position: 'relative' }}>
               <video
+                id="user-video-element"
                 ref={userVideoRef}
                 autoPlay
                 muted
                 playsInline
                 className="local-video"
+                style={{
+                  width: '100%',
+                  height: '300px',
+                  border: '3px solid #00ff00',
+                  borderRadius: '8px',
+                  backgroundColor: '#000',
+                  objectFit: 'cover'
+                }}
               />
               <div className="video-label">You ({currentUserName})</div>
+              <div className="video-debug" style={{
+                position: 'absolute',
+                top: '10px',
+                left: '10px',
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                padding: '5px',
+                fontSize: '12px',
+                borderRadius: '4px'
+              }}>
+                Stream: {localStream ? 'Active' : 'None'}<br/>
+                Tracks: {localStream?.getVideoTracks().length || 0}
+              </div>
               <div className="local-controls">
                 <button onClick={toggleMute} className={`control-btn ${isMuted ? 'disabled' : ''}`}>
                   <Mic className={isMuted ? 'off' : ''} size={20} />
@@ -803,7 +948,7 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
                 </div>
                 <div className="metric">
                   <Users size={16} />
-                  <span>Posture</span>
+                  <span>Posture Score</span>
                   <div className="metric-value">
                     {analyticsData.length > 0 ? 
                       `${Math.round(analyticsData[analyticsData.length - 1].userPosture.overall * 100)}%` : 
