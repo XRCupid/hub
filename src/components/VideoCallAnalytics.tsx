@@ -211,17 +211,17 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
   const setupGuestListener = (roomId: string) => {
     console.log('👥 [GUEST LISTENER] Setting up for room:', roomId);
     
-    const unsubscribe = firebaseService.onRoomUpdate(roomId, (roomData: any) => {
-      console.log('👥 [GUEST LISTENER] Room update received:', roomData);
-      if (roomData.participants && roomData.participants.length > 1 && !peerRef.current) {
-        const guestName = roomData.participants.find((p: string) => p !== currentUserName);
-        if (guestName) {
-          console.log('👥 [GUEST LISTENER] Guest joined:', guestName);
-          setGuestName(guestName);
-          setConnectionStatus('Guest joined, connecting...');
-          setShowQrCode(false);
-          createPeer(true, 'guest-peer');
-        }
+    // Listen directly to guest joining
+    onValue(ref(database, `conference-rooms/${roomId}/guest`), (snapshot) => {
+      const guestData = snapshot.val();
+      console.log('👥 [GUEST LISTENER] Guest data received:', guestData);
+      
+      if (guestData && guestData.name && !peerRef.current) {
+        console.log('👥 [GUEST LISTENER] Guest joined:', guestData.name);
+        setGuestName(guestData.name);
+        setConnectionStatus('Guest joined, connecting...');
+        setShowQrCode(false);
+        createPeer(true, 'host-peer');
       }
     });
   };
@@ -316,10 +316,9 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
     }
 
     console.log('✅ [JOIN] Media initialized, attempting to join room:', roomId);
-    console.log('✅ [JOIN] Media initialized, attempting to join room:', roomId);
     
-    // Add ourselves as guest (conference demo pattern)
-    await set(ref(database, `rooms/${roomId}/guest`), {
+    // Add ourselves as guest (using conference-rooms path like host)
+    await set(ref(database, `conference-rooms/${roomId}/guest`), {
       name: userName,
       peerId: myPeerIdRef.current,
       joinedAt: Date.now()
@@ -335,7 +334,7 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
     setConnectionStatus('Connecting to host...');
 
     // Get host name from room data
-    const roomData = await get(ref(database, `rooms/${roomId}/info`));
+    const roomData = await get(ref(database, `conference-rooms/${roomId}/info`));
     if (roomData.val()) {
       const hostName = roomData.val().hostName;
       if (hostName) {
@@ -344,16 +343,20 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
     }
 
     // Create peer connection
-    createPeer(false, 'host-peer');
+    createPeer(false, 'guest-peer');
 
-    // Listen for signals from host
-    onValue(ref(database, `rooms/${roomId}/signals`), (snapshot) => {
+    // Listen for signals from host on conference-rooms path
+    onValue(ref(database, `conference-rooms/${roomId}/signals`), (snapshot) => {
       const signals = snapshot.val();
+      console.log('🎯 [GUEST] Received signals data:', signals);
+      
       if (signals && signals['host-peer'] && signals['host-peer']['guest-peer']) {
         const signal = signals['host-peer']['guest-peer'];
+        console.log('🎯 [GUEST] Processing signal from host:', signal);
+        
         if (peerRef.current && signal.timestamp > Date.now() - 30000) {
-          console.log('🎯 [GUEST] Received signal from host:', signal);
-          peerRef.current.signal(JSON.parse(signal.signal));
+          console.log('🎯 [GUEST] Signaling to peer:', signal.signal);
+          peerRef.current.signal(signal.signal);
         }
       }
     });
@@ -457,7 +460,7 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
     }
 
     if (roomRef.current && currentUserName) {
-      const participantsRef = ref(database, `rooms/${roomRef.current}/participants`);
+      const participantsRef = ref(database, `conference-rooms/${roomRef.current}/participants`);
       get(participantsRef).then((snapshot) => {
         if (snapshot.val()) {
           const updatedParticipants = snapshot.val().filter((p: string) => p !== currentUserName);
@@ -485,6 +488,13 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
       const roomFromUrl = roomMatch[1];
       console.log('✅ [URL] Found room in URL:', roomFromUrl);
       setJoinRoomId(roomFromUrl);
+      
+      // Auto-join with default name if we have room parameter
+      const defaultName = 'Guest';
+      console.log('🔄 [URL] Auto-joining room with default name:', defaultName);
+      setTimeout(() => {
+        joinRoom(roomFromUrl, defaultName);
+      }, 1000);
     }
   }, []);
 
