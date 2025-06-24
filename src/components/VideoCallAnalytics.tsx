@@ -25,20 +25,17 @@ import { HeadRotationService } from '../services/HeadRotationService';
 import { performanceService } from '../services/performanceService';
 import { CallReport } from '../types/CallReport';
 import { CallAnalytics } from '../types/CallAnalytics';
-import { EmotionScore } from '../types/EmotionScore';
 import { TranscriptSegment } from '../types/TranscriptSegment';
 import { VideoCallAnalyticsStyles } from '../styles/VideoCallAnalyticsStyles';
 import { ChemistryScore } from '../types/ChemistryScore';
 import { NetworkQualityType } from '../types/NetworkQualityType';
 import { UserFeedback } from '../types/UserFeedback';
 import { VideoQuality } from '../types/VideoQuality';
-import { PerformanceMetrics } from '../types/PerformanceMetrics';
 import { CoachingRecommendation } from '../types/CoachingRecommendation';
 import { logger } from '../services/logger';
 import FaceMesh from '@mediapipe/face_mesh';
 import VideoCallAnalyzer from '../services/VideoCallAnalyzer';
 import { HumeVoiceServiceWrapper } from '../services/HumeVoiceServiceWrapper';
-import { EmotionScore, PostureScore, TranscriptEntry, AnalyticsSnapshot, VideoCallAnalyticsProps, CallReport, PerformanceMetrics, Recommendation } from '../types/VideoCallTypes';
 import { Eye, Activity, TrendingUp, Heart, Users, Mic, MicOff, PhoneOff, Clock, MessageSquare, Award, Camera, Share2 } from 'lucide-react';
 
 const EMOTION_COLORS: Record<string, string> = {
@@ -365,59 +362,67 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
   };
 
   // Create WebRTC peer connection
-  const createPeer = (initiator: boolean, targetPeerId: string) => {
+  const createPeer = (initiator: boolean, peerId: string) => {
+    if (!localStream) {
+      console.error('No local stream available');
+      return;
+    }
+
+    console.log('🎯 [PEER] Creating peer:', { initiator, peerId });
+    
     const peer = new Peer({
-      initiator,
+      initiator: initiator,
       trickle: false,
-      stream: localStream || undefined,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      }
+      stream: localStream
     });
 
-    peer.on('signal', (data: any) => {
-      if (roomRef.current) {
-        console.log('📡 [PEER] Sending signal:', data);
-        set(ref(database!, `rooms/${roomRef.current}/signals`), {
-          [myPeerIdRef.current]: {
-            [targetPeerId]: {
-              signal: JSON.stringify(data),
-              from: myPeerIdRef.current,
-              timestamp: Date.now()
-            }
-          }
-        });
+    // Handle incoming stream
+    peer.on('stream', (stream: MediaStream) => {
+      console.log('🎥 [PEER] Received remote stream');
+      setRemoteStream(stream);
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = stream;
       }
+      setConnectionStatus('Connected');
+    });
+
+    // Handle signaling data
+    peer.on('signal', (data: any) => {
+      console.log('📡 [PEER] Sending signal to Firebase');
+      // Send signal via Firebase
+      const signalRef = ref(database, `conference-rooms/${roomId}/signals/${peerId}/${isHost ? 'host' : 'guest'}`);
+      set(signalRef, {
+        signal: JSON.stringify(data),
+        timestamp: Date.now(),
+        from: isHost ? 'host' : 'guest'
+      });
     });
 
     peer.on('connect', () => {
+      console.log('✅ [PEER] Peer connected');
       setConnectionStatus('Connected');
-      startCall();
-    });
-
-    peer.on('stream', (stream: MediaStream) => {
-      console.log('Received remote stream');
-      setRemoteStream(stream);
-      setPartnerVideo(stream);
-      if (partnerVideoRef.current) {
-        partnerVideoRef.current.srcObject = stream;
-      }
-    });
-
-    peer.on('close', () => {
-      setConnectionStatus('Disconnected');
-      endCall();
     });
 
     peer.on('error', (err: Error) => {
-      console.error('Peer error:', err);
+      console.error('❌ [PEER] Peer error:', err);
       setConnectionStatus('Connection error');
     });
 
     peerRef.current = peer;
+
+    // Listen for signals from the other peer
+    const remoteSignalPath = `conference-rooms/${roomId}/signals/${peerId}/${isHost ? 'guest' : 'host'}`;
+    onValue(ref(database, remoteSignalPath), (snapshot) => {
+      const signalData = snapshot.val();
+      if (signalData && signalData.signal) {
+        try {
+          console.log('📡 [PEER] Received signal from Firebase');
+          peer.signal(JSON.parse(signalData.signal));
+        } catch (error) {
+          console.error('❌ [PEER] Error processing signal:', error);
+        }
+      }
+    });
   };
 
   // Toggle mute
