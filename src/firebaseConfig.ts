@@ -53,16 +53,17 @@ if (!isInitialized) {
     auth = getAuth(app);
     console.log('✅ Auth initialized:', auth);
     
+    // DISABLED: Anonymous auth causing errors, not needed for database access
     // Sign in anonymously for Firestore/Database access
-    signInAnonymously(auth)
-      .then(() => {
-        console.log('✅ Signed in anonymously');
-      })
-      .catch((error) => {
-        console.error('❌ Anonymous auth error:', error);
-      });
+    // signInAnonymously(auth)
+    //   .then(() => {
+    //     console.log('✅ Signed in anonymously');
+    //   })
+    //   .catch((error) => {
+    //     console.error('❌ Anonymous auth error:', error);
+    //   });
     
-    console.log('✅ Firebase initialized successfully with real credentials');
+    console.log('✅ Firebase initialized successfully with real credentials (auth disabled)');
     isInitialized = true;
   } catch (error) {
     console.error('❌ Firebase initialization error:', error);
