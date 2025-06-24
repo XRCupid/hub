@@ -272,9 +272,7 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
       
       // Generate QR code for mobile joining
       try {
-        const mobileUrl = firebaseService.getMobileJoinUrl ? 
-          firebaseService.getMobileJoinUrl(createdRoomId) : 
-          `${window.location.origin}/hub/#/video-analytics?room=${createdRoomId}`;
+        const mobileUrl = `${window.location.origin}/hub/#/video-analytics?room=${createdRoomId}`;
         
         console.log('🔗 [CREATE ROOM] Generating QR code for URL:', mobileUrl);
         
