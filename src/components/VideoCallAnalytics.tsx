@@ -1,43 +1,38 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ref, push, set, onValue, remove, get, update } from 'firebase/database';
+import React, { useState, useEffect, useRef } from 'react';
+import { ref, set, onValue, get } from 'firebase/database';
 import { database } from '../firebaseConfig';
 import { conferenceFirebaseService } from '../services/conferenceFirebaseService';
 import { isRealFirebase } from '../firebaseConfig';
 import Peer from 'simple-peer';
 import QRCode from 'qrcode';
-import { HumeVoiceService } from '../services/humeVoiceService';
-import { HumeCredentialsService } from '../services/humeCredentialsService';
-import { CombinedFaceTrackingService } from '../services/CombinedFaceTrackingService';
-import { collectAnalytics } from '../services/analyticsService';
-import { aiModelService } from '../services/aiModelService';
-import { saveCallData } from '../services/callDataService';
-import { VideoCallTypes } from '../types/VideoCallTypes';
-import { callReportService } from '../services/callReportService';
-import { ML5FaceMeshService } from '../services/ML5FaceMeshService';
-import { PostureTrackingService } from '../services/PostureTrackingService';
-import { FaceTrackingDebugService } from '../services/FaceTrackingDebugService';
-import { ExpressionsService } from '../services/ExpressionsService';
-import { AnalyticsService } from '../services/AnalyticsService';
-import { HumeExpressionService } from '../services/HumeExpressionService';
-import { EyeContactService } from '../services/EyeContactService';
-import { gestureService } from '../services/gestureService';
-import { HeadRotationService } from '../services/HeadRotationService';
-import { performanceService } from '../services/performanceService';
-import { CallReport } from '../types/CallReport';
-import { CallAnalytics } from '../types/CallAnalytics';
-import { TranscriptSegment } from '../types/TranscriptSegment';
-import { VideoCallAnalyticsStyles } from '../styles/VideoCallAnalyticsStyles';
-import { ChemistryScore } from '../types/ChemistryScore';
-import { NetworkQualityType } from '../types/NetworkQualityType';
-import { UserFeedback } from '../types/UserFeedback';
-import { VideoQuality } from '../types/VideoQuality';
-import { CoachingRecommendation } from '../types/CoachingRecommendation';
-import { logger } from '../services/logger';
-import FaceMesh from '@mediapipe/face_mesh';
-import VideoCallAnalyzer from '../services/VideoCallAnalyzer';
 import { HumeVoiceServiceWrapper } from '../services/HumeVoiceServiceWrapper';
-import { Eye, Activity, TrendingUp, Heart, Users, Mic, MicOff, PhoneOff, Clock, MessageSquare, Award, Camera, Share2 } from 'lucide-react';
+import VideoCallAnalyzer from '../services/VideoCallAnalyzer';
+import {
+  Eye,
+  Heart,
+  Users,
+  Mic,
+  PhoneOff,
+  Camera,
+  Share2,
+  MessageSquare,
+  Award
+} from 'lucide-react';
 
+// 🔑 Local project types
+import type {
+  VideoCallAnalyticsProps,
+  AnalyticsSnapshot,
+  EmotionScore,
+  PostureScore,
+  PerformanceMetrics,
+  Recommendation,
+  TranscriptEntry
+} from '../types/VideoCallAnalyticsTypes';
+import type { CallReport } from '../types/CallReport';
+
+/* -------------------------------------------------- */
+// 🎨 Emotion‑to‑color map
 const EMOTION_COLORS: Record<string, string> = {
   joy: '#FFD700',
   excitement: '#FF6B6B',
@@ -54,432 +49,64 @@ const EMOTION_COLORS: Record<string, string> = {
   neutral: '#BDC3C7'
 };
 
-export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose, partnerName = 'Partner' }) => {
-  // Firebase service instance
+export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ partnerName = 'Partner' }) => {
+  /* -------------------------- STATE & REFS -------------------------- */
   const firebaseService = conferenceFirebaseService;
   const usingRealFirebase = isRealFirebase();
 
-  // Video call states
+  // Streams
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [userVideo, setUserVideo] = useState<MediaStream | null>(null);
-  const [partnerVideo, setPartnerVideo] = useState<MediaStream | null>(null);
-  
-  // Room management states
+
+  // Room/session
   const [roomId, setRoomId] = useState('');
   const [isHost, setIsHost] = useState(false);
   const [isInRoom, setIsInRoom] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('Not connected');
+  const [connectionStatus, setConnectionStatus] = useState<'Not connected' | 'Connecting' | 'Connected' | 'Connection error'>('Not connected');
   const [currentUserName, setCurrentUserName] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [showQrCode, setShowQrCode] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState('');
   const [guestName, setGuestName] = useState('');
-  
-  // WebRTC refs
-  const peerRef = useRef<any>(null);
-  const myPeerIdRef = useRef<string>('');
-  const roomRef = useRef<string | null>(null);
 
-  // Existing states
+  // Analytics
   const [isCallActive, setIsCallActive] = useState(false);
-  const [callStartTime, setCallStartTime] = useState<number | null>(null);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsSnapshot[]>([]);
   const [callReport, setCallReport] = useState<CallReport | null>(null);
-  const [activeTab, setActiveTab] = useState<'emotions' | 'metrics' | 'recommendations' | 'summary'>('emotions');
+
+  // UI toggles
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  
+
+  // Refs
   const userVideoRef = useRef<HTMLVideoElement>(null);
   const partnerVideoRef = useRef<HTMLVideoElement>(null);
+  const peerRef = useRef<Peer.Instance | null>(null);
   const voiceServiceRef = useRef<HumeVoiceServiceWrapper | null>(null);
   const analyticsIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const webgazerRef = useRef<any>(null);
-  const poseNetRef = useRef<any>(null);
-  const faceMeshRef = useRef<any>(null);
+  const roomRef = useRef<string>('');
 
-  // Ensure video element gets the stream when available
-  useEffect(() => {
-    if (localStream && userVideoRef.current && isInRoom) {
-      console.log('🔄 Applying stream to video element via useEffect');
-      console.log('📺 Video element exists:', !!userVideoRef.current);
-      console.log('🎬 Setting srcObject and adding event listeners');
-      
-      userVideoRef.current.srcObject = localStream;
-      
-      // Add event listeners for debugging
-      userVideoRef.current.onloadedmetadata = () => {
-        console.log('✅ Video metadata loaded, dimensions:', 
-          userVideoRef.current?.videoWidth, 'x', userVideoRef.current?.videoHeight);
-      };
-      
-      userVideoRef.current.oncanplay = () => {
-        console.log('✅ Video can play');
-      };
-      
-      userVideoRef.current.onplay = () => {
-        console.log('✅ Video started playing');
-      };
-      
-      userVideoRef.current.onerror = (e) => {
-        console.error('❌ Video element error:', e);
-      };
-      
-      // Force play
-      userVideoRef.current.play().then(() => {
-        console.log('✅ Video play() succeeded');
-      }).catch(e => {
-        console.log('UseEffect video play error:', e);
-      });
-    } else {
-      console.log('🔍 Video setup conditions:', {
-        hasLocalStream: !!localStream,
-        hasVideoRef: !!userVideoRef.current,
-        isInRoom: isInRoom
-      });
-    }
-  }, [localStream, isInRoom]);
-
-  // Initialize media streams
-  const initializeMedia = async () => {
+  /* ----------------------- MEDIA INITIALISATION --------------------- */
+  const initializeMedia = async (): Promise<MediaStream | null> => {
     try {
-      console.log('🎥 Requesting camera access...');
-      
-      // Check if getUserMedia is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.error('❌ getUserMedia not supported');
-        setConnectionStatus('Camera not supported');
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setConnectionStatus('Connection error');
         return null;
       }
-      
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 },
-        audio: true
-      });
-      
-      console.log('✅ Camera access granted:', stream);
-      console.log('📹 Video tracks:', stream.getVideoTracks());
-      console.log('🎤 Audio tracks:', stream.getAudioTracks());
-      console.log('🔍 Stream active:', stream.active);
-      console.log('🔍 Video track enabled:', stream.getVideoTracks()[0]?.enabled);
-      
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       setLocalStream(stream);
-      setUserVideo(stream);
-      
-      // FORCE VIDEO SETUP IMMEDIATELY - NO DELAYS OR CONDITIONS
-      const forceVideoSetup = () => {
-        console.log('🎯 FORCE: Setting up video element');
-        const videoElement = document.querySelector('#user-video-element') as HTMLVideoElement;
-        
-        if (videoElement) {
-          console.log('✅ FORCE: Video element found by ID');
-          videoElement.srcObject = stream;
-          videoElement.play().then(() => {
-            console.log('✅ FORCE: Video playing successfully!');
-          }).catch(e => {
-            console.log('❌ FORCE: Video play failed:', e);
-          });
-        } else {
-          console.log('❌ FORCE: Video element not found');
-        }
-      };
-      
-      // Try immediately
-      forceVideoSetup();
-      
-      // Try again after 100ms
-      setTimeout(forceVideoSetup, 100);
-      
-      // Try again after 500ms
-      setTimeout(forceVideoSetup, 500);
-      
-      return stream;
-    } catch (error: any) {
-      console.error('❌ Failed to access media devices:', error);
-      if (error.name === 'NotAllowedError') {
-        setConnectionStatus('Camera permission denied');
-      } else if (error.name === 'NotFoundError') {
-        setConnectionStatus('No camera found');
-      } else {
-        setConnectionStatus('Camera access failed: ' + error.message);
+      if (userVideoRef.current) {
+        userVideoRef.current.srcObject = stream;
       }
+      return stream;
+    } catch (err) {
+      console.error('🎥 getUserMedia failed', err);
+      setConnectionStatus('Connection error');
       return null;
     }
   };
 
-  // Setup guest listener function
-  const setupGuestListener = (roomId: string) => {
-    console.log('👥 [GUEST LISTENER] Setting up for room:', roomId);
-    
-    // Listen directly to guest joining
-    onValue(ref(database, `conference-rooms/${roomId}/guest`), (snapshot) => {
-      const guestData = snapshot.val();
-      console.log('👥 [GUEST LISTENER] Guest data received:', guestData);
-      
-      if (guestData && guestData.name && !peerRef.current) {
-        console.log('👥 [GUEST LISTENER] Guest joined:', guestData.name);
-        setGuestName(guestData.name);
-        setConnectionStatus('Guest joined, connecting...');
-        setShowQrCode(false);
-        createPeer(true, 'host-peer');
-      }
-    });
-  };
-
-  // Create a new room
-  const createRoom = async () => {
-    console.log('🔥 [CREATE ROOM] Button clicked!');
-    console.log('🔥 [CREATE ROOM] currentUserName:', currentUserName);
-    console.log('🔥 [CREATE ROOM] Using Firebase service:', 'Real');
-    
-    if (!currentUserName.trim()) {
-      console.log('❌ [CREATE ROOM] Missing user name');
-      return;
-    }
-
-    if (!localStream) {
-      console.log('🎥 [CREATE ROOM] Initializing camera...');
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: true, 
-          audio: true 
-        });
-        setLocalStream(stream);
-        if (userVideoRef.current) {
-          userVideoRef.current.srcObject = stream;
-        }
-        console.log('✅ [CREATE ROOM] Camera initialized');
-      } catch (error) {
-        console.error('❌ [CREATE ROOM] Camera access failed:', error);
-        return;
-      }
-    }
-
-    try {
-      console.log('Creating room...');
-      const createdRoomId = await firebaseService.createRoom(currentUserName);
-      console.log('✅ [CREATE ROOM] Room created with ID:', createdRoomId);
-      
-      if (!createdRoomId) {
-        console.error('❌ [CREATE ROOM] Failed to create room');
-        return;
-      }
-
-      setRoomId(createdRoomId);
-      setIsHost(true);
-      setIsInRoom(true);
-      setCallStartTime(Date.now());
-      
-      // Generate QR code for mobile joining
-      try {
-        const mobileUrl = `${window.location.origin}/hub/#/video-analytics?room=${createdRoomId}`;
-        
-        console.log('🔗 [CREATE ROOM] Generating QR code for URL:', mobileUrl);
-        
-        const qrDataUrl = await QRCode.toDataURL(mobileUrl, {
-          width: 300,
-          margin: 2,
-          color: {
-            dark: '#000000',
-            light: '#FFFFFF'
-          }
-        });
-        setQrCodeUrl(qrDataUrl);
-        setShowQrCode(true);
-      } catch (err) {
-        console.error('❌ [CREATE ROOM] Error generating QR code:', err);
-      }
-      
-      // Setup guest listener
-      console.log('👥 [CREATE ROOM] Setting up guest listener...');
-      setupGuestListener(createdRoomId);
-      
-    } catch (error) {
-      console.error('❌ [CREATE ROOM] Error:', error);
-    }
-  };
-
-  // Join an existing room
-  const joinRoom = async (roomId: string, userName: string) => {
-    console.log('🔄 [JOIN] Starting room join process:', { roomId, userName });
-    
-    if (!roomId.trim() || !userName.trim()) {
-      console.error('❌ [JOIN] Missing room ID or username');
-      alert('Please enter your name and room ID');
-      return;
-    }
-
-    const stream = await initializeMedia();
-    if (!stream) {
-      console.error('❌ [JOIN] Failed to initialize media');
-      return;
-    }
-
-    console.log('✅ [JOIN] Media initialized, attempting to join room:', roomId);
-    
-    // Add ourselves as guest (using conference-rooms path like host)
-    await set(ref(database, `conference-rooms/${roomId}/guest`), {
-      name: userName,
-      peerId: myPeerIdRef.current,
-      joinedAt: Date.now()
-    });
-    
-    console.log('🔄 [JOIN] Successfully joined room as guest');
-    
-    setRoomId(roomId);
-    roomRef.current = roomId;
-    setIsInRoom(true);
-    setIsHost(false);
-    setCurrentUserName(userName);
-    setConnectionStatus('Connecting to host...');
-
-    // Get host name from room data
-    const roomData = await get(ref(database, `conference-rooms/${roomId}/info`));
-    if (roomData.val()) {
-      const hostName = roomData.val().hostName;
-      if (hostName) {
-        setGuestName(hostName);
-      }
-    }
-
-    // Create peer connection
-    createPeer(false, 'guest-peer');
-
-    // Listen for signals from host on conference-rooms path
-    onValue(ref(database, `conference-rooms/${roomId}/signals`), (snapshot) => {
-      const signals = snapshot.val();
-      console.log('🎯 [GUEST] Received signals data:', signals);
-      
-      if (signals && signals['host-peer'] && signals['host-peer']['guest-peer']) {
-        const signal = signals['host-peer']['guest-peer'];
-        console.log('🎯 [GUEST] Processing signal from host:', signal);
-        
-        if (peerRef.current && signal.timestamp > Date.now() - 30000) {
-          console.log('🎯 [GUEST] Signaling to peer:', signal.signal);
-          peerRef.current.signal(signal.signal);
-        }
-      }
-    });
-  };
-
-  // Create WebRTC peer connection
-  const createPeer = (initiator: boolean, peerId: string) => {
-    if (!localStream) {
-      console.error('No local stream available');
-      return;
-    }
-
-    console.log('🎯 [PEER] Creating peer:', { initiator, peerId });
-    
-    const peer = new Peer({
-      initiator: initiator,
-      trickle: false,
-      stream: localStream
-    });
-
-    // Handle incoming stream
-    peer.on('stream', (stream: MediaStream) => {
-      console.log('🎥 [PEER] Received remote stream');
-      setRemoteStream(stream);
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = stream;
-      }
-      setConnectionStatus('Connected');
-    });
-
-    // Handle signaling data
-    peer.on('signal', (data: any) => {
-      console.log('📡 [PEER] Sending signal to Firebase');
-      // Send signal via Firebase
-      const signalRef = ref(database, `conference-rooms/${roomId}/signals/${peerId}/${isHost ? 'host' : 'guest'}`);
-      set(signalRef, {
-        signal: JSON.stringify(data),
-        timestamp: Date.now(),
-        from: isHost ? 'host' : 'guest'
-      });
-    });
-
-    peer.on('connect', () => {
-      console.log('✅ [PEER] Peer connected');
-      setConnectionStatus('Connected');
-    });
-
-    peer.on('error', (err: Error) => {
-      console.error('❌ [PEER] Peer error:', err);
-      setConnectionStatus('Connection error');
-    });
-
-    peerRef.current = peer;
-
-    // Listen for signals from the other peer
-    const remoteSignalPath = `conference-rooms/${roomId}/signals/${peerId}/${isHost ? 'guest' : 'host'}`;
-    onValue(ref(database, remoteSignalPath), (snapshot) => {
-      const signalData = snapshot.val();
-      if (signalData && signalData.signal) {
-        try {
-          console.log('📡 [PEER] Received signal from Firebase');
-          peer.signal(JSON.parse(signalData.signal));
-        } catch (error) {
-          console.error('❌ [PEER] Error processing signal:', error);
-        }
-      }
-    });
-  };
-
-  // Toggle mute
-  const toggleMute = () => {
-    if (localStream) {
-      const audioTrack = localStream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsMuted(!audioTrack.enabled);
-      }
-    }
-  };
-
-  // Toggle video
-  const toggleVideo = () => {
-    if (localStream) {
-      const videoTrack = localStream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsVideoEnabled(videoTrack.enabled);
-      }
-    }
-  };
-
-  // Leave room
-  const leaveRoom = () => {
-    if (peerRef.current) {
-      peerRef.current.destroy();
-      peerRef.current = null;
-    }
-
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-    }
-
-    if (roomRef.current && currentUserName) {
-      const participantsRef = ref(database, `conference-rooms/${roomRef.current}/participants`);
-      get(participantsRef).then((snapshot) => {
-        if (snapshot.val()) {
-          const updatedParticipants = snapshot.val().filter((p: string) => p !== currentUserName);
-          update(participantsRef, updatedParticipants);
-        }
-      });
-    }
-
-    setIsInRoom(false);
-    setConnectionStatus('Not connected');
-    setRoomId('');
-    setLocalStream(null);
-    setRemoteStream(null);
-    setUserVideo(null);
-    setPartnerVideo(null);
-    endCall();
-  };
-
-  // Check for room ID in URL on mount
+  /* --------------------------- URL PARSING -------------------------- */
   useEffect(() => {
     const urlHash = window.location.hash;
     console.log('🔍 [URL] Current hash:', urlHash);
@@ -498,673 +125,300 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
     }
   }, []);
 
-  // Initialize video streams when call becomes active
-  const initializeVideoStreams = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { width: 1280, height: 720 }, 
-        audio: true 
-      });
-      setUserVideo(stream);
-      if (userVideoRef.current) {
-        userVideoRef.current.srcObject = stream;
+  /* --------------------------- ROOM LOGIC --------------------------- */
+  const setupGuestListener = (roomId: string) => {
+    onValue(ref(database, `conference-rooms/${roomId}/guest`), snap => {
+      const guest = snap.val();
+      console.log('👥 [GUEST LISTENER] Guest data received:', guest);
+      if (guest?.name && !peerRef.current) {
+        setGuestName(guest.name);
+        setConnectionStatus('Connecting');
+        setShowQrCode(false);
+        createPeer(true, 'host-peer');
       }
-      
-      // Initialize WebGazer with latest version (no conflicts!)
-      if ((window as any).webgazer) {
-        webgazerRef.current = (window as any).webgazer
-          .setGazeListener((data: any, clock: number) => {
-            // Process eye gaze data
-          })
-          .begin();
+    });
+  };
+
+  const createRoom = async () => {
+    if (!currentUserName) return;
+    if (!localStream && !(await initializeMedia())) return;
+
+    const newRoomId = await firebaseService.createRoom(currentUserName);
+    setRoomId(newRoomId);
+    roomRef.current = newRoomId;
+    setIsHost(true);
+    setIsInRoom(true);
+
+    // QR‑code for guest join
+    const mobileUrl = `${window.location.origin}/hub/#/video-analytics?room=${newRoomId}`;
+    setQrCodeUrl(await QRCode.toDataURL(mobileUrl));
+    setShowQrCode(true);
+    setupGuestListener(newRoomId);
+  };
+
+  const joinRoom = async (rId: string, name: string) => {
+    if (!rId || !name) return;
+    if (!(await initializeMedia())) return;
+    
+    await set(ref(database, `conference-rooms/${rId}/guest`), { name, joinedAt: Date.now() });
+    setRoomId(rId);
+    roomRef.current = rId;
+    setIsInRoom(true);
+    setIsHost(false);
+    setCurrentUserName(name);
+    setConnectionStatus('Connecting');
+    createPeer(false, 'guest-peer');
+  };
+
+  /* --------------------------- WEBRTC ------------------------------- */
+  const createPeer = (initiator: boolean, peerId: string) => {
+    if (!localStream) return;
+    
+    console.log('🎯 [PEER] Creating peer:', { initiator, peerId, roomId });
+    const peer = new Peer({ initiator, trickle: false, stream: localStream });
+
+    peer.on('stream', stream => {
+      console.log('✅ [PEER] Received remote stream');
+      setRemoteStream(stream);
+      if (partnerVideoRef.current) {
+        partnerVideoRef.current.srcObject = stream;
       }
-      
-      // Initialize PoseNet
-      if ((window as any).ml5?.poseNet) {
-        poseNetRef.current = (window as any).ml5.poseNet(userVideoRef.current, () => {
-          console.log('PoseNet initialized');
-        });
-        poseNetRef.current.on('pose', (results: any) => {
-          // Process pose data
-        });
+      setConnectionStatus('Connected');
+    });
+
+    peer.on('signal', data => {
+      console.log('📡 [PEER] Sending signal:', data);
+      const signalPath = `conference-rooms/${roomId}/signals/${peerId}/${isHost ? 'host' : 'guest'}`;
+      set(ref(database, signalPath), { signal: data, ts: Date.now() });
+    });
+
+    peer.on('connect', () => {
+      console.log('🔗 [PEER] Connected!');
+      setConnectionStatus('Connected');
+    });
+
+    peer.on('error', err => {
+      console.error('❌ [PEER] Error:', err);
+      setConnectionStatus('Connection error');
+    });
+
+    // Listen for remote signals
+    const remotePath = `conference-rooms/${roomId}/signals/${peerId}/${isHost ? 'guest' : 'host'}`;
+    onValue(ref(database, remotePath), snap => {
+      const signalData = snap.val();
+      if (signalData?.signal) {
+        console.log('📡 [PEER] Received signal:', signalData.signal);
+        peer.signal(signalData.signal);
       }
-      
-      // Initialize FaceMesh for facial emotions
-      if ((window as any).ml5?.faceMesh) {
-        faceMeshRef.current = (window as any).ml5.faceMesh(userVideoRef.current, () => {
-          console.log('FaceMesh initialized');
-        });
-        faceMeshRef.current.on('predict', (results: any) => {
-          // Process facial emotion data
-        });
-      }
-    } catch (error) {
-      console.error('Failed to initialize video streams:', error);
+    });
+
+    peerRef.current = peer;
+  };
+
+  /* ----------------------------- CONTROLS --------------------------- */
+  const toggleMute = () => {
+    const track = localStream?.getAudioTracks()[0];
+    if (track) {
+      track.enabled = !track.enabled;
+      setIsMuted(!track.enabled);
     }
   };
 
-  // Start the call
-  const startCall = async () => {
-    setIsCallActive(true);
-    setCallStartTime(Date.now());
-    setAnalyticsData([]);
-    
-    await initializeVideoStreams();
-    
-    // Start analytics collection
-    analyticsIntervalRef.current = setInterval(() => {
-      collectAnalyticsSnapshot();
-    }, 100 as number); // Collect data every 100ms for smooth visualization
-    
-    // Initialize Hume voice service for prosody analysis
-    voiceServiceRef.current = new HumeVoiceServiceWrapper();
-    await voiceServiceRef.current.connect();
-    
-    // Set up voice event handlers using public API
-    voiceServiceRef.current.onEmotion((emotions: any) => {
-      // Handle real-time emotion updates
-    });
-    voiceServiceRef.current.onTranscript((transcript: any) => {
-      // Handle transcript updates
-    });
+  const toggleVideo = () => {
+    const track = localStream?.getVideoTracks()[0];
+    if (track) {
+      track.enabled = !track.enabled;
+      setIsVideoEnabled(track.enabled);
+    }
   };
 
-  // End the call and generate report
-  const endCall = async () => {
+  const leaveRoom = () => {
+    peerRef.current?.destroy();
+    localStream?.getTracks().forEach(t => t.stop());
+    setIsInRoom(false);
+    setConnectionStatus('Not connected');
+    setRoomId('');
+    setIsHost(false);
+    setGuestName('');
+    setShowQrCode(false);
+    roomRef.current = '';
+    endCall();
+  };
+
+  /* ----------------------- ANALYTICS SNAPSHOTS ---------------------- */
+  const collectAnalyticsSnapshot = () => {
+    // Placeholder – integrate your ML hooks
+    setAnalyticsData(a => [...a, { timestamp: Date.now() } as any]);
+  };
+
+  /* ----------------------------- CALL ------------------------------- */
+  const startCall = async () => {
+    setIsCallActive(true);
+    analyticsIntervalRef.current = setInterval(collectAnalyticsSnapshot, 200);
+    voiceServiceRef.current = new HumeVoiceServiceWrapper();
+    await voiceServiceRef.current.connect();
+  };
+
+  const endCall = () => {
     setIsCallActive(false);
-    
-    // Stop analytics collection
     if (analyticsIntervalRef.current) {
       clearInterval(analyticsIntervalRef.current);
     }
-    
-    // Stop video streams
-    if (userVideo) {
-      userVideo.getTracks().forEach(track => track.stop());
-    }
-    
-    // Stop tracking services
-    if (webgazerRef.current) {
-      webgazerRef.current.end();
-    }
-    
-    // Disconnect voice service
-    if (voiceServiceRef.current) {
-      await voiceServiceRef.current.disconnect();
-    }
-    
-    // Generate comprehensive report
-    const report = await generateCallReport();
-    setCallReport(report);
+    voiceServiceRef.current?.disconnect();
   };
 
-  // Collect real-time analytics snapshot
-  const collectAnalyticsSnapshot = () => {
-    const userFaces = faceMeshRef.current?.results || [];
-    const partnerFaces = faceMeshRef.current?.results || [];
-    const userPose = poseNetRef.current?.results || [];
-    const partnerPose = poseNetRef.current?.results || [];
-    const userGaze = webgazerRef.current?.results || [];
-    const partnerGaze = webgazerRef.current?.results || [];
-    const userAudioData = voiceServiceRef.current?.getAudioData() || {};
-    const partnerAudioData = voiceServiceRef.current?.getAudioData() || {};
-
-    const snapshot: AnalyticsSnapshot = {
-      timestamp: Date.now(),
-      userEmotions: getCurrentEmotions(userFaces),
-      partnerEmotions: getCurrentEmotions(partnerFaces),
-      userPosture: calculatePostureScore(userPose),
-      partnerPosture: calculatePostureScore(partnerPose),
-      userEyeContact: isLookingAtCamera(userGaze),
-      partnerEyeContact: isLookingAtCamera(partnerGaze),
-      userSpeaking: isSpeaking(userAudioData),
-      partnerSpeaking: isSpeaking(partnerAudioData),
-      userVolume: (userAudioData && typeof userAudioData === 'object' && 'volume' in userAudioData) ? (userAudioData.volume as number) : 0,
-      partnerVolume: (partnerAudioData && typeof partnerAudioData === 'object' && 'volume' in partnerAudioData) ? (partnerAudioData.volume as number) : 0,
-    };
-    
-    setAnalyticsData(prev => [...prev, snapshot]);
-  };
-
-  // Generate comprehensive call report
-  const generateCallReport = async (): Promise<CallReport> => {
-    const analyzer = new VideoCallAnalyzer();
-    
-    // Initialize the analyzer with a call start
-    analyzer.startCall();
-    
-    // Add all analytics data to analyzer
-    analyticsData.forEach(snapshot => {
-      analyzer.addAnalyticsSnapshot(snapshot);
-    });
-    
-    // Get the full report from analyzer
-    const analyzerReport = await analyzer.generateReport();
-    
-    // Map the analyzer report to our CallReport structure
-    const report: CallReport = {
-      overallScore: analyzerReport.overallChemistry,
-      userMetrics: calculatePerformanceMetrics(analyticsData, 'user'),
-      partnerMetrics: calculatePerformanceMetrics(analyticsData, 'partner'),
-      chemistryScore: analyzerReport.overallChemistry,
-      recommendations: analyzerReport.recommendations,
-      aiSummary: analyzerReport.aiSummary.joint, // Use just the joint summary
-      emotionTimeline: analyticsData.map(snapshot => ({
-        time: snapshot.timestamp,
-        engagement: 0.7, // Placeholder
-        posture: (snapshot.userPosture.overall + snapshot.partnerPosture.overall) / 2,
-        eyeContact: ((snapshot.userEyeContact ? 1 : 0) + (snapshot.partnerEyeContact ? 1 : 0)) / 2,
-        emotions: snapshot.userEmotions
-      })),
-      transcript: analyzerReport.transcript
-    };
-    
-    return report;
-  };
-
-  // Helper functions
-  const getCurrentEmotions = (faces: any[]): EmotionScore[] => {
-    if (!faces || faces.length === 0) return [];
-    
-    const face = faces[0];
-    const emotions: EmotionScore[] = [];
-    
-    // Extract emotions from face mesh expressions
-    if (face.expressions) {
-      const emotionMap: Record<string, string> = {
-        happy: 'joy',
-        sad: 'sadness',
-        angry: 'anger',
-        surprised: 'surprise',
-        disgusted: 'disgust',
-        fearful: 'fear',
-        neutral: 'neutral'
-      };
-      
-      Object.entries(face.expressions).forEach(([emotion, score]) => {
-        if (typeof score === 'number' && score > 0.1) {
-          emotions.push({
-            name: emotionMap[emotion] || emotion,
-            score: score as number,
-            color: getEmotionColor(emotionMap[emotion] || emotion)
-          });
-        }
-      });
-    }
-    
-    // Sort by score and return top 3
-    return emotions.sort((a, b) => b.score - a.score).slice(0, 3);
-  };
-
-  const calculatePostureScore = (pose: any): PostureScore => {
-    if (!pose || !pose.keypoints) {
-      return { confidence: 0, alignment: 0, openness: 0, overall: 0 };
-    }
-    
-    const keypoints = pose.keypoints;
-    
-    // Find key body points
-    const nose = keypoints.find((kp: any) => kp.part === 'nose');
-    const leftShoulder = keypoints.find((kp: any) => kp.part === 'leftShoulder');
-    const rightShoulder = keypoints.find((kp: any) => kp.part === 'rightShoulder');
-    const leftElbow = keypoints.find((kp: any) => kp.part === 'leftElbow');
-    const rightElbow = keypoints.find((kp: any) => kp.part === 'rightElbow');
-    
-    // Calculate confidence based on keypoint confidence scores
-    const avgConfidence = keypoints.reduce((sum: number, kp: any) => sum + kp.score, 0) / keypoints.length;
-    
-    // Calculate alignment (shoulders level)
-    let alignment = 0;
-    if (leftShoulder && rightShoulder) {
-      const shoulderDiff = Math.abs(leftShoulder.position.y - rightShoulder.position.y);
-      alignment = Math.max(0, 1 - shoulderDiff / 50); // Normalize difference
-    }
-    
-    // Calculate openness (arms not crossed)
-    let openness = 1; // Default to open
-    if (leftElbow && rightElbow && leftShoulder && rightShoulder) {
-      const shoulderWidth = Math.abs(leftShoulder.position.x - rightShoulder.position.x);
-      const elbowDistance = Math.abs(leftElbow.position.x - rightElbow.position.x);
-      
-      // If elbows are closer than shoulders, posture is more closed
-      if (elbowDistance < shoulderWidth * 0.8) {
-        openness = elbowDistance / shoulderWidth;
-      }
-    }
-    
-    // Calculate overall score
-    const overall = (avgConfidence * 0.3 + alignment * 0.3 + openness * 0.4);
-    
-    return {
-      confidence: avgConfidence,
-      alignment,
-      openness,
-      overall
-    };
-  };
-
-  const isLookingAtCamera = (gazeData: any): boolean => {
-    if (!gazeData || !userVideoRef.current) return false;
-    
-    const { x, y } = gazeData;
-    const video = userVideoRef.current;
-    const rect = video.getBoundingClientRect();
-    
-    // Check if gaze is within video bounds (with some margin)
-    const margin = 50;
-    return (
-      x > rect.left - margin &&
-      x < rect.right + margin &&
-      y > rect.top - margin &&
-      y < rect.bottom + margin
-    );
-  };
-
-  const isSpeaking = (audioData: any): boolean => {
-    if (!audioData || !audioData.volume) return false;
-    
-    // Simple volume threshold detection
-    const SPEAKING_THRESHOLD = 0.02;
-    return audioData.volume > SPEAKING_THRESHOLD;
-  };
-
-  const getAudioVolume = (audioData: any): number => {
-    if (!audioData || !audioData.volume) return 0;
-    return Math.min(audioData.volume, 1); // Normalize to 0-1
-  };
-
-  const getTranscript = (): TranscriptEntry[] => {
-    if (!voiceServiceRef.current) return [];
-    
-    const messages = voiceServiceRef.current.getMessages();
-    const transcript: TranscriptEntry[] = [];
-    
-    messages.forEach((message, index) => {
-      if (message.type === 'user_message' || message.type === 'assistant_message') {
-        transcript.push({
-          speaker: message.type === 'user_message' ? 'user' : 'partner',
-          text: message.message?.content || '',
-          emotions: message.models?.prosody?.scores || [],
-          timestamp: message.receivedAt || Date.now(),
-          duration: 0 // Will be calculated from next message
-        });
-      }
-    });
-    
-    // Calculate durations
-    for (let i = 0; i < transcript.length - 1; i++) {
-      transcript[i].duration = transcript[i + 1].timestamp - transcript[i].timestamp;
-    }
-    
-    return transcript;
-  };
-
-  const getEmotionColor = (emotion: string): string => {
-    const colors: Record<string, string> = {
-      joy: '#FFD700',
-      excitement: '#FF6B6B',
-      interest: '#4ECDC4',
-      surprise: '#FFE66D',
-      contentment: '#98D8C8',
-      love: '#FF69B4',
-      sadness: '#6495ED',
-      fear: '#9370DB',
-      anger: '#DC143C',
-      disgust: '#8B7355',
-      contempt: '#696969',
-      neutral: '#A0A0A0'
-    };
-    return colors[emotion] || '#A0A0A0';
-  };
-
-  const calculatePerformanceMetrics = (data: AnalyticsSnapshot[], participant: 'user' | 'partner'): PerformanceMetrics => {
-    if (data.length === 0) {
-      return {
-        eyeContactPercentage: 0,
-        postureScore: 0,
-        speakingRatio: 0,
-        responseTime: 1.5,
-        emotionalEngagement: 0,
-        activeListening: 0
-      };
-    }
-    
-    let eyeContactCount = 0;
-    let avgPosture = 0;
-    let speakingTime = 0;
-    const emotionVariety = new Set<string>();
-    
-    data.forEach(snapshot => {
-      const isUser = participant === 'user';
-      
-      if (isUser ? snapshot.userEyeContact : snapshot.partnerEyeContact) {
-        eyeContactCount++;
-      }
-      
-      avgPosture += isUser ? snapshot.userPosture.overall : snapshot.partnerPosture.overall;
-      
-      if (isUser ? snapshot.userSpeaking : snapshot.partnerSpeaking) {
-        speakingTime++;
-      }
-      
-      const emotions = isUser ? snapshot.userEmotions : snapshot.partnerEmotions;
-      emotions.forEach(e => emotionVariety.add(e.name));
-    });
-    
-    const totalFrames = data.length;
-    const metrics = {
-      eyeContactPercentage: (eyeContactCount / totalFrames) * 100,
-      postureScore: avgPosture / totalFrames,
-      speakingRatio: speakingTime / analyticsData.length,
-      responseTime: 1.5, // Placeholder
-      emotionalEngagement: emotionVariety.size / 10, // Normalize to 0-1
-      activeListening: 0.7 // Placeholder
-    };
-    
-    return metrics;
-  };
-
+  /* ----------------------------- RENDER ----------------------------- */
   return (
-    <div className="video-call-analytics">
-      <h2>Video Call Analytics</h2>
+    <div className="video-call-analytics" style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
+      <h1>Video Call Analytics</h1>
       
-      {/* SIMPLE VIDEO TEST - ALWAYS VISIBLE */}
-      <div style={{ 
-        position: 'fixed', 
-        top: '10px', 
-        right: '10px', 
-        zIndex: 9999,
-        background: 'white',
-        border: '3px solid #00ff00',
-        borderRadius: '8px',
-        padding: '10px'
-      }}>
-        <div>Camera Feed:</div>
-        <video
-          id="user-video-element"
-          ref={userVideoRef}
-          autoPlay
-          muted
-          playsInline
-          style={{
-            width: '200px',
-            height: '150px',
-            border: '2px solid black',
-            objectFit: 'cover'
-          }}
-        />
-        <div style={{ fontSize: '10px', marginTop: '5px' }}>
-          {localStream ? 'CAMERA ACTIVE' : 'NO CAMERA'}
-        </div>
-      </div>
-
       {!isInRoom && (
-        <div className="room-controls">
-          <h2>Video Call Analytics Demo</h2>
-          <div className="room-options">
-            <div className="create-room">
-              <h3>Create a Room</h3>
-              <input
-                type="text"
-                placeholder="Your name"
-                value={currentUserName}
-                onChange={(e) => setCurrentUserName(e.target.value)}
-              />
-              <button onClick={() => createRoom()} disabled={!currentUserName}>
-                Create Room
-              </button>
-            </div>
-            
-            <div className="divider">OR</div>
-            
-            <div className="join-room">
-              <h3>Join a Room</h3>
-              <input
-                type="text"
-                placeholder="Room ID"
-                value={joinRoomId}
-                onChange={(e) => setJoinRoomId(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="Your name"
-                value={currentUserName}
-                onChange={(e) => setCurrentUserName(e.target.value)}
-              />
-              <button onClick={() => joinRoom(joinRoomId, currentUserName)} disabled={!joinRoomId || !currentUserName}>
-                Join Room
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* QR Code display for room sharing */}
-      {showQrCode && qrCodeUrl && (
-        <div className="qr-code-modal">
-          <div className="qr-content">
-            <h3>Share Room</h3>
-            <p>Room ID: {roomId}</p>
-            <img src={qrCodeUrl} alt="Room QR Code" />
-            <button onClick={() => setShowQrCode(false)}>Close</button>
-          </div>
-        </div>
-      )}
-
-      {/* Main video call interface */}
-      {isInRoom && (
-        <div className="video-call-container">
-          <div className="connection-status">
-            <span className={`status-indicator ${connectionStatus === 'Connected' ? 'connected' : 'connecting'}`}></span>
-            {connectionStatus}
-          </div>
-
-          <div className="video-grid">
-            <div className="local-video-container" style={{ position: 'relative' }}>
-              <video
-                id="user-video-element"
-                ref={userVideoRef}
-                autoPlay
-                muted
-                playsInline
-                className="local-video"
-                style={{
-                  width: '100%',
-                  height: '300px',
-                  border: '3px solid #00ff00',
-                  borderRadius: '8px',
-                  backgroundColor: '#000',
-                  objectFit: 'cover'
-                }}
-              />
-              <div className="video-label">You ({currentUserName})</div>
-              <div className="video-debug" style={{
-                position: 'absolute',
-                top: '10px',
-                left: '10px',
-                background: 'rgba(0,0,0,0.7)',
-                color: 'white',
-                padding: '5px',
-                fontSize: '12px',
-                borderRadius: '4px'
-              }}>
-                Stream: {localStream ? 'Active' : 'None'}<br/>
-                Tracks: {localStream?.getVideoTracks().length || 0}
-              </div>
-              <div className="local-controls">
-                <button onClick={toggleMute} className={`control-btn ${isMuted ? 'disabled' : ''}`}>
-                  <Mic className={isMuted ? 'off' : ''} size={20} />
-                </button>
-                <button onClick={toggleVideo} className={`control-btn ${!isVideoEnabled ? 'disabled' : ''}`}>
-                  <Camera className={isVideoEnabled ? '' : 'off'} size={20} />
-                </button>
-              </div>
-            </div>
-
-            <div className="remote-video-container">
-              <video
-                ref={partnerVideoRef}
-                autoPlay
-                playsInline
-                className="remote-video"
-              />
-              {guestName && <div className="video-label">{guestName}</div>}
-            </div>
-          </div>
-
-          {/* Call controls */}
-          <div className="call-controls">
-            <button className="end-call-btn" onClick={leaveRoom}>
-              <PhoneOff size={24} />
-              End Call
+        <section style={{ marginBottom: '20px' }}>
+          <div style={{ marginBottom: '10px' }}>
+            <input 
+              placeholder="Your name" 
+              value={currentUserName} 
+              onChange={e => setCurrentUserName(e.target.value)}
+              style={{ padding: '8px', marginRight: '10px', fontSize: '16px' }}
+            />
+            <button 
+              onClick={createRoom}
+              disabled={!currentUserName}
+              style={{ padding: '8px 16px', fontSize: '16px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}
+            >
+              Create Room
             </button>
-            {isHost && (
-              <button className="share-btn" onClick={() => setShowQrCode(true)}>
-                <Share2 size={20} />
-                Share Room
-              </button>
-            )}
           </div>
+          
+          <hr style={{ margin: '20px 0' }} />
+          
+          <div>
+            <input 
+              placeholder="Room ID to join" 
+              value={joinRoomId} 
+              onChange={e => setJoinRoomId(e.target.value)}
+              style={{ padding: '8px', marginRight: '10px', fontSize: '16px' }}
+            />
+            <button 
+              onClick={() => joinRoom(joinRoomId, currentUserName)}
+              disabled={!joinRoomId || !currentUserName}
+              style={{ padding: '8px 16px', fontSize: '16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px' }}
+            >
+              Join Room
+            </button>
+          </div>
+        </section>
+      )}
 
-          {/* Analytics visualization */}
-          {isCallActive && (
-            <div className="analytics-panel">
-              <h3>Live Analytics</h3>
-              <div className="metrics-grid">
-                <div className="metric">
-                  <Eye size={16} />
-                  <span>Eye Contact</span>
-                  <div className="metric-value">
-                    {analyticsData.length > 0 && analyticsData[analyticsData.length - 1].userEyeContact ? '✓' : '✗'}
-                  </div>
-                </div>
-                <div className="metric">
-                  <Users size={16} />
-                  <span>Posture Score</span>
-                  <div className="metric-value">
-                    {analyticsData.length > 0 ? 
-                      `${Math.round(analyticsData[analyticsData.length - 1].userPosture.overall * 100)}%` : 
-                      '0%'
-                    }
-                  </div>
-                </div>
-                <div className="metric">
-                  <Heart size={16} />
-                  <span>Emotion</span>
-                  <div className="metric-value">
-                    {analyticsData.length > 0 && analyticsData[analyticsData.length - 1].userEmotions.length > 0 ? 
-                      analyticsData[analyticsData.length - 1].userEmotions[0].name : 
-                      'Neutral'
-                    }
-                  </div>
-                </div>
-              </div>
+      {isInRoom && (
+        <section className="video-grid" style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+            <div style={{ flex: 1 }}>
+              <h3>You ({currentUserName})</h3>
+              <video 
+                ref={userVideoRef} 
+                muted 
+                autoPlay 
+                playsInline 
+                style={{ width: '100%', maxWidth: '400px', backgroundColor: '#000', borderRadius: '8px' }}
+              />
             </div>
-          )}
-        </div>
+            <div style={{ flex: 1 }}>
+              <h3>{guestName || 'Partner'}</h3>
+              <video 
+                ref={partnerVideoRef} 
+                autoPlay 
+                playsInline 
+                style={{ width: '100%', maxWidth: '400px', backgroundColor: '#000', borderRadius: '8px' }}
+              />
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button 
+              onClick={toggleMute}
+              style={{ 
+                padding: '10px', 
+                backgroundColor: isMuted ? '#dc3545' : '#28a745', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '50%', 
+                width: '40px', 
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Mic size={18} />
+            </button>
+            <button 
+              onClick={toggleVideo}
+              style={{ 
+                padding: '10px', 
+                backgroundColor: !isVideoEnabled ? '#dc3545' : '#28a745', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '50%', 
+                width: '40px', 
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Camera size={18} />
+            </button>
+            <button 
+              onClick={leaveRoom}
+              style={{ 
+                padding: '10px', 
+                backgroundColor: '#dc3545', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '50%', 
+                width: '40px', 
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <PhoneOff size={18} />
+            </button>
+            <span style={{ marginLeft: '20px', fontSize: '16px', color: connectionStatus === 'Connected' ? '#28a745' : '#6c757d' }}>
+              Status: {connectionStatus}
+            </span>
+          </div>
+        </section>
       )}
 
-      {/* Call report display */}
-      {callReport && <CallReportView report={callReport} onClose={() => setCallReport(null)} />}
-    </div>
-  );
-};
-
-// Separate component for the comprehensive report
-const CallReportView: React.FC<{ report: CallReport; onClose: () => void }> = ({ report, onClose }) => {
-  return (
-    <div className="call-report">
-      <div className="report-header">
-        <h2>Call Analysis Report</h2>
-        <button onClick={onClose} className="close-button">
-          <PhoneOff size={20} />
-        </button>
-      </div>
-      
-      <div className="chemistry-score">
-        <h3>Chemistry Score</h3>
-        <div className="score-display">
-          <div className="score-value">{Math.round(report.chemistryScore * 100)}%</div>
-          <div className="score-label">Overall Chemistry</div>
-        </div>
-      </div>
-      
-      <div className="metrics-comparison">
-        <div className="participant-metrics">
-          <h4>Your Performance</h4>
-          <MetricsList metrics={report.userMetrics} />
-        </div>
-        <div className="participant-metrics">
-          <h4>Partner Performance</h4>
-          <MetricsList metrics={report.partnerMetrics} />
-        </div>
-      </div>
-      
-      <div className="recommendations-section">
-        <h3><Award className="icon" /> Recommendations</h3>
-        {report.recommendations.map(rec => (
-          <RecommendationCard key={rec.id} recommendation={rec} />
-        ))}
-      </div>
-      
-      <div className="ai-summary">
-        <h3><MessageSquare className="icon" /> AI Summary</h3>
-        <p>{report.aiSummary}</p>
-      </div>
-    </div>
-  );
-};
-
-const MetricsList: React.FC<{ metrics: PerformanceMetrics }> = ({ metrics }) => {
-  return (
-    <div className="metrics-list">
-      <div className="metric-item">
-        <Eye className="metric-icon" />
-        <span>Eye Contact: {Math.round(metrics.eyeContactPercentage)}%</span>
-      </div>
-      <div className="metric-item">
-        <Users className="metric-icon" />
-        <span>Posture Score: {(metrics.postureScore * 100).toFixed(0)}%</span>
-      </div>
-      <div className="metric-item">
-        <Mic className="metric-icon" />
-        <span>Speaking Ratio: {(metrics.speakingRatio * 100).toFixed(0)}%</span>
-      </div>
-      <div className="metric-item">
-        <Heart className="metric-icon" />
-        <span>Engagement: {(metrics.emotionalEngagement * 100).toFixed(0)}%</span>
-      </div>
-    </div>
-  );
-};
-
-const RecommendationCard: React.FC<{ recommendation: Recommendation }> = ({ recommendation }) => {
-  const priorityColors = {
-    high: '#FF6B6B',
-    medium: '#FFD93D',
-    low: '#4ECDC4'
-  };
-  
-  return (
-    <div className="recommendation-card">
-      <div className="rec-header">
-        <span className="rec-category">{recommendation.category}</span>
-        <span 
-          className="rec-priority" 
-          style={{ backgroundColor: priorityColors[recommendation.priority] }}
-        >
-          {recommendation.priority}
-        </span>
-      </div>
-      <h4>{recommendation.title}</h4>
-      <p>{recommendation.description}</p>
-      {recommendation.coach && (
-        <div className="rec-coach">
-          <span>Recommended Coach: {recommendation.coach}</span>
-        </div>
+      {showQrCode && (
+        <section style={{ textAlign: 'center', marginTop: '20px' }}>
+          <h3>Share this QR code for others to join:</h3>
+          <img src={qrCodeUrl} alt="Room QR Code" style={{ border: '1px solid #ccc', borderRadius: '8px' }} />
+          <p>Room ID: {roomId}</p>
+        </section>
       )}
     </div>
   );
 };
+
+/* ---------------------- REPORT COMPONENTS ------------------------- */
+const MetricsList: React.FC<{ metrics: PerformanceMetrics }> = ({ metrics }) => (
+  <ul>
+    <li><Eye size={14} /> {Math.round(metrics.eyeContactPercentage)}% eye contact</li>
+    <li><Users size={14} /> {(metrics.postureScore * 100).toFixed(0)}% posture</li>
+    <li><Mic size={14} /> {(metrics.speakingRatio * 100).toFixed(0)}% speaking</li>
+    <li><Heart size={14} /> {(metrics.emotionalEngagement * 100).toFixed(0)}% engagement</li>
+  </ul>
+);
+
+const RecommendationCard: React.FC<{ recommendation: Recommendation }> = ({ recommendation }) => (
+  <div className="recommendation">
+    <strong>{recommendation.title}</strong>
+    <p>{recommendation.description}</p>
+  </div>
+);
 
 export default VideoCallAnalytics;
