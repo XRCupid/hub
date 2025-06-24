@@ -1,2 +1,0 @@
-"use strict";(self.webpackChunkhub=self.webpackChunkhub||[]).push([[2116],{99735:(e,a,s)=>{s.r(a),s.d(a,{SimpleTestAvatar:()=>c});s(65043);var t=s(81597),l=s(70579);t.p.preload("/avatars/coach_grace.glb");const c=e=>{let{url:a}=e;console.log("[SimpleTestAvatar] Rendering with URL:",a);const{scene:s}=(0,t.p)(a);return console.log("[SimpleTestAvatar] Scene loaded:",s),(0,l.jsx)("primitive",{object:s,scale:1,position:[0,0,0]})}}}]);
-//# sourceMappingURL=2116.c5ef2113.chunk.js.map
