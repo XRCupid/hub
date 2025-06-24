@@ -1,5 +1,5 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth, signInAnonymously } from 'firebase/auth';
+import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getDatabase, Database } from 'firebase/database';
 
@@ -52,16 +52,6 @@ if (!isInitialized) {
     console.log('🚀 Attempting to get auth...');
     auth = getAuth(app);
     console.log('✅ Auth initialized:', auth);
-    
-    // DISABLED: Anonymous auth causing errors, not needed for database access
-    // Sign in anonymously for Firestore/Database access
-    // signInAnonymously(auth)
-    //   .then(() => {
-    //     console.log('✅ Signed in anonymously');
-    //   })
-    //   .catch((error) => {
-    //     console.error('❌ Anonymous auth error:', error);
-    //   });
     
     console.log('✅ Firebase initialized successfully with real credentials (auth disabled)');
     isInitialized = true;
