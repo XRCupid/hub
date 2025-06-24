@@ -190,61 +190,60 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
 
     console.log('Creating room...');
     try {
-      const createdRoomId = await push(ref(database, 'rooms'), { participants: [userName] }).key;
+      const createdRoomId = (await push(ref(database, 'rooms'), {})).key;
       console.log('Room creation result:', createdRoomId);
       
       if (!createdRoomId) {
-        console.error('Failed to create room - no room ID returned');
-        alert('Failed to create room. Please check your internet connection and try again.');
+        alert('Failed to create room - no room ID returned');
         return;
       }
 
-      console.log('Room created successfully:', createdRoomId);
+      // Set up room info like the working conference demo
+      await set(ref(database, `rooms/${createdRoomId}/info`), {
+        hostName: userName,
+        hostPeerId: myPeerIdRef.current,
+        createdAt: Date.now(),
+        isActive: true
+      });
+
+      // Clear old signals
+      await set(ref(database, `rooms/${createdRoomId}/signals`), null);
+
       setRoomId(createdRoomId);
       roomRef.current = createdRoomId;
-      myPeerIdRef.current = 'host-peer';
-      setIsHost(true);
-      setCurrentUserName(userName);
       setIsInRoom(true);
-      setConnectionStatus('Waiting for partner...');
-
+      setIsHost(true);
+      setGuestName('');
+      
       // Generate QR code
+      const qrUrl = `https://xrcupid.github.io/hub#/video-analytics?room=${createdRoomId}`;
+      console.log('🔗 QR URL:', qrUrl);
       try {
-        const joinUrl = `${window.location.origin}/hub#/video-analytics?room=${createdRoomId}`;
-        const qrDataUrl = await QRCode.toDataURL(joinUrl, {
-          width: 300,
-          margin: 2,
-          color: {
-            dark: '#000000',
-            light: '#FFFFFF'
-          }
-        });
-        setQrCodeUrl(qrDataUrl);
-        setShowQrCode(true);
-      } catch (err) {
-        console.error('Error generating QR code:', err);
+        const qr = await QRCode.toDataURL(qrUrl);
+        setQrCodeUrl(qr);
+      } catch (error) {
+        console.error('QR generation failed:', error);
       }
 
-      // Listen for guest
-      onValue(ref(database, `rooms/${createdRoomId}/participants`), (snapshot) => {
-        if (snapshot.val() && snapshot.val().length > 1 && !peerRef.current) {
-          const guest = snapshot.val().find((p: string) => p !== userName);
-          if (guest) {
-            console.log('Guest joined:', guest);
-            setGuestName(guest);
-            setConnectionStatus('Partner joined, connecting...');
-            setShowQrCode(false);
-            createPeer(true, 'guest-peer');
-          }
+      // Listen for guest joining (conference demo pattern)
+      onValue(ref(database, `rooms/${createdRoomId}/guest`), (snapshot) => {
+        const guestData = snapshot.val();
+        if (guestData && !peerRef.current) {
+          console.log('Guest joined, creating peer connection');
+          setGuestName(guestData.name || 'Guest');
+          createPeer(true, 'guest-peer');
         }
       });
 
       // Listen for signals from guest
-      onValue(ref(database, `rooms/${createdRoomId}/signals/guest-peer`), (snapshot) => {
-        const signal = snapshot.val();
-        if (signal && peerRef.current && signal.timestamp > Date.now() - 30000) {
-          console.log('🎯 [HOST] Received signal from guest:', signal);
-          peerRef.current.signal(signal.data);
+      onValue(ref(database, `rooms/${createdRoomId}/signals`), (snapshot) => {
+        const signals = snapshot.val();
+        if (signals && signals['guest-peer'] && signals['guest-peer']['host-peer']) {
+          const signal = signals['guest-peer']['host-peer'];
+          if (peerRef.current && signal.timestamp > Date.now() - 30000) {
+            console.log('🎯 [HOST] Received signal from guest:', signal);
+            peerRef.current.signal(JSON.parse(signal.signal));
+          }
         }
       });
     } catch (error) {
@@ -270,37 +269,28 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
     }
 
     console.log('✅ [JOIN] Media initialized, attempting to join room:', roomId);
-    const participantsSnapshot = await get(ref(database, `rooms/${roomId}/participants`));
-    const currentParticipants = participantsSnapshot.val() || [];
+    console.log('✅ [JOIN] Media initialized, attempting to join room:', roomId);
     
-    if (currentParticipants.length >= 2) {
-      alert('Room is full!');
-      return;
-    }
+    // Add ourselves as guest (conference demo pattern)
+    await set(ref(database, `rooms/${roomId}/guest`), {
+      name: userName,
+      peerId: myPeerIdRef.current,
+      joinedAt: Date.now()
+    });
     
-    // Add ourselves to participants
-    const updatedParticipants = [...currentParticipants, userName];
-    await set(ref(database, `rooms/${roomId}/participants`), updatedParticipants);
+    console.log('🔄 [JOIN] Successfully joined room as guest');
     
-    console.log('🔄 [JOIN] Successfully joined room');
-    
-    if (!updatedParticipants.includes(userName)) {
-      alert('Failed to join room. Please try again.');
-      return;
-    }
-
-    console.log('✅ [JOIN] Successfully joined room, setting up peer connection');
+    setRoomId(roomId);
     roomRef.current = roomId;
-    myPeerIdRef.current = 'guest-peer';
+    setIsInRoom(true);
     setIsHost(false);
     setCurrentUserName(userName);
-    setIsInRoom(true);
     setConnectionStatus('Connecting to host...');
 
     // Get host name from room data
-    const roomData = await get(ref(database, `rooms/${roomId}`));
-    if (roomData.val() && roomData.val().participants && roomData.val().participants.length > 0) {
-      const hostName = roomData.val().participants.find((p: string) => p !== userName);
+    const roomData = await get(ref(database, `rooms/${roomId}/info`));
+    if (roomData.val()) {
+      const hostName = roomData.val().hostName;
       if (hostName) {
         setGuestName(hostName);
       }
@@ -310,11 +300,14 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
     createPeer(false, 'host-peer');
 
     // Listen for signals from host
-    onValue(ref(database, `rooms/${roomId}/signals/host-peer`), (snapshot) => {
-      const signal = snapshot.val();
-      if (signal && peerRef.current && signal.timestamp > Date.now() - 30000) {
-        console.log('🎯 [GUEST] Received signal from host:', signal);
-        peerRef.current.signal(signal.data);
+    onValue(ref(database, `rooms/${roomId}/signals`), (snapshot) => {
+      const signals = snapshot.val();
+      if (signals && signals['host-peer'] && signals['host-peer']['guest-peer']) {
+        const signal = signals['host-peer']['guest-peer'];
+        if (peerRef.current && signal.timestamp > Date.now() - 30000) {
+          console.log('🎯 [GUEST] Received signal from host:', signal);
+          peerRef.current.signal(JSON.parse(signal.signal));
+        }
       }
     });
   };
@@ -335,9 +328,15 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
 
     peer.on('signal', (data: any) => {
       if (roomRef.current) {
-        set(ref(database, `rooms/${roomRef.current}/signals/${myPeerIdRef.current}`), {
-          data,
-          timestamp: Date.now()
+        console.log('📡 [PEER] Sending signal:', data);
+        set(ref(database!, `rooms/${roomRef.current}/signals`), {
+          [myPeerIdRef.current]: {
+            [targetPeerId]: {
+              signal: JSON.stringify(data),
+              from: myPeerIdRef.current,
+              timestamp: Date.now()
+            }
+          }
         });
       }
     });
