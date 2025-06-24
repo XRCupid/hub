@@ -178,13 +178,15 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ onClose,
 
   // Create a new room
   const createRoom = async (userName: string) => {
-    if (!userName.trim()) {
-      alert('Please enter your name');
+    if (!localStream || !userName.trim()) {
+      alert('Please enter your name and ensure camera access');
       return;
     }
 
-    const stream = await initializeMedia();
-    if (!stream) return;
+    if (!database) {
+      alert('Database connection failed. Please check your internet connection.');
+      return;
+    }
 
     console.log('Creating room...');
     try {
