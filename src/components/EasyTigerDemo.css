@@ -1,0 +1,278 @@
+/* EasyTiger Professional Demo Styles */
+
+:root {
+  --easytiger-primary: #FF6B35;
+  --easytiger-secondary: #1E3A8A;
+  --easytiger-dark: #0F172A;
+  --easytiger-light: #F8FAFC;
+  --easytiger-success: #10B981;
+  --easytiger-warning: #F59E0B;
+  --easytiger-gradient: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%);
+  --easytiger-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --easytiger-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Authentication Screen */
+.easytiger-auth {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  padding: 2rem;
+}
+
+.auth-container {
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--easytiger-shadow-lg);
+  padding: 3rem;
+  width: 100%;
+  max-width: 480px;
+}
+
+.logo-section {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.brand {
+  font-size: 3rem;
+  font-weight: 800;
+  background: var(--easytiger-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  color: #64748B;
+  font-size: 1.125rem;
+  margin-top: 0.5rem;
+}
+
+.auth-form {
+  margin-bottom: 2rem;
+}
+
+.auth-form h2 {
+  font-size: 1.5rem;
+  color: var(--easytiger-dark);
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+}
+
+.password-input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  font-size: 1rem;
+  border: 2px solid #E2E8F0;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  transition: all 0.2s;
+}
+
+.password-input:focus {
+  outline: none;
+  border-color: var(--easytiger-primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.access-button {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  background: var(--easytiger-gradient);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.access-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--easytiger-shadow-lg);
+}
+
+.demo-info {
+  border-top: 1px solid #E2E8F0;
+  padding-top: 2rem;
+}
+
+.demo-info h3 {
+  font-size: 1.125rem;
+  color: var(--easytiger-dark);
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.demo-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.demo-info li {
+  padding: 0.5rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+  color: #64748B;
+}
+
+.demo-info li:before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--easytiger-success);
+  font-weight: bold;
+}
+
+/* Main Demo */
+.easytiger-demo {
+  min-height: 100vh;
+  background: #F8FAFC;
+}
+
+.demo-header {
+  background: white;
+  border-bottom: 1px solid #E2E8F0;
+  box-shadow: var(--easytiger-shadow);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.demo-header .brand {
+  font-size: 2rem;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.demo-badge {
+  background: var(--easytiger-gradient);
+  color: white;
+  padding: 0.375rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.logout-button {
+  padding: 0.5rem 1.25rem;
+  background: transparent;
+  color: #64748B;
+  border: 2px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-button:hover {
+  border-color: var(--easytiger-primary);
+  color: var(--easytiger-primary);
+}
+
+.demo-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.demo-intro {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.demo-intro h2 {
+  font-size: 2.5rem;
+  color: var(--easytiger-dark);
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+.demo-intro p {
+  font-size: 1.25rem;
+  color: #64748B;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Override VideoCallAnalytics styles */
+.easytiger-demo .video-call-analytics {
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--easytiger-shadow-lg);
+  padding: 2rem;
+}
+
+.easytiger-demo .video-call-analytics h2 {
+  color: var(--easytiger-dark);
+}
+
+.easytiger-demo .video-call-analytics button {
+  background: var(--easytiger-gradient);
+  border: none;
+  transition: all 0.2s;
+}
+
+.easytiger-demo .video-call-analytics button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--easytiger-shadow);
+}
+
+.demo-footer {
+  background: white;
+  border-top: 1px solid #E2E8F0;
+  padding: 2rem;
+  text-align: center;
+  color: #64748B;
+  font-size: 0.875rem;
+  margin-top: 4rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .auth-container {
+    padding: 2rem;
+  }
+
+  .brand {
+    font-size: 2.5rem;
+  }
+
+  .demo-intro h2 {
+    font-size: 2rem;
+  }
+
+  .demo-intro p {
+    font-size: 1.125rem;
+  }
+
+  .header-content {
+    padding: 1rem;
+  }
+
+  .demo-container {
+    padding: 1rem;
+  }
+}
