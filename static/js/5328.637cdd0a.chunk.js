@@ -1,2 +1,0 @@
-"use strict";(self.webpackChunkhub=self.webpackChunkhub||[]).push([[5328],{25328:(e,n,s)=>{s.r(n),s.d(n,{default:()=>r});s(65043);var i=s(70579);const r=()=>(0,i.jsxs)("div",{style:{padding:"20px"},children:[(0,i.jsx)("h1",{children:"\ud83c\udfa5 Video Test Component"}),(0,i.jsx)("p",{children:"If you can see this, routing is working!"}),(0,i.jsx)("p",{children:"VideoCallAnalytics component has an error preventing it from loading."})]})}}]);
-//# sourceMappingURL=5328.637cdd0a.chunk.js.map

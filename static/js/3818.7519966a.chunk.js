@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkhub=self.webpackChunkhub||[]).push([[3818],{43818:(s,e,n)=>{n.r(e),n.d(e,{MinimalPostProcessing:()=>h});n(9950);var i=n(65415),c=n(44414);const h=()=>(0,c.jsx)(i.s0,{children:(0,c.jsx)(i.mK,{intensity:.5})})}}]);
