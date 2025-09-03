@@ -4,12 +4,14 @@ import {
   ETHICAL_PRINCIPLES,
   PERFORMANCE_METRICS,
   CurriculumModule,
-  Lesson
+  Lesson,
+  getAllLessons,
+  getTotalLessonCount
 } from '../config/curriculumStructure';
 import './CurriculumNavigator.css';
 
 interface CurriculumNavigatorProps {
-  selectedCoach: 'grace' | 'posie' | 'rizzo';
+  selectedCoach?: 'grace' | 'posie' | 'rizzo';
   userProgress?: {
     completedModules: string[];
     currentMetrics: Record<string, number>;
@@ -17,34 +19,47 @@ interface CurriculumNavigatorProps {
 }
 
 export const CurriculumNavigator: React.FC<CurriculumNavigatorProps> = ({
-  selectedCoach,
+  selectedCoach = 'grace',
   userProgress = { completedModules: [], currentMetrics: {} }
 }) => {
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [showEthicsPanel, setShowEthicsPanel] = useState(false);
+  const [currentCoach, setCurrentCoach] = useState<'grace' | 'posie' | 'rizzo'>(selectedCoach);
 
-  // Use simplified curriculum structure
+  // Get the comprehensive curriculum structure
   const curriculum = CURRICULUM_STRUCTURE;
+  const totalLessons = getTotalLessonCount();
+  const allLessons = getAllLessons();
+  
+  // Debug logging
+  console.log('Curriculum data:', curriculum);
+  console.log('Current coach:', currentCoach);
+  console.log('Total lessons:', totalLessons);
+  console.log('Current coach data:', curriculum[currentCoach]);
 
-  const renderModule = (module: CurriculumModule, level: string) => {
+  const renderModule = (module: any, level: string, coachName: string) => {
     const isCompleted = userProgress.completedModules.includes(module.id);
     const isLocked = level === 'intermediate' && userProgress.completedModules.length < 2 ||
                      level === 'advanced' && userProgress.completedModules.length < 4;
 
     return (
       <div
-        key={module.id}
+        key={`${coachName}-${module.id}`}
         className={`module-card ${isCompleted ? 'completed' : ''} ${isLocked ? 'locked' : ''}`}
         onClick={() => !isLocked && setSelectedModule(module.id)}
       >
         <h4>{module.title}</h4>
         <div className="module-lessons">
-          {module.lessons.map((lesson: Lesson, idx: number) => (
-            <div key={lesson.id || idx} className="lesson-preview">
-              <h4>{lesson.title}</h4>
-              <p>{lesson.description}</p>
+          {module.lessons.map((lessonName: string, idx: number) => (
+            <div key={idx} className="lesson-preview">
+              <h5>{lessonName}</h5>
+              <p>{coachName} • {level}</p>
             </div>
           ))}
+        </div>
+        <div className="module-info">
+          <span className="lesson-count">{module.lessons.length} lessons</span>
+          <span className="coach-name">{coachName}</span>
         </div>
         {isCompleted && <div className="completion-badge">✓ Completed</div>}
         {isLocked && <div className="lock-icon">🔒</div>}
@@ -56,7 +71,7 @@ export const CurriculumNavigator: React.FC<CurriculumNavigatorProps> = ({
     const metric = PERFORMANCE_METRICS[metricName as keyof typeof PERFORMANCE_METRICS];
     if (!metric || !metric.idealRange) return null;
 
-    const { min, max } = metric.idealRange;
+    const [min, max] = metric.idealRange;
     const percentage = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
     
     return (
@@ -130,42 +145,78 @@ export const CurriculumNavigator: React.FC<CurriculumNavigatorProps> = ({
     );
   };
 
+  const renderCoachSelector = () => {
+    return (
+      <div className="coach-selector">
+        {Object.entries(curriculum).map(([coachId, coach]) => (
+          <button
+            key={coachId}
+            className={`coach-btn ${currentCoach === coachId ? 'active' : ''}`}
+            onClick={() => setCurrentCoach(coachId as 'grace' | 'posie' | 'rizzo')}
+          >
+            <div className="coach-avatar">👩‍🏫</div>
+            <div className="coach-info">
+              <h4>{coach.name}</h4>
+              <p>{coach.focus}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const getCurrentCoachData = () => {
+    return curriculum[currentCoach];
+  };
+
   return (
     <div className="curriculum-navigator">
-      <div className="coach-header">
-        <h2>Curriculum</h2>
-        <p className="coach-focus"></p>
-      </div>
-
-      <div className="curriculum-levels">
-        <div className="level-section">
-          <h3>Foundation Level</h3>
-          <div className="modules-grid">
-            {curriculum.foundation.map((module: CurriculumModule) => 
-              renderModule(module, 'foundation')
-            )}
-          </div>
-        </div>
-
-        <div className="level-section">
-          <h3>Intermediate Level</h3>
-          <div className="modules-grid">
-            {curriculum.intermediate.map((module: CurriculumModule) => 
-              renderModule(module, 'intermediate')
-            )}
-          </div>
-        </div>
-
-        <div className="level-section">
-          <h3>Advanced Level</h3>
-          <div className="modules-grid">
-            {curriculum.advanced.map((module: CurriculumModule) => 
-              renderModule(module, 'advanced')
-            )}
-          </div>
+      <div className="navigator-header">
+        <h1>XRCupid Curriculum</h1>
+        <div className="curriculum-stats">
+          <span className="stat">{totalLessons} Total Lessons</span>
+          <span className="stat">3 Expert Coaches</span>
+          <span className="stat">9 Modules</span>
         </div>
       </div>
 
+      {renderCoachSelector()}
+
+      <div className="curriculum-content">
+        <div className="coach-header">
+          <h2>{getCurrentCoachData().name} - {getCurrentCoachData().focus}</h2>
+        </div>
+
+        <div className="curriculum-levels">
+          {Object.entries(getCurrentCoachData().modules).map(([level, modules]) => (
+            <div key={level} className="level-section">
+              <h3>{level.charAt(0).toUpperCase() + level.slice(1)} Level</h3>
+              <div className="modules-grid">
+                {modules.map((module: any) => 
+                  renderModule(module, level, getCurrentCoachData().name)
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="curriculum-overview">
+        <h3>All Courses Overview</h3>
+        <div className="courses-summary">
+          {allLessons.map((courseGroup, idx) => (
+            <div key={idx} className="course-group">
+              <h4>{courseGroup.coach} - {courseGroup.module}</h4>
+              <div className="course-lessons">
+                {courseGroup.lessons.map((lesson, lessonIdx) => (
+                  <span key={lessonIdx} className="lesson-tag">{lesson}</span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
       {renderCurrentMetrics()}
       {renderEthicsPanel()}
 
@@ -178,10 +229,10 @@ export const CurriculumNavigator: React.FC<CurriculumNavigatorProps> = ({
           </div>
           <div className="stat">
             <span className="stat-value">
-              {Math.round(
+              {Object.keys(userProgress.currentMetrics).length > 0 ? Math.round(
                 Object.values(userProgress.currentMetrics).reduce((a, b) => a + b, 0) / 
                 Object.keys(PERFORMANCE_METRICS).length * 100
-              )}%
+              ) : 0}%
             </span>
             <span className="stat-label">Overall Performance</span>
           </div>

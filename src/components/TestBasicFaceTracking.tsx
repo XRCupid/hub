@@ -25,7 +25,7 @@ const TestBasicFaceTracking: React.FC = () => {
       }
       
       // Initialize tracking
-      trackingService.current = new CombinedFaceTrackingService();
+      trackingService.current = CombinedFaceTrackingService.getInstance();
       await trackingService.current.initialize();
       
       // Start tracking

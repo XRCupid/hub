@@ -235,9 +235,10 @@ let auth: firebase.auth.Auth | undefined;
 let database: firebase.database.Database | MockDatabase;
 
 // Use real Firebase if API key is provided, otherwise use mock for development
-if (false) { // Disabled to prevent duplicate Firebase initialization
+if (process.env.REACT_APP_FIREBASE_API_KEY && process.env.REACT_APP_FIREBASE_API_KEY !== "demo-api-key") {
   try {
     console.log('🚀 Initializing real Firebase with project:', firebaseConfig.projectId);
+    console.log('🚀 API Key starts with:', process.env.REACT_APP_FIREBASE_API_KEY?.substring(0, 10));
     
     // Initialize Firebase app
     app = firebase.initializeApp(firebaseConfig);
@@ -279,6 +280,7 @@ if (false) { // Disabled to prevent duplicate Firebase initialization
 console.log('📋 Final database instance:', database);
 console.log('📋 Database ref function available:', typeof database?.ref);
 console.log('📋 Database constructor:', database.constructor.name);
+console.log('📋 Is MockDatabase?:', database instanceof MockDatabase);
 console.log('📋 About to export database:', database);
 
 export { firestore, auth, database, firebase as default };

@@ -183,7 +183,7 @@ const DougieSpeedDateV3: React.FC = () => {
 
   // UI toggle states
   const [showSidebar, setShowSidebar] = useState(true);
-  const [showChat, setShowChat] = useState(true);
+  const [showChat, setShowChat] = useState(false); // Default to false to prevent UI blocking during calls
   const [showPiP, setShowPiP] = useState(false);
   const [pipSize, setPipSize] = useState<'small' | 'medium' | 'large' | 'hidden'>('medium'); // Default to medium for better visibility
   const [showControls, setShowControls] = useState(true);

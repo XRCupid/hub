@@ -3,9 +3,15 @@ import { webSocketManager } from './WebSocketManager';
 
 class HumeAIService {
   constructor() {
-    this.apiKey = 'm3KaINwHsH55rJNO6zr2kIEAWvOimYeLTon3OriOXWJeCxCl'; // HARDCODED
-    this.secretKey = 'IWtKuDbybQZLI0qWWPJn2M1iW3wrKGiQhmoQcTvIGJD2iBhDG3eRD35969FzcjNT'; // HARDCODED
+    // Use environment variables with fallback for development
+    this.apiKey = process.env.REACT_APP_HUME_API_KEY || '';
+    this.secretKey = process.env.REACT_APP_HUME_SECRET_KEY || '';
     this.baseURL = "https://api.hume.ai/v0";
+    
+    // Warn if API keys are not configured
+    if (!this.apiKey || !this.secretKey) {
+      console.warn('[HumeAIService] API keys not configured. Please set REACT_APP_HUME_API_KEY and REACT_APP_HUME_SECRET_KEY environment variables.');
+    }
 
     this.facialSocket = null;
     this.prosodySocket = null;
@@ -163,7 +169,7 @@ class HumeAIService {
         console.error('Facial WebSocket not connected');
         return;
       }
-  
+
       // If the string is a data URL, strip off "data:...base64,"
       if (typeof imageData === 'string') {
         let base64String = imageData;
@@ -171,6 +177,33 @@ class HumeAIService {
           base64String = imageData.split(',')[1];
         }
         // Add actual WebSocket message sending logic here
+      }
+    }
+
+    // Send facial data for analysis (used by UnifiedEmotionService)
+    sendFacialData(base64Data) {
+      if (!this.facialSocket || this.facialSocket.readyState !== WebSocket.OPEN) {
+        console.error('Facial WebSocket not connected');
+        return;
+      }
+
+      const message = {
+        data: base64Data,
+        models: {
+          face: {
+            fps_pred: 2,
+            prob_threshold: 0.1,
+            identify_faces: false,
+            min_face_size: 60,
+            save_faces: false
+          }
+        }
+      };
+
+      try {
+        this.facialSocket.send(JSON.stringify(message));
+      } catch (error) {
+        console.error('Error sending facial data:', error);
       }
     }
 }

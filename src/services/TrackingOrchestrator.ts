@@ -1,6 +1,8 @@
 // Intelligent Tracking Orchestrator
 // Manages multiple tracking systems without performance degradation
 
+import { PerformanceMonitor } from '../utils/PerformanceMonitor';
+
 export type TrackerType = 'posture' | 'hands' | 'eyes' | 'face';
 
 export interface TrackerConfig {
@@ -270,8 +272,8 @@ export class TrackingOrchestrator {
   }
 }
 
-// Performance monitoring helper
-class PerformanceMonitor {
+// Internal performance tracker for orchestrator
+class OrchestratorPerformanceTracker {
   private frameCount = 0;
   private lastTime = performance.now();
   private fps = 60;

@@ -11,12 +11,16 @@ export const InteractiveCurriculumOverviewSimple: React.FC = () => {
     const modules: any[] = [];
     console.log('Getting all modules...');
     
-    // Use the simplified structure directly
-    ['foundation', 'intermediate', 'advanced'].forEach(level => {
-      const levelModules = CURRICULUM_STRUCTURE[level as 'foundation' | 'intermediate' | 'advanced'];
-      if (levelModules && Array.isArray(levelModules)) {
-        levelModules.forEach(module => {
-          modules.push({ ...module, level });
+    // Use the comprehensive structure with coaches
+    Object.entries(CURRICULUM_STRUCTURE).forEach(([coachKey, coachData]) => {
+      if (coachData && coachData.modules) {
+        ['foundation', 'intermediate', 'advanced'].forEach(level => {
+          const levelModules = coachData.modules[level as 'foundation' | 'intermediate' | 'advanced'];
+          if (levelModules && Array.isArray(levelModules)) {
+            levelModules.forEach(module => {
+              modules.push({ ...module, level, coach: coachKey });
+            });
+          }
         });
       }
     });

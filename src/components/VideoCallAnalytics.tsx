@@ -1,9 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import SimplePeer from 'simple-peer';
 import QRCode from 'react-qr-code';
+import { database } from '../firebase';
 import { conferenceFirebaseService } from '../services/conferenceFirebaseService';
-import { database } from '../firebase'; // Use firebase.ts not firebaseConfig.ts
+import VideoCallAnalyzer from '../services/VideoCallAnalyzer';
 import { ref, set, onValue, get } from 'firebase/database';
+import { ChemistryReportModal } from './ChemistryReportModal';
 import './VideoCallAnalytics.css';
 
 // 🔑 Local project types
@@ -12,20 +14,27 @@ import type {
   AnalyticsSnapshot,
   EmotionScore,
   PostureScore,
+  TranscriptEntry,
   PerformanceMetrics,
   Recommendation,
-  TranscriptEntry
-} from '../types/VideoCallAnalyticsTypes';
+  CallReport
+} from '../types/VideoCallTypes';
 
-// Define CallReport interface locally since the import is not working
-interface CallReport {
-  overallScore: number;
-  userMetrics: any;
-  partnerMetrics: any;
-  chemistryScore: number;
-  recommendations: string[];
-  callDuration: number;
-  transcript?: any[];
+// Tracking state for analytics
+interface TrackingData {
+  eyeContact: boolean;
+  pose: any;
+  emotions: {
+    happy: number;
+    sad: number;
+    angry: number;
+    surprised: number;
+    neutral: number;
+    excited: number;
+  };
+  speechRate: number;
+  pitch: number;
+  volume: number;
 }
 
 /* -------------------------------------------------- */
@@ -52,7 +61,7 @@ const Heart = () => <span>❤️</span>;
 
 export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ partnerName = 'Partner' }) => {
   /* -------------------------- STATE & REFS -------------------------- */
-  const firebaseService = conferenceFirebaseService;
+  const firebaseService = ConferenceFirebaseService;
   const usingRealFirebase = true;
 
   // Streams
@@ -92,8 +101,9 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ partnerN
 
   // Analytics
   const [isCallActive, setIsCallActive] = useState(false);
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsSnapshot[]>([]);
-  const [callReport, setCallReport] = useState<CallReport | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<any[]>([]);
+  const [chemistryReport, setChemistryReport] = useState<any>(null);
+  const [showReport, setShowReport] = useState(false);
 
   // UI toggles
   const [isMuted, setIsMuted] = useState(false);
@@ -103,8 +113,10 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ partnerN
   const userVideoRef = useRef<HTMLVideoElement>(null);
   const partnerVideoRef = useRef<HTMLVideoElement>(null);
   const peerRef = useRef<any>(null);
-  const voiceServiceRef = useRef<any | null>(null);
   const analyticsIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const analyzerRef = useRef<VideoCallAnalyzer | null>(null);
+  const mockDataGeneratorRef = useRef<NodeJS.Timeout | null>(null);
+  const voiceServiceRef = useRef<any>(null);
   const roomRef = useRef<string>('');
 
   /* ----------------------- INIT MEDIA -------------------------- */
@@ -238,7 +250,7 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ partnerN
     const currentUserName = userName.trim() || 'User';
     if (!localStream && !(await initializeMedia())) return;
 
-    const newRoomId = await conferenceFirebaseService.createRoom(currentUserName);
+    const newRoomId = await firebaseService.createRoom(currentUserName);
     if (!newRoomId) {
       setErrorMessage('Failed to create room');
       return;
@@ -402,26 +414,122 @@ export const VideoCallAnalytics: React.FC<VideoCallAnalyticsProps> = ({ partnerN
   };
 
   /* ----------------------- ANALYTICS SNAPSHOTS ---------------------- */
-  const collectAnalyticsSnapshot = () => {
-    // Placeholder – integrate your ML hooks
-    setAnalyticsData(a => [...a, { timestamp: Date.now() } as any]);
+  const generateMockEmotions = (): EmotionScore[] => {
+    const emotions = ['joy', 'neutral', 'interest', 'excitement', 'contentment'];
+    const selected = emotions[Math.floor(Math.random() * emotions.length)];
+    return [{ name: selected, score: 0.5 + Math.random() * 0.5 }];
   };
+
+  const generateMockPosture = (): PostureScore => ({
+    overall: 0.6 + Math.random() * 0.4,
+    openness: 0.5 + Math.random() * 0.5,
+    leaning: Math.random() > 0.5 ? 'forward' : 'neutral',
+    mirroring: Math.random() > 0.7
+  });
+
+  const collectAnalyticsSnapshot = useCallback(() => {
+    if (!analyzerRef.current) return;
+
+    // Generate mock analytics data for demo
+    const snapshot: AnalyticsSnapshot = {
+      timestamp: Date.now(),
+      userEmotions: generateMockEmotions(),
+      partnerEmotions: generateMockEmotions(),
+      userPosture: generateMockPosture(),
+      partnerPosture: generateMockPosture(),
+      userEyeContact: Math.random() > 0.3,
+      partnerEyeContact: Math.random() > 0.3,
+      userSpeaking: Math.random() > 0.6,
+      partnerSpeaking: Math.random() > 0.6,
+      userVolume: Math.random(),
+      partnerVolume: Math.random()
+    };
+
+    analyzerRef.current.addAnalyticsSnapshot(snapshot);
+    setAnalyticsData(prev => [...prev, snapshot]);
+    
+    // Add mock transcript entries occasionally
+    if (Math.random() > 0.95) {
+      const entry: TranscriptEntry = {
+        timestamp: Date.now(),
+        speaker: Math.random() > 0.5 ? 'user' : 'partner',
+        text: 'This is a mock transcript entry for testing.',
+        emotion: generateMockEmotions()[0]
+      };
+      analyzerRef.current.addTranscriptEntry(entry);
+    }
+  }, []);
 
   /* ----------------------------- CALL ------------------------------- */
   const startCall = async () => {
     setIsCallActive(true);
+    
+    // Initialize analyzer
+    analyzerRef.current = new VideoCallAnalyzer();
+    analyzerRef.current.startCall();
+    
+    // Start collecting analytics
     analyticsIntervalRef.current = setInterval(collectAnalyticsSnapshot, 200);
-    const { HumeVoiceServiceWrapper } = await import('../services/HumeVoiceServiceWrapper');
-    voiceServiceRef.current = new HumeVoiceServiceWrapper();
-    await voiceServiceRef.current.connect();
+    
+    // Initialize voice service
+    try {
+      const { HumeVoiceServiceWrapper } = await import('../services/HumeVoiceServiceWrapper');
+      voiceServiceRef.current = new HumeVoiceServiceWrapper();
+      await voiceServiceRef.current.connect();
+      
+      // Set up voice service callbacks
+      voiceServiceRef.current.onEmotion((emotions: any) => {
+        console.log('Voice emotions:', emotions);
+      });
+      
+      voiceServiceRef.current.onTranscript((transcript: any) => {
+        console.log('Voice transcript:', transcript);
+        if (analyzerRef.current && transcript.text) {
+          analyzerRef.current.addTranscriptEntry({
+            timestamp: Date.now(),
+            speaker: transcript.role === 'user' ? 'user' : 'partner',
+            text: transcript.text,
+            emotion: transcript.prosody || { name: 'neutral', score: 0.5 }
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Failed to initialize voice service:', error);
+    }
   };
 
-  const endCall = () => {
+  const endCall = async () => {
     setIsCallActive(false);
+    
+    // Stop analytics collection
     if (analyticsIntervalRef.current) {
       clearInterval(analyticsIntervalRef.current);
+      analyticsIntervalRef.current = null;
     }
-    voiceServiceRef.current?.disconnect();
+    
+    // Stop mock data generator if running
+    if (mockDataGeneratorRef.current) {
+      clearInterval(mockDataGeneratorRef.current);
+      mockDataGeneratorRef.current = null;
+    }
+    
+    // Disconnect voice service
+    if (voiceServiceRef.current) {
+      await voiceServiceRef.current.disconnect();
+      voiceServiceRef.current = null;
+    }
+    
+    // Generate chemistry report
+    if (analyzerRef.current) {
+      try {
+        const report = await analyzerRef.current.generateReport();
+        console.log('Chemistry Report Generated:', report);
+        setChemistryReport(report);
+        setShowReport(true);
+      } catch (error) {
+        console.error('Failed to generate report:', error);
+      }
+    }
   };
 
   /* ----------------------------- RENDER ----------------------------- */

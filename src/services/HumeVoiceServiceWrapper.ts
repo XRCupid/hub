@@ -56,4 +56,17 @@ export class HumeVoiceServiceWrapper extends HumeVoiceService {
       handler(transcript);
     });
   }
+
+  // Override disconnect to clean up wrapper state
+  async disconnect(): Promise<void> {
+    console.log('[HumeVoiceServiceWrapper] Disconnecting...');
+    // Clear wrapper state
+    this.messages = [];
+    this.audioData = { volume: 0, isSpeaking: false };
+    this.emotionHandlers = [];
+    this.transcriptHandlers = [];
+    
+    // Call parent disconnect
+    await super.disconnect();
+  }
 }

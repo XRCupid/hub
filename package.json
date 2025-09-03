@@ -2,7 +2,6 @@
   "name": "hub",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://xrcupid.github.io/hub",
   "dependencies": {
     "@amplitude/analytics-browser": "^2.17.3",
     "@gltf-transform/core": "^4.1.3",

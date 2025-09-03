@@ -222,7 +222,7 @@ export const UserAvatarPiP: React.FC<UserAvatarPiPProps> = ({
       try {
         // Initialize tracking service
         if (!trackingService.current) {
-          trackingService.current = new CombinedFaceTrackingService();
+          trackingService.current = CombinedFaceTrackingService.getInstance();
           
           // Force ML5-only for now due to Hume API issues
           // const hasHume = process.env.REACT_APP_HUME_API_KEY ? true : false;

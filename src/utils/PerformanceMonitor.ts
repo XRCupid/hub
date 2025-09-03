@@ -144,6 +144,10 @@ export class PerformanceMonitor {
     return { ...this.metrics };
   }
 
+  getCurrentFPS(): number {
+    return Math.round(this.metrics.fps);
+  }
+
   getPerformanceScore(): number {
     // Calculate overall performance score (0-100)
     let score = 100;

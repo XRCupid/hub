@@ -1,7 +1,7 @@
-import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getDatabase, Database } from 'firebase/database';
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getDatabase } from 'firebase/database';
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -21,15 +21,21 @@ console.log('- Project ID:', process.env.REACT_APP_FIREBASE_PROJECT_ID);
 console.log('- Database URL:', process.env.REACT_APP_FIREBASE_DATABASE_URL);
 
 // Initialize Firebase
-let app: FirebaseApp;
-let db: Database | null = null;
-let firestore: Firestore;
-let auth: Auth;
-let database: Database | null = null;
+let app: any | null = null;
+let db: any | null = null;
+let firestore: any | null = null;
+let auth: any | null = null;
+let database: any | null = null;
+
+// DISABLE FIREBASE INITIALIZATION HERE TO PREVENT CONFLICTS
+// firebase.ts handles all Firebase initialization
+console.log('⚠️ [firebaseConfig.ts] Skipping initialization - using firebase.ts instead');
 
 // Flag to prevent duplicate initialization
 let isInitialized = false;
 
+// Comment out all initialization to prevent conflicts
+/*
 if (!isInitialized) {
   try {
     console.log('🚀 Initializing Firebase app with project:', process.env.REACT_APP_FIREBASE_PROJECT_ID);
@@ -68,6 +74,7 @@ if (!isInitialized) {
     }
   }
 }
+*/
 
 // Export Firebase services
 export { app, db, database, firestore, auth };

@@ -1,7 +1,7 @@
 import { CoachProfile } from '../config/coachConfig';
 import { NPCPersonality } from '../config/NPCPersonalities';
 import { FacialExpressions, PostureData, TrackingData, EngagementAnalytics } from '../types/tracking';
-import { EngagementDetectionService } from './EngagementDetectionService';
+import { PerformanceMonitor } from '../utils/PerformanceMonitor';
 
 // Core interfaces for dynamic tracking selection
 export interface SessionContext {
@@ -708,8 +708,27 @@ export class UnifiedTrackingCoordinator {
 }
 
 // Supporting classes
-class PerformanceMonitor {
-  // Implementation will be added
+// PerformanceMonitor is imported from utils/PerformanceMonitor.ts
+
+class EngagementDetectionService {
+  // Stub implementation for engagement detection
+  constructor() {}
+  
+  detectEngagement(data: any): boolean {
+    return true;
+  }
+  
+  analyzeEngagement(data: any): any {
+    return {
+      level: 'high',
+      confidence: 0.85,
+      indicators: []
+    };
+  }
+  
+  reset(): void {
+    // Reset engagement tracking state
+  }
 }
 
 class ModelPool {

@@ -61,7 +61,7 @@ const UserPresenceAvatar: React.FC<UserPresenceAvatarProps> = ({
 
         // Create tracking service
         const service = useHumeEmotions 
-          ? new CombinedFaceTrackingService()
+          ? CombinedFaceTrackingService.getInstance()
           : new ML5FaceMeshService();
         
         setTrackingService(service);

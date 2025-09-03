@@ -110,7 +110,7 @@ export const SimpleUserAvatarPiP: React.FC<SimpleUserAvatarPiPProps> = ({
       try {
         // Initialize tracking service
         if (!trackingService.current) {
-          trackingService.current = new CombinedFaceTrackingService();
+          trackingService.current = CombinedFaceTrackingService.getInstance();
           await trackingService.current.initialize();
         }
         

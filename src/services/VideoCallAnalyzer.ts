@@ -139,7 +139,7 @@ export class VideoCallAnalyzer {
     // Turn taking and interruptions
     let turnTaking = 0;
     let interruptionCount = 0;
-    let lastSpeaker: 'user' | 'partner' | null = null;
+    let lastSpeaker: string | null = null;
     this.transcriptEntries.forEach((entry, index) => {
       const currentSpeaker = entry.speaker === 'user' ? 'user' : 'partner';
       if (lastSpeaker && lastSpeaker !== currentSpeaker) {
@@ -369,7 +369,7 @@ export class VideoCallAnalyzer {
 
     // Reward turn taking
     let turns = 0;
-    let lastSpeaker = null;
+    let lastSpeaker: string | null = null;
     this.analytics.forEach(d => {
       const speaker = d.userSpeaking ? 'user' : d.partnerSpeaking ? 'partner' : null;
       if (speaker && speaker !== lastSpeaker) {

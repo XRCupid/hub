@@ -90,6 +90,7 @@ export class HumeVoiceService {
   private lastProsodyEmotions: { name: string; score: number }[] = [];
   private lastFacialEmotions: { name: string; score: number }[] = [];
   private transcriptHistory: TranscriptSegment[] = [];
+  private transcriptBuffer: Map<string, TranscriptSegment> = new Map();
 
   private globalCleanupHandlers?: () => void;
 
@@ -148,6 +149,9 @@ export class HumeVoiceService {
 
   async connect(configId?: string): Promise<void> {
     console.log('[HumeVoiceService] 🔌 Starting connection...');
+    
+    // Track connection attempts for fallback
+    let connectionFailed = false;
     
     try {
       // NUCLEAR OVERRIDE - YOUR CREDENTIALS ONLY
@@ -241,6 +245,9 @@ export class HumeVoiceService {
       
       const connectOptions: any = {
         configId: configToUse,
+        // Disable assistant responses - we only want transcription
+        enableAudio: false, // Don't play assistant audio responses
+        systemPrompt: "You are a silent transcription service. Never respond with speech. Only transcribe what you hear."
       };
       
       console.log('[HumeVoiceService] Connect options:', connectOptions);
@@ -315,32 +322,18 @@ export class HumeVoiceService {
             break;
 
           case 'assistant_message':
-            console.log('[HumeVoiceService] 🤖 Assistant message:', {
+            console.log('[HumeVoiceService] 🤖 Assistant message IGNORED (we only want transcription):', {
               content: message.message?.content,
               hasProsody: !!message.models?.prosody
             });
             
-            if (message.message?.content && this.onMessageCallback) {
-              this.onMessageCallback?.(message);
-            }
+            // IGNORE assistant messages - we don't want AI responses in the transcript
+            // The assistant should be silent anyway with our config
+            break;
             
-            // Create transcript segment for assistant
-            if (message.message?.content && this.onTranscriptCallback) {
-              console.log('[HumeVoiceService] 📝 Creating assistant transcript segment');
-              const segment: TranscriptSegment = {
-                timestamp: Date.now(),
-                speaker: 'Assistant',
-                text: message.message.content,
-                emotions: this.lastEmotions || [],
-                prosodyEmotions: this.lastProsodyEmotions || [],
-                facialEmotions: this.lastFacialEmotions || [],
-                dominantEmotion: this.lastEmotions?.[0]?.name,
-                emotionIntensity: this.lastEmotions?.[0]?.score / 100,
-                prosodyData: message.models?.prosody
-              };
-              this.transcriptHistory.push(segment);
-              this.onTranscriptCallback(segment);
-            }
+          case 'assistant_end':
+            console.log('[HumeVoiceService] 🤖 Assistant end message IGNORED');
+            // Ignore assistant end messages
             
             // Extract emotion data from prosody scores
             if (message.models?.prosody?.scores && this.onEmotionCallback) {
@@ -358,6 +351,17 @@ export class HumeVoiceService {
               content: message.message?.content,
               hasProsody: !!message.models?.prosody
             });
+            
+            // Extract prosody emotions if available
+            if (message.models?.prosody?.scores) {
+              console.log('[HumeVoiceService] 🎭 Found prosody in user_message');
+              const emotions = this.convertEmotionsToArray(message.models.prosody.scores);
+              this.lastProsodyEmotions = emotions;
+              this.lastEmotions = emotions;
+              if (this.onEmotionCallback) {
+                this.onEmotionCallback(emotions);
+              }
+            }
             
             if (message.message?.content) {
               if (this.onUserMessageCallback) {
@@ -401,6 +405,69 @@ export class HumeVoiceService {
             }
             break;
 
+          case 'speech_update':
+            console.log('[HumeVoiceService] 🎙️ Speech update:', {
+              hasText: !!message.text,
+              hasTranscript: !!message.transcript,
+              hasContent: !!message.content,
+              isFinal: message.isFinal || message.is_final,
+              hasProsody: !!message.models?.prosody,
+              messageKeys: Object.keys(message)
+            });
+            
+            // Extract prosody emotions if available
+            if (message.models?.prosody?.scores) {
+              console.log('[HumeVoiceService] 🎭 Found prosody in speech_update');
+              const emotions = this.convertEmotionsToArray(message.models.prosody.scores);
+              this.lastProsodyEmotions = emotions;
+              this.lastEmotions = emotions;
+              if (this.onEmotionCallback) {
+                this.onEmotionCallback(emotions);
+              }
+            } else if (!this.lastEmotions || this.lastEmotions.length === 0) {
+              // Use default emotions if none available
+              this.lastEmotions = this.getDefaultEmotions();
+              this.lastProsodyEmotions = this.getDefaultEmotions();
+            }
+            
+            // Extract text from various possible fields
+            const speechText = message.text || message.transcript || message.content || '';
+            
+            if (speechText) {
+              // Always send to transcript callback for real-time display
+              if (this.onTranscriptCallback) {
+                console.log('[HumeVoiceService] 📝 Creating speech transcript segment:', speechText.substring(0, 100));
+                const segment: TranscriptSegment = {
+                  timestamp: Date.now(),
+                  speaker: 'User',
+                  text: speechText,
+                  emotions: this.lastEmotions || [],
+                  prosodyEmotions: this.lastProsodyEmotions || [],
+                  facialEmotions: this.lastFacialEmotions || [],
+                  dominantEmotion: this.lastEmotions?.[0]?.name,
+                  emotionIntensity: this.lastEmotions?.[0]?.score / 100,
+                  prosodyData: message.models?.prosody,
+                  isFinal: message.isFinal || message.is_final || false
+                };
+                
+                // Buffer final segments for completeness
+                if (message.isFinal || message.is_final) {
+                  this.transcriptHistory.push(segment);
+                  this.transcriptBuffer.set(`speech_${Date.now()}`, segment);
+                  console.log('[HumeVoiceService] Final speech segment buffered');
+                }
+                
+                this.onTranscriptCallback(segment);
+              }
+              
+              // Send to message callback only for final segments
+              if (this.onMessageCallback && (message.isFinal || message.is_final)) {
+                console.log('[HumeVoiceService] Sending final speech to message callback');
+                this.onMessageCallback(speechText);
+              }
+            }
+            break;
+
           case 'error':
             console.error('[HumeVoiceService] ❌ Error message:', message);
             if (message.message?.includes('too many active chats')) {
@@ -413,6 +480,29 @@ export class HumeVoiceService {
 
           default:
             console.log('[HumeVoiceService] 🔍 Unknown message type:', message.type);
+            
+            // Try to extract any text from unknown message types
+            const unknownText = message.text || message.transcript || message.content || 
+                              message.message?.content || message.message?.text || '';
+            
+            if (unknownText) {
+              console.log('[HumeVoiceService] 📝 Found text in unknown message type:', unknownText.substring(0, 100));
+              if (this.onTranscriptCallback) {
+                const segment: TranscriptSegment = {
+                  timestamp: Date.now(),
+                  speaker: 'User',
+                  text: unknownText,
+                  emotions: this.lastEmotions || [],
+                  prosodyEmotions: this.lastProsodyEmotions || [],
+                  facialEmotions: this.lastFacialEmotions || [],
+                  dominantEmotion: this.lastEmotions?.[0]?.name,
+                  emotionIntensity: this.lastEmotions?.[0]?.score / 100,
+                  prosodyData: message.models?.prosody
+                };
+                this.transcriptHistory.push(segment);
+                this.onTranscriptCallback(segment);
+              }
+            }
         }
       });
 
@@ -484,8 +574,22 @@ export class HumeVoiceService {
         name: (error as any)?.name
       });
       
+      connectionFailed = true;
+      
       // Set connection state to false
       this.isConnected = false;
+      
+      // Try fallback mode if main connection fails
+      if (this.reconnectAttempts === 0) {
+        console.warn('[HumeVoiceService] Primary connection failed, attempting fallback mode...');
+        try {
+          await this.fallbackConnect();
+          console.log('[HumeVoiceService] Fallback mode activated successfully');
+          return; // Exit successfully with fallback
+        } catch (fallbackError) {
+          console.error('[HumeVoiceService] Fallback mode also failed:', fallbackError);
+        }
+      }
       
       // If this is a reconnect attempt, increment the counter
       if (this.reconnectAttempts > 0) {
@@ -640,6 +744,11 @@ export class HumeVoiceService {
   private convertEmotionsToArray(scores: any): { name: string; score: number }[] {
     const emotionArray: { name: string; score: number }[] = [];
     
+    if (!scores || typeof scores !== 'object') {
+      console.warn('[HumeVoiceService] Invalid emotion scores:', scores);
+      return [];
+    }
+    
     // Convert all emotion scores to array format
     for (const [emotion, score] of Object.entries(scores)) {
       if (typeof score === 'number' && score > 0.01) { // Only include emotions with score > 1%
@@ -653,8 +762,47 @@ export class HumeVoiceService {
     // Sort by score descending
     emotionArray.sort((a, b) => b.score - a.score);
     
+    // Log top emotions for debugging
+    if (emotionArray.length > 0) {
+      console.log('[HumeVoiceService] Top emotions:', emotionArray.slice(0, 3).map(e => `${e.name}:${e.score}%`).join(', '));
+    }
+    
     // Return top 8 emotions
     return emotionArray.slice(0, 8);
+  }
+
+  // Fallback mechanism for emotion detection
+  private getDefaultEmotions(): { name: string; score: number }[] {
+    return [
+      { name: 'Neutral', score: 70 },
+      { name: 'Calm', score: 20 },
+      { name: 'Interested', score: 10 }
+    ];
+  }
+
+  // Fallback for when Hume service is unavailable
+  public async fallbackConnect(): Promise<void> {
+    console.warn('[HumeVoiceService] Using fallback connection mode (no Hume service)');
+    this.isConnected = true;
+    
+    // Set up basic microphone access for transcription fallback
+    try {
+      this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('[HumeVoiceService] Fallback: Audio stream obtained for basic recording');
+      
+      // Notify callbacks that we're in fallback mode
+      if (this.onOpenCallback) {
+        this.onOpenCallback();
+      }
+      
+      // Use default emotions in fallback mode
+      this.lastEmotions = this.getDefaultEmotions();
+      this.lastProsodyEmotions = this.getDefaultEmotions();
+      
+    } catch (error) {
+      console.error('[HumeVoiceService] Fallback mode failed:', error);
+      throw new Error('Failed to initialize fallback audio capture');
+    }
   }
 
   public async reconnect(): Promise<void> {

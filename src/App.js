@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, Suspense } from 'react';
 import {
-  HashRouter as Router,
+  BrowserRouter as Router,
   Routes,
   Route,
   NavLink,
@@ -89,11 +89,12 @@ import { testRPMIntegration } from './utils/testRPMIntegration'; // Import RPM t
 import { testRPMAvatars } from './utils/testRPMAvatars'; // Import RPM avatar test utility
 import { createTestAvatar } from './utils/createTestAvatar'; // Import test avatar creator
 import PiPTrackingTest from './components/PiPTrackingTest'; // Import PiP tracking test component
+import ImageTest from './pages/ImageTest'; // Import image test page
 import './utils/quickWins'; // Import quick wins utilities
 import './utils/diagnostics'; // Import diagnostics utilities  
 import './utils/offlineMode'; // Import offline mode handler
-import './utils/performanceMonitor'; // Import performance monitor
-import CurriculumNavigator from './components/CurriculumNavigator';
+import './utils/PerformanceMonitor'; // Import performance monitor
+import { CurriculumNavigator } from './components/CurriculumNavigator';
 import { PerformanceToProgress } from './components/PerformanceToProgress';
 import { CoachingSessionDemo } from './components/CoachingSessionDemo';
 import AvatarCreationHub from './pages/AvatarCreationHub';
@@ -102,6 +103,7 @@ import VideoCallAnalytics from './components/VideoCallAnalytics';
 import { SkillTreeDiagram } from './components/SkillTreeDiagram';
 import { InteractiveCurriculumOverview } from './components/InteractiveCurriculumOverview';
 import { InteractiveCurriculumOverviewSimple } from './components/InteractiveCurriculumOverviewSimple';
+import { ConversationToolkit } from './components/ConversationToolkit';
 import { TestComponent } from './components/TestComponent';
 import { SampleLessons } from './components/SampleLessons';
 import HumeCoachCall from './components/HumeCoachCall'; // Fix import to use default export
@@ -236,6 +238,7 @@ const AppContent = () => {
           <Route path="/conference-booth" element={<ConferenceBoothDemo />} />
           <Route path="/hume-quick-setup" element={<HumeQuickSetup />} />
           <Route path="/test-simple" element={<div style={{padding: '2rem', color: 'white'}}>TEST ROUTE WORKS!</div>} />
+          <Route path="/image-test" element={<ImageTest />} />
           <Route path="/investor-demo" element={<SimpleInvestorDemo />} />
           <Route path="/million-dollar-demo" element={<SimpleInvestorDemo />} />
           <Route path="/emotion-showcase" element={<EmotionAnalysisShowcase />} />
@@ -257,6 +260,9 @@ const AppContent = () => {
           <Route path="/test" element={<TestComponent />} />
           <Route path="/sample-lessons" element={<SampleLessons />} />
           <Route path="/interactive-curriculum-overview" element={<InteractiveCurriculumOverview />} />
+          <Route path="/curriculum-navigator" element={<CurriculumNavigator />} />
+          <Route path="/storyteller-toolkit" element={<ConversationToolkit />} />
+          <Route path="/conversation-toolkit" element={<ConversationToolkit />} />
           {/* Debug Routes */}
           <Route path="/env-check" element={<EnvCheck />} />
           <Route path="/hume-debug" element={<HumeConnectionDebug />} />

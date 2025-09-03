@@ -5,18 +5,21 @@ export interface EmotionScore {
 }
 
 export interface PostureScore {
-  confidence: number;
-  alignment: number;
-  openness: number;
+  confidence?: number;
+  alignment?: number;
+  openness?: number;
   overall: number;
+  leaning?: 'forward' | 'neutral' | 'backward';
+  mirroring?: boolean;
 }
 
 export interface TranscriptEntry {
   speaker: 'user' | 'partner';
   text: string;
-  emotions: EmotionScore[];
+  emotion?: EmotionScore;
+  emotions?: EmotionScore[];
   timestamp: number;
-  duration: number;
+  duration?: number;
 }
 
 export interface AnalyticsSnapshot {
@@ -46,23 +49,48 @@ export interface CallMetrics {
 }
 
 export interface PerformanceMetrics {
-  eyeContactPercentage: number;
-  postureScore: number;
+  avgEyeContact: number;
+  avgPosture: number;
+  emotionalRange: number;
+  emotionalVariability: number;
   speakingRatio: number;
-  responseTime: number;
-  emotionalEngagement: number;
-  activeListening: number;
+  engagementScore: number;
+  dominantEmotions: EmotionScore[];
+  strengthAreas: string[];
+  improvementAreas: string[];
+  turnTaking: number;
+  interruptionCount: number;
+  silenceDuration: number;
+  laughterCount: number;
+  questionCount: number;
+  eyeContactPercentage?: number;
+  postureScore?: number;
+  responseTime?: number;
+  emotionalEngagement?: number;
+  activeListening?: number;
 }
 
 export interface CallReport {
-  overallScore: number;
+  callId: string;
+  startTime: Date;
+  endTime: Date;
+  duration: number;
+  analytics: AnalyticsSnapshot[];
+  transcript: TranscriptEntry[];
   userMetrics: PerformanceMetrics;
   partnerMetrics: PerformanceMetrics;
-  chemistryScore: number;
+  overallChemistry: number;
+  conversationFlow: number;
+  emotionalSynchrony: number;
   recommendations: Recommendation[];
-  aiSummary: string;
-  emotionTimeline: TimelinePoint[];
-  transcript: TranscriptEntry[];
+  aiSummary: {
+    joint: string;
+    forUser: string;
+    forPartner: string;
+  };
+  overallScore?: number;
+  chemistryScore?: number;
+  emotionTimeline?: TimelinePoint[];
 }
 
 export interface PerformanceSection {
@@ -90,12 +118,14 @@ export interface ChemistryReport {
 
 export interface Recommendation {
   id: string;
-  category: string;
+  category: 'eye-contact' | 'posture' | 'emotion' | 'engagement' | 'conversation' | 'confidence' | string;
   priority: 'high' | 'medium' | 'low';
   title: string;
   description: string;
-  suggestedLesson?: string;
-  coach?: string;
+  suggestedLesson: string;
+  coach: 'Grace' | 'Rizzo' | 'Posie' | string;
+  estimatedDuration: number;
+  keyExercises: string[];
   exercises?: string[];
 }
 

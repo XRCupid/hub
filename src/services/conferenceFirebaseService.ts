@@ -1,5 +1,5 @@
 import { ref, set, push, onValue, off, get, DataSnapshot, Database } from 'firebase/database';
-import { database } from '../firebaseConfig';
+import { database } from '../firebase';
 
 interface Room {
   host: string;
@@ -8,7 +8,7 @@ interface Room {
 }
 
 class ConferenceFirebaseService {
-  private db: Database | null = null;
+  private db: any = null;
   
   constructor() {
     console.log('[ConferenceFirebaseService] Constructor called');
@@ -17,7 +17,7 @@ class ConferenceFirebaseService {
   }
   
   // Ensure database is available
-  private getDatabase(): Database | null {
+  private getDatabase(): any {
     if (!this.db && database) {
       console.log('[ConferenceFirebaseService] Database was null, reinitializing from import');
       this.db = database;

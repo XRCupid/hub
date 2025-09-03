@@ -55,16 +55,22 @@ const COMPUTER_VISION_FEATURES: ComputerVisionFeature[] = [
   }
 ];
 
-interface ExtendedModule extends CurriculumModule {
-  computerVisionFeatures?: string[];
+interface ExtendedModule {
+  id: string;
+  title: string;
+  description?: string;
+  lessons: string[]; // Lessons are now strings in the new structure
+  level?: string;
   coach?: string;
+  coachKey?: string;
+  computerVisionFeatures?: string[];
 }
 
 export const InteractiveCurriculumOverview: React.FC = () => {
   const [selectedCoach, setSelectedCoach] = useState<'all' | 'grace' | 'posie' | 'rizzo' | 'max'>('all');
   const [selectedLevel, setSelectedLevel] = useState<'all' | 'foundation' | 'intermediate' | 'advanced'>('all');
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
-  const [selectedLesson, setSelectedLesson] = useState<{lesson: Lesson, moduleTitle: string} | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState<{lesson: string, moduleTitle: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCVFeatures, setShowCVFeatures] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -118,18 +124,19 @@ export const InteractiveCurriculumOverview: React.FC = () => {
   const getAllModules = () => {
     const modules: CurriculumModule[] = [];
     
-    // Use the simplified structure directly
-    ['foundation', 'intermediate', 'advanced'].forEach(level => {
-      const levelModules = CURRICULUM_STRUCTURE[level as 'foundation' | 'intermediate' | 'advanced'];
-      if (levelModules && Array.isArray(levelModules)) {
-        levelModules.forEach((module: CurriculumModule) => {
+    // Use the new comprehensive structure with coaches
+    Object.entries(CURRICULUM_STRUCTURE).forEach(([coachKey, coachData]) => {
+      Object.entries(coachData.modules).forEach(([level, levelModules]) => {
+        levelModules.forEach((module: any) => {
           modules.push({
             ...module,
             level,
+            coach: coachData.name,
+            coachKey,
             lessons: module.lessons || []
           });
         });
-      }
+      });
     });
     
     return modules;
@@ -223,7 +230,7 @@ export const InteractiveCurriculumOverview: React.FC = () => {
     });
   };
 
-  const handleLessonClick = (lesson: Lesson, moduleTitle: string) => {
+  const handleLessonClick = (lesson: string, moduleTitle: string) => {
     setSelectedLesson({ lesson, moduleTitle });
   };
 
@@ -234,15 +241,15 @@ export const InteractiveCurriculumOverview: React.FC = () => {
         <div className="lesson-overlay" onClick={() => setSelectedLesson(null)}>
           <div className="lesson-modal" onClick={(e) => e.stopPropagation()}>
             <button className="close-button" onClick={() => setSelectedLesson(null)}>×</button>
-            <h2>{selectedLesson.lesson.title}</h2>
+            <h2>{selectedLesson.lesson}</h2>
             <p className="module-context">From: {selectedLesson.moduleTitle}</p>
             <div className="lesson-content">
               <div className="lesson-details">
                 <div className="detail-item">
-                  <strong>Duration:</strong> {selectedLesson.lesson.duration}
+                  <strong>Duration:</strong> ~10 min
                 </div>
                 <div className="detail-item">
-                  <strong>Type:</strong> {selectedLesson.lesson.type}
+                  <strong>Type:</strong> Interactive Lesson
                 </div>
               </div>
             </div>
@@ -382,7 +389,7 @@ export const InteractiveCurriculumOverview: React.FC = () => {
                 <div className="module-stats">
                   <p className="module-lessons">{module.lessons.length} lessons</p>
                   <p className="module-duration">
-                    {module.lessons.reduce((total, lesson) => total + lesson.duration, 0)} min total
+                    {module.lessons.length * 10} min estimated
                   </p>
                 </div>
                 
@@ -411,8 +418,8 @@ export const InteractiveCurriculumOverview: React.FC = () => {
                         }}
                         style={{ cursor: 'pointer' }}
                       >
-                        <span className="lesson-title">{lesson.title}</span>
-                        <span className="lesson-duration">{lesson.duration}</span>
+                        <span className="lesson-title">{lesson}</span>
+                        <span className="lesson-duration">~10 min</span>
                       </div>
                     </div>
                   ))}

@@ -66,7 +66,7 @@ export const SeeSoEyeTracker: React.FC = () => {
       
     } catch (err) {
       console.error('[SeeSo] Initialization error:', err);
-      setError(`Failed to initialize SeeSo: ${err.message}`);
+      setError(`Failed to initialize SeeSo: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -83,7 +83,7 @@ export const SeeSoEyeTracker: React.FC = () => {
       console.log('[SeeSo] Calibration started');
     } catch (err) {
       console.error('[SeeSo] Calibration error:', err);
-      setError(`Calibration failed: ${err.message}`);
+      setError(`Calibration failed: ${err instanceof Error ? err.message : String(err)}`);
       setIsCalibrating(false);
     }
   };
@@ -97,7 +97,7 @@ export const SeeSoEyeTracker: React.FC = () => {
       console.log('[SeeSo] Tracking started');
     } catch (err) {
       console.error('[SeeSo] Tracking error:', err);
-      setError(`Failed to start tracking: ${err.message}`);
+      setError(`Failed to start tracking: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
